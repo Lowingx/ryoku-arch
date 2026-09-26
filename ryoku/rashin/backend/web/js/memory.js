@@ -5,6 +5,9 @@
 // when the panel is hidden.
 
 import { escapeHtml } from "./markdown.js";
+import { humanBytes } from "./format.js";
+import { motion } from "./motion.js";
+import { initOrbit, supportsWebGL } from "./orbit3d.js";
 
 const MONO = "'JetBrains Mono', monospace";
 const MONTHS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
@@ -184,18 +187,7 @@ function heatLevel(c) {
   return "3";
 }
 
-function humanBytes(n) {
-  if (!Number.isFinite(n) || n < 0) return "--";
-  if (n < 1024) return n + " B";
-  const u = ["KB", "MB", "GB", "TB"];
-  let v = n / 1024;
-  let i = 0;
-  while (v >= 1024 && i < u.length - 1) {
-    v /= 1024;
-    i++;
-  }
-  return (v < 10 ? v.toFixed(1) : String(Math.round(v))) + " " + u[i];
-}
+
 
 function shortDate(iso) {
   if (!iso) return "";
@@ -222,6 +214,9 @@ export function initMemory(root) {
   const canvas = root.querySelector("[data-mem-graph]");
   const heatEl = root.querySelector("[data-mem-heatmap]");
   const sessEl = root.querySelector("[data-mem-sessions]");
+  const wrap3d = root.querySelector("[data-mem-graph-3d]");
+  const orbitCanvas = root.querySelector("[data-mem-orbit]");
+  const viewToggle = root.querySelector("[data-mem-view-toggle]");
   const ctx = canvas ? canvas.getContext("2d") : null;
   const reduce =
     typeof matchMedia !== "undefined" &&
@@ -241,6 +236,8 @@ export function initMemory(root) {
   let settleFrames = 0;
   let hover = null;
   let drag = null;
+  let view = "links";
+  let orbit = null;
   const SETTLE = 0.6;
   const SETTLE_FRAMES = 20;
 
@@ -556,7 +553,7 @@ export function initMemory(root) {
   }
 
   function wake() {
-    if (reduce) return;
+    if (reduce || !motion.on) return;
     if (!isVisible()) return;
     if (!model || !model.nodes.length) {
       drawEmpty("no notes yet");
@@ -575,6 +572,68 @@ export function initMemory(root) {
   function isVisible() {
     return !root.hidden && document.visibilityState !== "hidden";
   }
+
+  // ---- 3D orbit view ----
+
+  function rebuildOrbit() {
+    if (!wrap3d || !orbitCanvas || view !== "orbit") return;
+    wrap3d.hidden = false;
+    if (canvas) canvas.hidden = true;
+    if (!orbit) {
+      orbit = initOrbit(orbitCanvas, {
+        nodes: model ? model.nodes : [],
+        links: model ? model.links : [],
+        onSelect: (n) => {
+          if (n && String(n.id).slice(-3) === ".md") location.hash = "#/vault";
+        },
+      });
+    } else if (orbit.step) {
+      orbit.step(model ? model.nodes : []);
+    }
+    if (orbit && orbit.resume) orbit.resume();
+  }
+
+  function showOrbit(on) {
+    view = on ? "orbit" : "links";
+    if (wrap3d) wrap3d.hidden = !on;
+    if (canvas) canvas.hidden = on;
+    if (viewToggle) {
+      viewToggle.querySelectorAll(".chip").forEach((b) => b.classList.toggle("active", (b.dataset.view === "orbit") === on));
+    }
+    if (on) {
+      rebuildOrbit();
+      stop();
+    } else {
+      resize();
+      wake();
+      if (settled && model && model.nodes.length) draw();
+    }
+  }
+
+  if (viewToggle) {
+    if (!supportsWebGL()) {
+      const chip = viewToggle.querySelector('[data-view="orbit"]');
+      if (chip) {
+        chip.disabled = true;
+        chip.title = "webgl unavailable on this machine";
+      }
+    }
+    viewToggle.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-view]");
+      if (!b || b.disabled) return;
+      showOrbit(b.dataset.view === "orbit");
+    });
+  }
+
+  // the motion switch parks or restarts both renderers
+  motion.onChange((on) => {
+    if (on) {
+      wake();
+      if (view === "orbit" && orbit && orbit.resume) orbit.resume();
+    } else if (model && model.nodes.length) {
+      draw();
+    }
+  });
 
   // ---- pointer interactions ----
 
@@ -676,12 +735,13 @@ export function initMemory(root) {
       }
       settled = true;
       draw();
-      return;
+    } else {
+      warmup = 60;
+      settled = false;
+      settleFrames = 0;
+      wake();
     }
-    warmup = 60;
-    settled = false;
-    settleFrames = 0;
-    wake();
+    if (view === "orbit") rebuildOrbit();
   }
 
   async function fetchMemory(force) {
@@ -709,6 +769,7 @@ export function initMemory(root) {
     if (isVisible()) {
       fetchMemory(false);
       wake();
+      if (view === "orbit" && orbit && orbit.resume) orbit.resume();
     } else {
       stop();
     }

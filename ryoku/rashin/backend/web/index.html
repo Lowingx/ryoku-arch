@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/panels.css">
   <link rel="stylesheet" href="css/chat.css">
+  <link rel="stylesheet" href="css/system.css">
   <link rel="stylesheet" href="css/motion.css">
 </head>
 <body>
@@ -16,13 +17,18 @@
     <div class="kanji" aria-hidden="true">羅針盤</div>
     <ul class="nav">
       <li><a data-nav="overview" href="#/overview"><b>01</b><span>OVERVIEW</span></a></li>
-      <li><a data-nav="vault" href="#/vault"><b>02</b><span>VAULT</span></a></li>
-      <li><a data-nav="memory" href="#/memory"><b>03</b><span>MEMORY</span></a></li>
-      <li><a data-nav="skills" href="#/skills"><b>04</b><span>SKILLS</span></a></li>
-      <li><a data-nav="agents" href="#/agents"><b>05</b><span>AGENTS</span></a></li>
-      <li><a data-nav="chat" href="#/chat"><b>06</b><span>CHAT</span></a></li>
-      <li><a data-nav="about" href="#/about"><b>07</b><span>ABOUT</span></a></li>
+      <li><a data-nav="system" href="#/system"><b>02</b><span>SYSTEM</span></a></li>
+      <li><a data-nav="vault" href="#/vault"><b>03</b><span>VAULT</span></a></li>
+      <li><a data-nav="memory" href="#/memory"><b>04</b><span>MEMORY</span></a></li>
+      <li><a data-nav="skills" href="#/skills"><b>05</b><span>SKILLS</span></a></li>
+      <li><a data-nav="agents" href="#/agents"><b>06</b><span>AGENTS</span></a></li>
+      <li><a data-nav="models" href="#/models"><b>07</b><span>MODELS</span></a></li>
+      <li><a data-nav="chat" href="#/chat"><b>08</b><span>CHAT</span></a></li>
+      <li><a data-nav="about" href="#/about"><b>09</b><span>ABOUT</span></a></li>
     </ul>
+    <button class="motion-toggle" data-motion-toggle type="button" title="Animations on/off" aria-pressed="true">
+      <span aria-hidden="true">動</span><span class="motion-label">MOTION</span>
+    </button>
   </nav>
 
   <main class="stage">
@@ -30,6 +36,7 @@
     <section class="panel" data-panel="overview" hidden>
       <header class="hero" data-hero>
         <img src="assets/hero.webp" alt="" onerror="this.closest('[data-hero]').classList.add('no-art')">
+        <canvas class="hero-3d" data-hero-3d aria-hidden="true"></canvas>
         <span class="hero-sun" aria-hidden="true"></span>
         <span class="hero-tick" aria-hidden="true"></span>
         <div class="hero-cap"><b>RYOKU RASHIN</b><span>羅針 / the system needle</span></div>
@@ -73,12 +80,63 @@
         <div><em>HERMES</em><span class="stamp stamp-idle" data-s="hermes">--</span></div>
       </div>
 
+      <a class="sys-strip" href="#/system" aria-label="Open the system inventory">
+        <div><em>SERVICES</em><b data-sys="services">--</b></div>
+        <div><em>TIMERS</em><b data-sys="timers">--</b></div>
+        <div><em>CONTAINERS</em><b data-sys="containers">--</b></div>
+        <div><em>LISTENING</em><b data-sys="listeners">--</b></div>
+        <div><em>TIPS</em><b data-sys="tips">--</b></div>
+      </a>
       <div class="code-card" data-code-card hidden>
         <div class="code-head">
           <em class="eyebrow">CODE INTELLIGENCE</em>
           <span class="dim" data-code-repo></span>
         </div>
         <div class="code-body" data-code-body></div>
+      </div>
+    </section>
+    <section class="panel panel-system" data-panel="system" hidden>
+      <div class="sys-toolbar">
+        <h2 class="panel-title">SYSTEM</h2>
+        <span class="sys-stamp dim" data-sys-stamp></span>
+        <button class="btn btn-ghost" data-sys-refresh type="button">RESCAN</button>
+      </div>
+      <p class="sys-readonly eyebrow">READ-ONLY SURFACE / every command listed is one you run, rashin never does</p>
+      <div class="sys-tips" data-sys-tips><p class="dim">loading...</p></div>
+      <div class="sys-blocks">
+        <section class="sys-block" data-sys-block="services">
+          <h3 class="panel-sub">SERVICES <span class="sys-count" data-count="services"></span></h3>
+          <div class="sys-filter" data-filter="services">
+            <button class="chip active" data-state="running" type="button">RUNNING</button>
+            <button class="chip" data-state="stopped" type="button">STOPPED</button>
+            <button class="chip" data-state="user" type="button">USER</button>
+          </div>
+          <div class="sys-table" data-body="services"><p class="dim">loading...</p></div>
+        </section>
+        <section class="sys-block" data-sys-block="timers">
+          <h3 class="panel-sub">TIMERS <span class="sys-count" data-count="timers"></span></h3>
+          <div class="sys-table" data-body="timers"><p class="dim">loading...</p></div>
+        </section>
+        <section class="sys-block" data-sys-block="schedules">
+          <h3 class="panel-sub">CRON + AT <span class="sys-count" data-count="schedules"></span></h3>
+          <div class="sys-table" data-body="schedules"><p class="dim">loading...</p></div>
+        </section>
+        <section class="sys-block" data-sys-block="containers">
+          <h3 class="panel-sub">CONTAINERS <span class="sys-count" data-count="containers"></span></h3>
+          <div class="sys-table" data-body="containers"><p class="dim">loading...</p></div>
+        </section>
+        <section class="sys-block" data-sys-block="listeners">
+          <h3 class="panel-sub">LISTENING <span class="sys-count" data-count="listeners"></span></h3>
+          <div class="sys-table" data-body="listeners"><p class="dim">loading...</p></div>
+        </section>
+        <section class="sys-block" data-sys-block="processes">
+          <h3 class="panel-sub">TOP CPU <span class="sys-count" data-count="processes"></span></h3>
+          <div class="sys-table" data-body="processes"><p class="dim">loading...</p></div>
+        </section>
+        <section class="sys-block" data-sys-block="mounts">
+          <h3 class="panel-sub">FILESYSTEMS <span class="sys-count" data-count="mounts"></span></h3>
+          <div class="sys-table" data-body="mounts"><p class="dim">loading...</p></div>
+        </section>
       </div>
     </section>
 
@@ -92,14 +150,23 @@
         <article class="vault-pane md" data-vault-pane><p class="dim">Select a file.</p></article>
       </div>
     </section>
-
     <section class="panel panel-memory" data-panel="memory" hidden>
-      <h2 class="panel-title">MEMORY</h2>
+      <div class="mem-toolbar">
+        <h2 class="panel-title">MEMORY</h2>
+        <div class="view-toggle" data-mem-view-toggle role="group" aria-label="Graph renderer">
+          <button class="chip active" data-view="links" type="button">LINKS</button>
+          <button class="chip" data-view="orbit" type="button">ORBIT 3D</button>
+        </div>
+      </div>
       <div class="mem-tiles" data-mem-tiles></div>
       <div class="mem-grid">
         <div class="mem-graph-wrap">
           <em class="eyebrow">THE WEB OF NOTES</em>
           <canvas class="mem-graph" data-mem-graph></canvas>
+          <div class="mem-graph-3d" data-mem-graph-3d hidden>
+            <canvas data-mem-orbit></canvas>
+            <div class="mem-orbit-hint dim" aria-hidden="true">drag to rotate · click a node for its card</div>
+          </div>
           <div class="mem-legend" aria-hidden="true">
             <span><i style="background:#C94E44"></i>hub</span>
             <span><i style="background:#CDA47B"></i>generated map</span>
@@ -127,13 +194,25 @@
       <div class="skills-groups" data-skills-groups><p class="dim">loading...</p></div>
       <h3 class="panel-sub">TOOLBELT</h3>
       <div class="toolbelt" data-toolbelt><p class="dim">loading...</p></div>
+      <h3 class="panel-sub">BY HARNESS <span class="dim">/ what every installed agent knows</span></h3>
+      <div class="harness-row" data-harness-skills><p class="dim">loading...</p></div>
     </section>
-
     <section class="panel" data-panel="agents" hidden>
       <h2 class="panel-title">AGENTS</h2>
       <div class="agents-list" data-agents-list><p class="dim">loading...</p></div>
       <div class="manifest-block" data-connect></div>
       <div class="manifest-block" data-chatbackend></div>
+      <h3 class="panel-sub">HARNESS LEDGER <span class="dim">/ memories, sessions, models per agent</span></h3>
+      <div class="harness-ledger" data-harness-ledger><p class="dim">loading...</p></div>
+    </section>
+
+    <section class="panel panel-models" data-panel="models" hidden>
+      <div class="models-toolbar">
+        <h2 class="panel-title">MODELS</h2>
+        <input class="models-search" data-models-search type="search" placeholder="filter providers..." spellcheck="false">
+      </div>
+      <div class="models-counts" data-models-counts></div>
+      <div class="models-list" data-models-list><p class="dim">loading...</p></div>
     </section>
 
     <section class="panel panel-chat" data-panel="chat" hidden>

@@ -4,6 +4,7 @@
 // the daemon is absent.
 
 import { escapeHtml } from "./markdown.js";
+import { loadHarnesses, renderHarnessSkills } from "./harnesses.js";
 
 // filterCategories(categories, query) -> categories with only matching skills,
 // dropping groups that end up empty. Case-insensitive substring over skill name
@@ -163,4 +164,7 @@ export function initSkills(root) {
   }
 
   load();
+  loadHarnesses()
+    .then((rows) => renderHarnessSkills(root.querySelector("[data-harness-skills]"), rows))
+    .catch(() => {});
 }

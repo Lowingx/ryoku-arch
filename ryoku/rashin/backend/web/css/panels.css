@@ -232,6 +232,7 @@
 }
 .mem-graph-wrap .eyebrow { display: block; margin-bottom: 8px; }
 .mem-graph { display: block; width: 100%; height: 420px; min-height: 420px; touch-action: none; }
+.mem-graph[hidden] { display: none; }
 .mem-side { display: flex; flex-direction: column; gap: 10px; }
 .mem-side .eyebrow { display: block; margin-top: 6px; }
 

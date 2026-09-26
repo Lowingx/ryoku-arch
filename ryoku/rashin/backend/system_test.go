@@ -171,3 +171,30 @@ func TestDeriveTipsGrounded(t *testing.T) {
 		}
 	}
 }
+
+func TestParseCrontabRejectsShellProse(t *testing.T) {
+	// anacron script dirs are not crontabs; a stray shell line must never
+	// parse as a schedule even if the field count matches.
+	out := `if [ -f /etc/conf.d/snapper ]; then
+0 * * * * /usr/bin/true
+`
+	entries := parseCrontab(out, "test")
+	if len(entries) != 1 || entries[0].Command != "/usr/bin/true" {
+		t.Fatalf("entries = %+v, want only the real cron line", entries)
+	}
+}
+
+func TestLooksLikeCron(t *testing.T) {
+	for spec, want := range map[string]bool{
+		"*/5 * * * *":    true,
+		"0 17 * * 1-5":   true,
+		"0 0 * * SUN":    true,
+		"if [ -f /e/c ]": false,
+		"then rm -rf /":  false,
+		"@reboot":        false, // handled by the special-line form, not here
+	} {
+		if got := looksLikeCron(spec); got != want {
+			t.Errorf("looksLikeCron(%q) = %v, want %v", spec, got, want)
+		}
+	}
+}

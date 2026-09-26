@@ -433,11 +433,11 @@ func collectSchedules(inv *SystemInventory) {
 			sc.Crontabs = append(sc.Crontabs, entries...)
 		}
 	}
-	if entries, ok := readCronPaths("/etc/cron.hourly"); ok {
+	if entries, ok := readCronScripts("/etc/cron.hourly", "hourly"); ok {
 		sources++
 		sc.Anacron = append(sc.Anacron, entries...)
 	}
-	if entries, ok := readCronPaths("/etc/cron.daily"); ok {
+	if entries, ok := readCronScripts("/etc/cron.daily", "daily"); ok {
 		sources++
 		sc.Anacron = append(sc.Anacron, entries...)
 	}
@@ -467,7 +467,10 @@ func collectSchedules(inv *SystemInventory) {
 	}
 }
 
-// readCronPaths covers a crontab file or a cron.d/cron.hourly directory.
+// readCronPaths covers a crontab file or a cron.d directory. A directory of
+// scripts (cron.hourly/daily) is NOT a crontab tree: its files are shell
+// programs anacron runs, so each one becomes a single entry instead of being
+// parsed line by line.
 func readCronPaths(p string) ([]CronEntry, bool) {
 	st, err := os.Stat(p)
 	if err != nil {
@@ -480,11 +483,7 @@ func readCronPaths(p string) ([]CronEntry, bool) {
 			if e.IsDir() || strings.HasPrefix(e.Name(), ".") || strings.HasSuffix(e.Name(), ".rpmsave") {
 				continue
 			}
-			b, err := os.ReadFile(filepath.Join(p, e.Name()))
-			if err != nil {
-				continue
-			}
-			entries = append(entries, parseCrontab(string(b), filepath.Join(p, e.Name()))...)
+			entries = append(entries, CronEntry{Schedule: "-", Command: filepath.Join(p, e.Name()), Origin: "script"})
 		}
 		return entries, true
 	}
@@ -493,6 +492,19 @@ func readCronPaths(p string) ([]CronEntry, bool) {
 		return nil, false
 	}
 	return parseCrontab(string(b), p), true
+}
+
+// readCronScripts lists an anacron directory as scheduled work with a cadence.
+func readCronScripts(p, cadence string) ([]CronEntry, bool) {
+	entries, ok := readCronPaths(p)
+	if !ok {
+		return nil, false
+	}
+	for i := range entries {
+		entries[i].Schedule = cadence
+		entries[i].Origin = p
+	}
+	return entries, true
 }
 
 var cronLineRe = regexp.MustCompile(`^(\S+\s+\S+\s+\S+\s+\S+\s+\S+)\s+(\S.*)$`)
@@ -515,12 +527,15 @@ func parseCrontab(text, origin string) []CronEntry {
 		if m == nil {
 			continue
 		}
+		if !looksLikeCron(m[1]) {
+			continue
+		}
 		fields := strings.Fields(m[2])
-		if len(fields) < 2 {
+		if len(fields) == 0 {
 			continue
 		}
 		cmd := m[2]
-		if len(fields[0]) <= 16 && !strings.ContainsAny(fields[0], "/.$@\"'") &&
+		if len(fields) >= 2 && len(fields[0]) <= 16 && !strings.ContainsAny(fields[0], "/.$@\"'") &&
 			strings.HasPrefix(fields[1], "/") {
 			// six-field form: fields[0] is the run-as user, not part of the command
 			cmd = strings.Join(fields[1:], " ")
@@ -529,6 +544,28 @@ func parseCrontab(text, origin string) []CronEntry {
 	}
 	return out
 }
+
+// looksLikeCron rejects shell prose that happens to have five leading
+// whitespace-separated tokens: every cron field is digits, *, ranges, steps,
+// lists, or three-letter month/day names.
+func looksLikeCron(spec string) bool {
+	for _, f := range strings.Fields(spec) {
+		for _, part := range strings.Split(f, ",") {
+			for _, tok := range strings.Split(part, "/") {
+				tok = strings.ReplaceAll(tok, "-", "")
+				if tok == "*" || tok == "?" {
+					continue
+				}
+				if !cronTokenRe.MatchString(tok) {
+					return false
+				}
+			}
+		}
+	}
+	return true
+}
+
+var cronTokenRe = regexp.MustCompile(`^([0-9]+|[A-Za-z]{3})$`)
 
 var anacronRe = regexp.MustCompile(`^(\d+)\s+(\d+)\s+(\S+)\s+(\S.*)$`)
 

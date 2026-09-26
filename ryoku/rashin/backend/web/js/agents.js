@@ -6,6 +6,7 @@
 
 import { api } from "./api.js";
 import { escapeHtml } from "./markdown.js";
+import { initLedger } from "./harnesses.js";
 
 export function initAgents(root) {
   const listEl = root.querySelector("[data-agents-list]");
@@ -108,4 +109,5 @@ export function initAgents(root) {
   });
 
   load();
+  initLedger(root.querySelector("[data-harness-ledger]"));
 }

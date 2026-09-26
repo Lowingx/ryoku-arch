@@ -32,6 +32,14 @@ export const api = {
     if (!r.ok) throw new Error("chat agent " + r.status);
     return r.json();
   },
+  system: () => getJSON("/api/system"),
+  harnesses: () => getJSON("/api/harnesses"),
+  providers: () => getJSON("/api/providers"),
+  codeStatus: () => getJSON("/api/code/status"),
+  code: (endpoint, params) => {
+    const qs = params ? "?" + new URLSearchParams(params).toString() : "";
+    return getJSON("/api/code/" + endpoint + qs);
+  },
 };
 
 async function postAgent(path, id) {

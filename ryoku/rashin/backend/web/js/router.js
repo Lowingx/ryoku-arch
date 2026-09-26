@@ -1,7 +1,7 @@
 // Hash router: maps #/<panel> to the visible panel and the active nav item, and
 // plays a clip-path wipe on swap (skipped under prefers-reduced-motion).
 
-const PANELS = ["overview", "vault", "memory", "skills", "agents", "chat", "about"];
+const PANELS = ["overview", "system", "vault", "memory", "skills", "agents", "models", "chat", "about"];
 const reduce = () =>
   typeof matchMedia !== "undefined" &&
   matchMedia("(prefers-reduced-motion: reduce)").matches;
