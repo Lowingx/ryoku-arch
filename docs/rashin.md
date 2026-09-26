@@ -153,7 +153,8 @@ so it survives compositor restarts and is up before the desktop paints.
 
 The dashboard serves on `http://127.0.0.1:3600`. The HTTP API (all localhost)
 covers `GET /api/status`, `GET /api/vitals` (also pushed on `WS /ws/vitals`),
-`GET /api/vault` and `GET /api/vault/file?p=`, `POST /api/index`,
+`GET /api/system` (the read-only machine inventory: services, timers, cron,
+containers, listeners, processes, mounts, plus deterministic tips),
 `GET /api/agents` with wire and unwire, `GET /api/hermes/skills`,
 `GET /api/hermes/memory`, `GET /api/prowl` and `GET /api/prowl/search?q=`,
 `GET /api/about`, and `WS /ws/chat` for the Hermes bridge. Vitals come from

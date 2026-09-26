@@ -101,6 +101,9 @@ func Serve(cfg Config) error {
 	mux.HandleFunc("GET /api/vitals", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, SampleVitals())
 	})
+	mux.HandleFunc("GET /api/system", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, SystemNow())
+	})
 	mux.HandleFunc("GET /api/vault", func(w http.ResponseWriter, r *http.Request) {
 		files, err := VaultTree()
 		if err != nil {
