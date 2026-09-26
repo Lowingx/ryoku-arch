@@ -131,6 +131,9 @@ func Serve(cfg Config) error {
 	mux.HandleFunc("GET /api/agents", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, DetectAgents())
 	})
+	mux.HandleFunc("GET /api/harnesses", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, map[string]any{"harnesses": HarnessesNow()})
+	})
 	mux.HandleFunc("POST /api/agents/wire", agentMutation(func(id string) error {
 		if err := Wire(id); err != nil {
 			return err
@@ -175,6 +178,35 @@ func Serve(cfg Config) error {
 	})
 	mux.HandleFunc("GET /api/prowl/search", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, map[string]any{"hits": ProwlSearch(r.URL.Query().Get("q"))})
+	})
+	// The prowl code-intelligence proxy: the dashboard keeps one origin;
+	// /api/code/* forwards to `prowl api` on its own loopback port, and
+	// /api/providers answers the consolidated free/paid/subscription
+	// directory from the same service.
+	mux.HandleFunc("GET /api/code/status", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, prowlAPIStatus())
+	})
+	mux.HandleFunc("GET /api/code/", func(w http.ResponseWriter, r *http.Request) {
+		sub := "/api" + strings.TrimPrefix(r.URL.Path, "/api/code")
+		if r.URL.RawQuery != "" {
+			sub += "?" + r.URL.RawQuery
+		}
+		body, err := prowlAPIGet(sub)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(body)
+	})
+	mux.HandleFunc("GET /api/providers", func(w http.ResponseWriter, r *http.Request) {
+		body, err := prowlAPIGet("/api/providers")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadGateway)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(body)
 	})
 	mux.HandleFunc("GET /api/about", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, AboutReportNow(cfg))

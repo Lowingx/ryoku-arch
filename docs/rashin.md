@@ -155,10 +155,14 @@ The dashboard serves on `http://127.0.0.1:3600`. The HTTP API (all localhost)
 covers `GET /api/status`, `GET /api/vitals` (also pushed on `WS /ws/vitals`),
 `GET /api/system` (the read-only machine inventory: services, timers, cron,
 containers, listeners, processes, mounts, plus deterministic tips),
-`GET /api/agents` with wire and unwire, `GET /api/hermes/skills`,
+`GET /api/agents` with wire and unwire, `GET /api/harnesses` (every detected
+coding agent with its own skills, memories, sessions, model choice, and
+credential sources, names only), `GET /api/hermes/skills`,
 `GET /api/hermes/memory`, `GET /api/prowl` and `GET /api/prowl/search?q=`,
-`GET /api/about`, and `WS /ws/chat` for the Hermes bridge. Vitals come from
-`/proc` and `statfs`, with GPU via `nvidia-smi` when present.
+`GET /api/code/*` (the live Prowl index proxy, below), `GET /api/providers`
+(the consolidated free/paid/subscription directory), `GET /api/about`, and
+`WS /ws/chat` for the Hermes bridge. Vitals come from `/proc` and `statfs`,
+with GPU via `nvidia-smi` when present.
 
 ## Quick asks: two lanes
 
@@ -320,6 +324,14 @@ package, so the desktop set ships it and every rashin box has it.
   and hermes), installing Prowl's own agent skill alongside the `ryoku` skill, so
   an agent gains its code-intelligence guide in the same pass. It is skipped on a
   Prowl too old to apply non-interactively (no `--yes` in `skills --help`).
+- **One origin for the dashboard.** `prowl api` serves the same answers over
+  loopback HTTP (`/api/find`, `/api/overview`, `/api/impact`, ...) behind the
+  machine-local gateway token. Rashin starts it lazily on the repo
+  `prowlRepo()` names and proxies it as `GET /api/code/*`, so the dashboard
+  keeps one origin and the panels show live index answers instead of the
+  cached report. `/api/providers` forwards the consolidated free, credits,
+  and subscription directory the same way. When prowl or its index is absent,
+  `/api/code/status` says exactly why, and the panels degrade honestly.
 
 ## Prowl integration
 

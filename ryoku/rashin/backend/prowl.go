@@ -47,6 +47,11 @@ type ProwlHit struct {
 // name and falls back to the legacy prowl-agent, so a box that still carries
 // only the old binary keeps working; every caller runs the resolved path.
 func findProwl() (string, bool) {
+	if v := os.Getenv("RYOKU_PROWL_BIN"); v != "" {
+		if _, err := os.Stat(v); err == nil {
+			return v, true
+		}
+	}
 	if p, err := exec.LookPath("prowl"); err == nil {
 		return p, true
 	}
