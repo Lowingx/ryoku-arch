@@ -95,7 +95,8 @@ note saying the diff is unavailable.
 Rashin ships an agent skill, `ryoku`, so any agent finds the desktop's safety
 rules and command catalogue the way it finds a hub- or agent-grown skill, not
 only through the vault pointer block. It lives in the repo at
-`ryoku/rashin/skills/ryoku/` (`SKILL.md`, `bar.md`, `plugins.md`); the package
+`ryoku/rashin/skills/ryoku/` (`SKILL.md`, `gui.md`, `bar.md`, `plugins.md`,
+`feature.md`); the package
 installs it to `/usr/share/ryoku/skills/ryoku`, and a dev deploy resolves the
 checkout copy through the repo pointer.
 
@@ -104,7 +105,10 @@ edit a shipped file; a user override goes to `~/.config/ryoku/user_edits` or a
 command), the command catalogue (`ryoku`, `ryoku-shell`, `ryoku-hub`,
 `ryogami`, `ryoku-rashin`), the decision framework, and worked examples.
 `bar.md` is the QS Bar and dock guide; `plugins.md` is the plugin contract and
-the `ryoku plugin` CLI.
+the `ryoku plugin` CLI; `feature.md` is the ladder for a feature the desktop
+does not have: `ryostore catalog` first, then the machine's own catalogues,
+and only then a new plugin. The vault's `AGENTS.md` and `desktop.md` point at
+the same ladder, so an agent that only reads the vault still climbs it.
 
 `ryoku-rashin wire` symlinks the skill dir into every agent's skills directory:
 `~/.agents/skills/ryoku`, `~/.claude/skills/ryoku`, `~/.codex/skills/ryoku`,
@@ -252,17 +256,22 @@ recipes (`rr-<name>` fish abbreviations). Full design and UX in
 ## The dashboard
 
 Hand-authored HTML, CSS, and JS embedded in the binary. No node, no build step,
-no CDN; fonts and art ship in the repo. It deliberately does not use the desktop
-Tokyo Night language: the look is Japanese retro poster and print brutalism, near
-black paper with cream ink and a vermillion sun disc.
+no CDN; fonts, art, and the two vendored libraries (three.js for the 3D views,
+anime.js for the one orchestrated entrance) ship in the repo. It deliberately
+does not use the desktop Tokyo Night language: the look is Japanese retro
+poster and print brutalism, near black paper with cream ink and a vermillion
+sun disc. A rail switch turns all motion off at once (the OS
+reduced-motion setting does too), and every render loop parks itself under it.
 
 | Panel | Content |
 |---|---|
-| Overview | Hero poster header, vitals as poster stat blocks, daemon and hermes state, code intelligence card (prowl doctor counts, files and symbols, hotspots) |
+| Overview | Hero poster with a live 3D compass needle that follows the cursor, vitals as poster stat blocks, daemon and hermes state, the system summary strip, and the code intelligence card (live counts, clusters, and doctor score from the Prowl API, falling back to the cached report) |
+| System | The machine as a home server, read-only: services (running/stopped/user), timers (firing and dormant), cron/anacron/at, docker containers, listening sockets with reach, top processes, filesystems, and deterministic tips whose commands copy to your clipboard; rashin never runs any of them |
 | Vault | File tree, rendered markdown, reindex button, generated-fence badges |
-| Memory | Provider tiles (builtin or external, with Obsidian vault detection), a force-directed graph of the vault's notes and their references, a 26-week activity heatmap, and the Hermes session history read from `~/.hermes/state.db` |
-| Skills | Every Hermes skill grouped by category with origin counts (bundled, hub, agent-grown), live search, and the enabled toolbelt grouped into families |
-| Agents | Detected CLIs, wiring state per agent, wire and unwire actions |
+| Memory | Provider tiles (builtin or external, with Obsidian vault detection), the graph of the vault's notes in two renderers behind a toggle (the 2D force layout, and a 3D orbit you drag), a 26-week activity heatmap, and the Hermes session history read from `~/.hermes/state.db` |
+| Skills | Every Hermes skill grouped by category with origin counts (bundled, hub, agent-grown), live search, the enabled toolbelt grouped into families, and a by-harness strip of what every other agent installed |
+| Agents | Detected CLIs, wiring state per agent, wire and unwire actions, and the harness ledger: each agent's own skills, memory files, session counts, model choice, and credential names |
+| Models | The consolidated provider directory (free, credits, paid) from Prowl's shipped catalogue, with signup friction, model counts, and a key-on-box mark joined from the harness scan |
 | Chat | The full Hermes conversation surface (below) |
 | About | What Rashin is, the pieces with live facts, quick start, a command crib (`hermes -h`, `hermes gateway`, `hermes model`, `hermes tools`, `prowl overview`), and the privacy note |
 

@@ -53,8 +53,11 @@ const AgentsTemplate = "# Ryoku system vault\n" +
 	"\n" +
 	"To change the desktop, use the `ryoku` skill (linked into your skills dir;\n" +
 	"`desktop.md` names its path and carries the GUI map): answer \"how do I\" GUI-\n" +
-	"first, act through commands, never edit shipped files. A new bar widget is a\n" +
-	"plugin, per the skill's `plugins.md`.\n" +
+	"first, act through commands, never edit shipped files. When the ask is a\n" +
+	"feature the desktop does not have, climb the ladder in the skill's\n" +
+	"`feature.md` before writing code: `ryostore catalog`, then\n" +
+	"`ryoku-shell bar catalog`, then `ryoku plugin list`, then build a plugin per\n" +
+	"`plugins.md`. Never rebuild what the store or a hidden built-in already ships.\n" +
 	"\n" +
 	"## What is here\n" +
 	"\n" +

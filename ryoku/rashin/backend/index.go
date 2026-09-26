@@ -174,7 +174,8 @@ func actingBody() string {
 	b.WriteString("`ryoku-hub`, `ryogami`, `ryoku wm act`), never by editing shipped files. The\n")
 	b.WriteString("`ryoku` skill is the contract for that: `SKILL.md` (rules and the command\n")
 	b.WriteString("catalogue), `gui.md` (the GUI map), `bar.md` (the QS Bar model), `plugins.md`\n")
-	b.WriteString("(how a new widget is written and installed).\n")
+	b.WriteString("(how a new widget is written and installed), `feature.md` (the ladder:\n")
+	b.WriteString("check the store, then the machine, then build).\n")
 	if d := skillSourceDir(); d != "" {
 		fmt.Fprintf(&b, "Read them at `%s/` (also linked into each agent's skills dir as `ryoku`).\n", d)
 	} else {
