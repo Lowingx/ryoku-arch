@@ -4,6 +4,8 @@ import QtQuick
 import Quickshell
 import Quickshell.Bluetooth
 import Quickshell.Io
+import shell.services as Ryoku
+import inir
 import inir.modules.common
 import inir.services
 
@@ -393,7 +395,10 @@ Singleton {
             icon: "content_paste",
             category: "tools",
             keywords: ["clipboard", "history", "paste"],
-            execute: () => { GlobalStates.clipboardOpen = !GlobalStates.clipboardOpen }
+            execute: () => {
+                const st = Ryoku.ShellState.forActive()
+                if (st) st.clipboardOpen = !st.clipboardOpen
+            }
         }
     ]
 

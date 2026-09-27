@@ -14,15 +14,8 @@ Singleton {
     // Deferred panel loading gate — non-critical panels wait for this before activating
     property bool deferredPanelsReady: false
     property bool barOpen: true
-    property bool crosshairOpen: false
     property bool sidebarLeftOpen: false
     property string sidebarLeftTargetOutput: ""
-    property bool sidebarLeftExpanded: false
-    // A left-sidebar feature requests the panel stay open through implicit closes
-    // (backdrop click / focus loss) and yield keyboard focus — e.g. the InnerTune
-    // device-flow login, where the user must type a code into an external browser.
-    property bool sidebarLeftHoldOpen: false
-    property bool aiChatDetached: false
     property bool sidebarRightOpen: false
     property string sidebarRightTargetOutput: ""
     property bool mediaControlsOpen: false
@@ -61,38 +54,22 @@ Singleton {
     property bool osdVolumeOpen: false
     property bool osdMicOpen: false
     property bool osdMediaOpen: false
-    property string osdMediaAction: "play" // "play", "pause", "next", "previous"
     signal osdMediaActionTriggered(string action)
 
     function showMediaAction(action: string): void {
         const normalized = String(action ?? "")
         if (!["play", "pause", "next", "previous"].includes(normalized))
             return
-        root.osdMediaAction = normalized
         root.osdMediaOpen = true
         root.osdMediaActionTriggered(normalized)
     }
 
     property bool osdKeyboardLayoutOpen: false
-    property bool oskOpen: false
-    property bool overlayOpen: false
-    property bool overviewOpen: false
-    property string overviewMode: "default"
-    property string overviewTargetOutput: ""
-    property string overviewSearchPrefix: ""
-    signal pillSurfaceCommand(string command, string surface)
-    property bool altSwitcherOpen: false
-    signal altSwitcherCommand(string command)
     property int activeContextMenuCount: 0
     property var activeContextMenu: null
-    property bool clipboardOpen: false
     property bool settingsOverlayOpen: false
     property int settingsOverlayRequestedPage: -1 // Set before opening to navigate to a specific page
     property string settingsOverlayRequestedSection: ""
-    property int settingsOverlayCurrentPage: -1 // Published by whichever overlay chrome is loaded
-    property var _settingsNativeDialogs: ({})
-    readonly property bool settingsNativeDialogOpen:
-        Object.keys(root._settingsNativeDialogs).length > 0
 
     // The frame's own settings overlay. Ryoku Hub owns every non-frame
     // setting page, so the family chrome opens locally and deep-links the
@@ -109,89 +86,15 @@ Singleton {
         root.settingsOverlayOpen = true
     }
 
-    function toggleSettings(): void {
-        if (root.settingsOverlayOpen) {
-            root.settingsOverlayOpen = false
-            return
-        }
-        root.openSettings()
-    }
-
-    function setSettingsNativeDialogVisible(dialogKey: string, visible: bool): void {
-        const key = String(dialogKey ?? "").trim()
-        if (!key) return
-        const next = Object.assign({}, root._settingsNativeDialogs)
-        if (visible)
-            next[key] = true
-        else
-            delete next[key]
-        root._settingsNativeDialogs = next
-    }
-
-    property bool regionSelectorOpen: false
-    property bool japaneseLookupOpen: false
-    property bool japaneseLookupExpanded: false
-    property var japaneseLookupResult: ({})
-    property string japaneseLookupScreen: ""
-    property real japaneseLookupX: 0
-    property real japaneseLookupY: 0
-    property real japaneseLookupWidth: 0
-    property real japaneseLookupHeight: 0
-    property var regionSelectorAction: 0
-    property var regionSelectorMode: 0
-    // Explicit screenshot callers must remain deterministic. The dedicated
-    // Niri binds for screenshot, OCR and visual search are separate contracts;
-    // opening one must never inherit state left by another tool.
-    function openRegionScreenshot(): void {
-        regionSelectorAction = 0
-        regionSelectorMode = 0
-        regionSelectorOpen = true
-    }
-
-    // The unified snip menu may restore the last toolbar choice. Raw ordinals
-    // mirror RegionSelection's enums: action 0 Shot, 1 Edit, 2 Search, 3 OCR
-    // (record is never restored); mode 0 rectangle, 1 circle.
-    function openRememberedRegionTool(): void {
-        let action = 0
-        let mode = 0
-        if (Config.options?.regionSelector?.rememberSnipChoice ?? true) {
-            const savedAction = Config.options?.regionSelector?.lastAction ?? 0
-            const savedMode = Config.options?.regionSelector?.lastMode ?? 0
-            if (savedAction >= 0 && savedAction <= 3) action = savedAction
-            if (savedMode === 1) mode = savedMode
-        }
-        regionSelectorAction = action
-        regionSelectorMode = mode
-        regionSelectorOpen = true
-    }
-    property bool tilingOverlayPickerOpen: false
-    property bool tilingOverlayOsdOpen: false
-    // Native screenshot annotation editor (Edit action)
-    property bool annotationEditorOpen: false
-    property string annotationEditorPath: ""
     property bool screenLocked: false
-    property bool screenLockContainsCharacters: false
-    property bool screenUnlockFailed: false
     property bool sessionOpen: false
-    property bool superDown: false
-    property bool superReleaseMightTrigger: true
-    property bool wallpaperSelectorOpen: false
-    property string wallpaperSelectorSource: ""
-    property string wallpaperSelectorQuery: ""
-    property bool wallpaperLauncherOpen: false
-    property string wallpaperLauncherMode: "static"
     property bool widgetEditMode: false
     property string selectedDesktopWidget: ""
-    property string selectedDesktopItem: ""
     property string desktopWidgetQuickControls: ""
-    property bool shellLayoutEditMode: false
 
     function setWidgetEditMode(enabled: bool): void {
-        if (enabled)
-            shellLayoutEditMode = false
-        else {
+        if (!enabled) {
             selectedDesktopWidget = ""
-            selectedDesktopItem = ""
             desktopWidgetQuickControls = ""
         }
         widgetEditMode = enabled
@@ -201,22 +104,11 @@ Singleton {
         if (!widgetEditMode)
             return
         selectedDesktopWidget = String(instanceKey ?? "")
-        selectedDesktopItem = ""
     }
 
     function clearDesktopWidgetSelection(): void {
         selectedDesktopWidget = ""
-        selectedDesktopItem = ""
         desktopWidgetQuickControls = ""
-    }
-
-    function selectDesktopItem(instanceKey: string): void {
-        selectedDesktopItem = String(instanceKey ?? "")
-        selectedDesktopWidget = ""
-    }
-
-    function clearDesktopItemSelection(): void {
-        selectedDesktopItem = ""
     }
 
     function requestDesktopWidgetQuickControls(instanceKey: string): void {
@@ -227,65 +119,6 @@ Singleton {
         desktopWidgetQuickControls = key
     }
 
-    function setShellLayoutEditMode(enabled: bool): void {
-        if (enabled) {
-            widgetEditMode = false
-            selectedDesktopWidget = ""
-            selectedDesktopItem = ""
-            desktopWidgetQuickControls = ""
-        }
-        shellLayoutEditMode = enabled
-    }
-    // Navigate sidebar right to a specific widget by type (e.g. "notepad", "calendar")
-    property string sidebarRightRequestedWidget: ""
-    // Dialog requests from other panels (e.g. left sidebar → right sidebar)
-    property bool requestWifiDialog: false
-    property bool requestBluetoothDialog: false
-    // Selection targets: "main", "backdrop", "waffle", "waffle-backdrop"
-    property string wallpaperSelectionTarget: "main"
-    // Target monitor for wallpaper selector (set before opening, avoids config timing issues)
-    property string wallpaperSelectorTargetMonitor: ""
-    onWallpaperSelectorOpenChanged: {
-        // Reset selection target when selector closes without selection
-        if (!wallpaperSelectorOpen) {
-            wallpaperSelectionTarget = "main";
-            wallpaperSelectorTargetMonitor = "";
-            // Also reset Config targets if they were set
-            if (Config.options?.wallpaperSelector?.selectionTarget &&
-                Config.options.wallpaperSelector.selectionTarget !== "main") {
-                Config.setNestedValue("wallpaperSelector.selectionTarget", "main")
-            }
-            if (Config.options?.wallpaperSelector?.targetMonitor) {
-                Config.setNestedValue("wallpaperSelector.targetMonitor", "")
-            }
-        }
-    }
-    onWallpaperLauncherOpenChanged: {
-        if (!wallpaperLauncherOpen) {
-            wallpaperSelectionTarget = "main"
-            wallpaperSelectorTargetMonitor = ""
-            if (Config.options?.wallpaperSelector?.selectionTarget
-                    && Config.options.wallpaperSelector.selectionTarget !== "main")
-                Config.setNestedValue("wallpaperSelector.selectionTarget", "main")
-            if (Config.options?.wallpaperSelector?.targetMonitor)
-                Config.setNestedValue("wallpaperSelector.targetMonitor", "")
-        }
-    }
-    property bool cheatsheetOpen: false
-    property bool coverflowSelectorOpen: false
-    onCoverflowSelectorOpenChanged: {
-        if (!coverflowSelectorOpen) {
-            wallpaperSelectionTarget = "main";
-            wallpaperSelectorTargetMonitor = "";
-            if (Config.options?.wallpaperSelector?.selectionTarget &&
-                Config.options.wallpaperSelector.selectionTarget !== "main") {
-                Config.setNestedValue("wallpaperSelector.selectionTarget", "main")
-            }
-            if (Config.options?.wallpaperSelector?.targetMonitor) {
-                Config.setNestedValue("wallpaperSelector.targetMonitor", "")
-            }
-        }
-    }
     property bool controlPanelOpen: false
     // iRiS: screen-local geometry ({x, y, width, height, radius, screen}) of the
     // Island part that last opened a surface, so it can morph out of and back
@@ -357,29 +190,13 @@ Singleton {
     property var irisDockMenuRequest: null
     // A query for Spotlight to type as it opens (IPC); taken and cleared by the palette.
     property string irisSpotlightQuery: ""
-    // Desktop widget manager toggle routed to the output that should show it.
-    signal desktopWidgetManagerToggleRequested(string outputName)
     // Whether any output's Island is expanded, published for `inir iris status`.
     property bool irisIslandExpanded: false
     property string irisIslandPage: ""
-    property bool dashboardOpen: false
-    property bool workspaceShowNumbers: false
-    property var activeBooruImageMenu: null  // Track which BooruImage has its menu open
-    property var activeTaskViewMenu: null  // Track which WindowThumbnail has its menu open
-    // Waffle-specific states
+    // The palette's open flag: the frame's search surface and the Spotlight
+    // launcher variant share it, so one morph answers Super+Space, the island
+    // search bubble and the dock's launcher alike.
     property bool searchOpen: false
-    property bool waffleActionCenterOpen: false
-    property bool waffleNotificationCenterOpen: false
-    property bool waffleWidgetsOpen: false
-    property bool waffleAltSwitcherOpen: false
-    property bool waffleClipboardOpen: false
-    property bool waffleTaskViewOpen: false
-    // Panel family transition animation state
-    property bool familyTransitionActive: false
-    property string familyTransitionDirection: "left" // "left" = current exits left, new enters from right
-    property string familyTransitionTarget: ""
-
-    signal requestRipple(real x, real y, string screenName)
 
     // User-configured fallback for singular panels such as wallpaper pickers.
     // Empty string uses the first available Quickshell screen.
@@ -429,8 +246,6 @@ Singleton {
         return names[0]
     }
 
-    readonly property string overviewPresentationOutput:
-        root.resolveOutputName(root.overviewTargetOutput, [])
     readonly property var sidebarScreenList: (Config.options?.panelFamily ?? "ii") === "iris"
         ? [] : (Config.options?.sidebar?.screenList ?? [])
     readonly property string sidebarLeftPresentationOutput:
@@ -439,24 +254,6 @@ Singleton {
     readonly property string sidebarRightPresentationOutput:
         root.resolveOutputName(root.sidebarRightTargetOutput,
             root.sidebarScreenList)
-
-    function openOverview(outputName): void {
-        overviewMode = "default"
-        overviewTargetOutput = root.resolveOutputName(outputName, [])
-        overviewOpen = true
-    }
-
-    function closeOverview(): void {
-        overviewOpen = false
-    }
-
-    function toggleOverview(outputName): void {
-        const resolved = root.resolveOutputName(outputName, [])
-        if (overviewOpen && overviewMode === "default" && overviewPresentationOutput === resolved)
-            root.closeOverview()
-        else
-            root.openOverview(resolved)
-    }
 
     function openSidebarLeft(outputName): void {
         if (Config.options?.panelFamily === "iris" && !(Config.options?.iris?.sidebars?.left?.enable ?? true)) return
@@ -467,15 +264,6 @@ Singleton {
 
     function closeSidebarLeft(): void {
         sidebarLeftOpen = false
-    }
-
-    function toggleSidebarLeft(outputName): void {
-        const resolved = root.resolveOutputName(outputName,
-            root.sidebarScreenList)
-        if (sidebarLeftOpen && sidebarLeftPresentationOutput === resolved)
-            root.closeSidebarLeft()
-        else
-            root.openSidebarLeft(resolved)
     }
 
     function openSidebarRight(outputName): void {
@@ -489,82 +277,10 @@ Singleton {
         sidebarRightOpen = false
     }
 
-    function toggleSidebarRight(outputName): void {
-        const resolved = root.resolveOutputName(outputName,
-            root.sidebarScreenList)
-        if (sidebarRightOpen && sidebarRightPresentationOutput === resolved)
-            root.closeSidebarRight()
-        else
-            root.openSidebarRight(resolved)
-    }
-
-    onOverviewOpenChanged: {
-        if (overviewOpen && overviewTargetOutput.length === 0)
-            overviewTargetOutput = root.resolveOutputName("", [])
-    }
-
     onSidebarLeftOpenChanged: {
         if (sidebarLeftOpen && sidebarLeftTargetOutput.length === 0)
             sidebarLeftTargetOutput = root.resolveOutputName("",
                 root.sidebarScreenList)
-    }
-
-    // Close other waffle popups when one opens (unless allowMultiplePanels is enabled)
-    property bool _allowMultiple: Config.options?.waffles?.behavior?.allowMultiplePanels ?? false
-    onSearchOpenChanged: {
-        if (searchOpen && !_allowMultiple) {
-            waffleActionCenterOpen = false
-            waffleNotificationCenterOpen = false
-            waffleWidgetsOpen = false
-            waffleClipboardOpen = false
-        }
-    }
-    onWaffleActionCenterOpenChanged: {
-        if (waffleActionCenterOpen && !_allowMultiple) {
-            searchOpen = false
-            waffleNotificationCenterOpen = false
-            waffleWidgetsOpen = false
-            waffleClipboardOpen = false
-        }
-    }
-    onWaffleNotificationCenterOpenChanged: {
-        if (waffleNotificationCenterOpen) {
-            if (!_allowMultiple) {
-                searchOpen = false
-                waffleActionCenterOpen = false
-                waffleWidgetsOpen = false
-                waffleClipboardOpen = false
-            }
-            // Mark notifications as read when opening notification center
-            Notifications.timeoutAll();
-            Notifications.markAllRead();
-        }
-    }
-    onWaffleWidgetsOpenChanged: {
-        if (waffleWidgetsOpen && !_allowMultiple) {
-            searchOpen = false
-            waffleActionCenterOpen = false
-            waffleNotificationCenterOpen = false
-            waffleClipboardOpen = false
-        }
-    }
-    onWaffleClipboardOpenChanged: {
-        if (waffleClipboardOpen && !_allowMultiple) {
-            searchOpen = false
-            waffleActionCenterOpen = false
-            waffleNotificationCenterOpen = false
-            waffleWidgetsOpen = false
-            waffleTaskViewOpen = false
-        }
-    }
-    onWaffleTaskViewOpenChanged: {
-        if (waffleTaskViewOpen && !_allowMultiple) {
-            searchOpen = false
-            waffleActionCenterOpen = false
-            waffleNotificationCenterOpen = false
-            waffleWidgetsOpen = false
-            waffleClipboardOpen = false
-        }
     }
 
     onSidebarRightOpenChanged: {

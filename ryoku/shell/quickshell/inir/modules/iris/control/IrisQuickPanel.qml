@@ -325,7 +325,10 @@ GridLayout {
             ShortcutTile {
                 glyph: "screenshot_region"
                 label: Translation.tr("Capture")
-                onClicked: { GlobalStates.controlPanelOpen = false; GlobalStates.openRegionScreenshot() }
+                onClicked: {
+                    GlobalStates.controlPanelOpen = false
+                    Quickshell.execDetached(["sh", "-c", "flock -n -o /tmp/ryoshot.lock qs -c ryoshot"])
+                }
             }
             ShortcutTile {
                 glyph: RecorderStatus.isRecording ? "stop_circle" : "radio_button_checked"

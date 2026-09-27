@@ -310,10 +310,7 @@ ColumnLayout {
             colBackground: IrisStyle.veil
             colBackgroundHover: IrisStyle.veilStrong
             Accessible.name: Translation.tr("Change wallpaper")
-            onClicked: {
-                GlobalStates.wallpaperSelectorTargetMonitor = page.island.targetScreen?.name ?? ""
-                Quickshell.execDetached(["ryogami", "wallpaper", "ui"])
-            }
+            onClicked: Quickshell.execDetached(["ryogami", "wallpaper", "ui"])
         }
 
         RowLayout {

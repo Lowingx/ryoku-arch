@@ -961,10 +961,6 @@ Item {
             root.showBadge("language", IrisStyle.accent,
                 KeyboardIndicators.currentLayoutCodeInline || KeyboardIndicators.currentLayoutName)
         }
-        function onWallpaperSelectorOpenChanged(): void {
-            root.publishOrigin(chassis)
-            if (GlobalStates.wallpaperSelectorOpen) root.expanded = false
-        }
         function onSearchOpenChanged(): void {
             root.publishOrigin(chassis)
             if (GlobalStates.searchOpen) root.expanded = false

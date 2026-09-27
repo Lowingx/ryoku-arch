@@ -15,6 +15,7 @@ import inir
 import inir.modules.common
 import inir.modules.iris
 import inir.modules.iris.critical
+import inir.services
 import "../../../../services/lib/screens.js" as Screens
 
 Item {
@@ -53,6 +54,10 @@ Item {
                 // The reference's boot ladder, re-driven whenever the shell
                 // hot-reloads (singletons keep their one-shot state).
                 Component.onCompleted: {
+                    // GlobalActions owns the `globalActions` IPC target; it is a
+                    // lazy singleton, so without this nudge the target stays
+                    // unregistered until the palette first opens.
+                    void GlobalActions.allActions
                     GlobalStates.shellEntryReady = false
                     GlobalStates.deferredPanelsReady = false
                     if (Config.ready)

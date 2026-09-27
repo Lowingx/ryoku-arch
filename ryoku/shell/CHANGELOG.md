@@ -21,6 +21,21 @@
   fell back to Noto Sans with different metrics and tight card rows clipped
   their unit glyphs (the Vitals card's `%` ran off the edge). Both faces now
   ship from [ryoku] (see the release changelog) and pacstrap on install.
+- **The iRiS frame starts with the reference's own defaults.** The port pruned
+  the reference shell without carrying its config defaults, so game mode
+  silently disabled animations, effects and the visualizer, sound events
+  defaulted on, and the keyboard-indicator, resource-monitor and capture keys
+  ran on inline fallbacks that had drifted from upstream values. The surviving
+  blocks are backfilled with the reference defaults, so a fresh box behaves
+  like the shell it was ported from and every Studio row resets to the right
+  value.
+- **The Control Center's Capture tile captures.** It drove the reference's own
+  region selector, which the port pruned, so the tile did nothing; it now
+  opens Ryoku's capture tool. The palette's clipboard action likewise opens
+  the shell's clipboard overlay instead of a flag no surface reads, and the
+  frame's action registry registers its IPC target at boot the way the
+  reference does, so keybinds and scripts can run actions before the palette
+  first opens.
 - **The edge field's top and bottom edges light up again.** The EDGES chips in
   the visualizer's editing bar passed their lit state to `armed`, which `Btn`
   treats as enabled, so an unlit edge could never be tapped: with the default
