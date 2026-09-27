@@ -1,47 +1,60 @@
-/* System: dense ledger tables under a ruled toolbar. */
+/* System: surface tabs, a filter strip, and hairline ledgers. Tips are the
+   one place the alert red shows up in content, because a tip is an alert. */
 
-.sys-toolbar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 14px 0;
-}
-.sys-toolbar .sys-search { flex: 1; max-width: 300px; }
-.sys-stamp { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); }
-.sys-stamp.stale { color: var(--warn); }
-.sys-body { min-height: 320px; }
-.sys-body table.data { background: var(--sheet); border: 1px solid var(--rule-soft); padding: 2px 14px; }
-.sys-body table.data th { position: sticky; top: 0; background: var(--sheet); }
-.sys-body .muted, .sys-body .dim { font-size: 12px; }
-
+[data-sys-tabs] { margin-bottom: var(--s4); }
 .seg-tip { margin-left: auto; }
 
-.tips-line { margin: 0 0 10px; }
-.tip {
-  display: flex; flex-direction: column; gap: 6px;
-  margin-bottom: 8px; padding: 12px 14px;
-  background: var(--sheet);
-  border: 1px solid var(--rule-soft);
-  border-left: 2px solid var(--idle);
+.sys-toolbar {
+  display: flex; align-items: center; gap: var(--s3);
+  margin-bottom: var(--s4);
 }
-.tip-act { border-left-color: var(--anno); }
-.tip-watch { border-left-color: var(--warn); }
-.tip-info { border-left-color: var(--info); }
-.tip b { font-size: 13px; font-weight: 600; }
-.tip p { margin: 0; font-size: 12.5px; color: var(--ink-dim); max-width: 78ch; }
-.tip .state { align-self: flex-start; }
+.sys-toolbar .sys-search { flex: 1; max-width: 320px; }
+.sys-stamp { margin-left: auto; font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; color: var(--ink-faint); }
+.sys-stamp.stale { color: var(--sun); }
+
+.sys-body { min-height: 320px; }
+.sys-body > .seg { margin-bottom: var(--s3); }
+.sys-body > .seg .seg-btn { height: 26px; font-size: 12px; }
+.sys-body table.data {
+  background: var(--paper-lift);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  border-collapse: separate; border-spacing: 0;
+  overflow: hidden;
+}
+.sys-body table.data th, .sys-body table.data td { padding-left: var(--s4); }
+.sys-body table.data th:last-child, .sys-body table.data td:last-child { padding-right: var(--s4); }
+.sys-body .muted, .sys-body .dim { font-size: 12.5px; }
+
+.tips-line { margin: 0 0 var(--s4); font-size: 13px; }
+.tip {
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  column-gap: var(--s4);
+  row-gap: 6px;
+  margin-bottom: var(--s2);
+  padding: var(--s4) var(--s5);
+}
+.tip .state { grid-row: 1 / span 3; align-self: start; padding-top: 2px; }
+.tip b { font-weight: 500; font-size: 15px; color: var(--ink); }
+.tip p { margin: 0; font-size: 13.5px; color: var(--ink-muted); max-width: 78ch; }
+.tip-act { border-color: color-mix(in srgb, var(--alert) 45%, var(--line)); }
 
 .cmd-btn {
-  display: flex; align-items: center; gap: 12px;
-  width: 100%;
-  margin-top: 2px;
-  padding: 6px 10px;
-  background: var(--sheet-raised);
-  border: 1px solid var(--rule-soft);
+  display: flex; align-items: center; gap: var(--s3);
+  width: 100%; max-width: 78ch;
+  margin-top: var(--s1);
+  padding: var(--s2) var(--s3);
+  background: var(--paper);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
   color: var(--ink);
   text-align: left;
   cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease);
 }
-.cmd-btn:hover { border-color: var(--anno); }
-.cmd-btn code { font-family: var(--font-mono); font-size: 12px; word-break: break-all; }
-.cmd-copy { margin-left: auto; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); white-space: nowrap; }
+.cmd-btn:hover { border-color: var(--line-strong); }
+.cmd-btn code { font-family: var(--mono); font-size: 12px; word-break: break-all; }
+.cmd-btn code::before { content: "$ "; color: var(--ink-faint); }
+.cmd-copy { margin-left: auto; font-family: var(--mono); font-size: 10px; letter-spacing: var(--track-label); text-transform: uppercase; color: var(--ink-faint); white-space: nowrap; }
+.cmd-btn:hover .cmd-copy { color: var(--ink); }

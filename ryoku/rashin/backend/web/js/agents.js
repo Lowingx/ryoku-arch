@@ -62,7 +62,7 @@ export function initAgents(root) {
     const btns = (backs || [])
       .map((b) => {
         const cls = "seg-btn" + (b.active ? " active" : "");
-        const star = b.recommended ? " ★" : "";
+        const star = b.recommended ? ' <i class="seg-tag">recommended</i>' : "";
         const dis = b.available ? "" : " disabled";
         return '<button class="' + cls + '" data-chat="' + esc(b.id) + '"' + dis + ">" + esc(b.name) + star + "</button>";
       })
@@ -77,7 +77,7 @@ export function initAgents(root) {
       const list = await api.agents();
       listEl.innerHTML = (list || []).map(card).join("");
     } catch (err) {
-      listEl.innerHTML = '<p class="muted">agents unavailable, start the daemon</p>';
+      listEl.innerHTML = '<p class="muted">The daemon is not running, so there are no agents to show.</p>';
     }
     try { renderConnect(await api.manifest()); } catch (e) { connectEl.innerHTML = ""; }
     try { renderChat(await api.chatAgents()); } catch (e) { chatEl.innerHTML = ""; }

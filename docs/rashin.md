@@ -159,6 +159,8 @@ The dashboard serves on `http://127.0.0.1:3600`. The HTTP API (all localhost)
 covers `GET /api/status`, `GET /api/vitals` (also pushed on `WS /ws/vitals`),
 `GET /api/system` (the read-only machine inventory: services, timers, cron,
 containers, listeners, processes, mounts, plus deterministic tips),
+`GET /api/theme` (the desktop's resolved palette and whether a wallpaper is
+showable) and `GET /api/wallpaper` (that wallpaper's file, image or clip),
 `GET /api/agents` with wire and unwire, `GET /api/harnesses` (every detected
 coding agent with its own skills, memories, sessions, model choice, and
 credential sources, names only), `GET /api/hermes/skills`,
@@ -256,18 +258,29 @@ recipes (`rr-<name>` fish abbreviations). Full design and UX in
 ## The dashboard
 
 Hand-authored HTML, CSS, and JS embedded in the binary. No node, no build
-step, no CDN; fonts and art ship in the repo. The look is a cyanotype
-engineering drawing: a Prussian-blue sheet on a faint grid, chalk line-work,
-annotation red for emphasis, IBM Plex Condensed for chrome and Plex Mono for
-every number. A masthead of numbered sheets replaces a side rail; a title
-block of machine facts (host, kernel, uptime) runs along the foot. It is
-deliberately not the desktop's Tokyo Night palette and carries no poster art.
-Motion is functional only (bar widths, panel swaps) and yields to the OS
-reduced-motion setting.
+step, no CDN; the fonts ship in the repo as subset woff2. The dashboard is a
+Ryoku surface, not a product with its own costume: it speaks the Hub's paper
+and ink (`docs/ui-ux.md`) and wears the desktop's live palette. `GET
+/api/theme` resolves the Material roles the way `Tokens.qml` does (a named
+scheme, then the wallpaper, then the signature default), and the page retints
+within 15 seconds of a wallpaper or scheme change. Emphasis is inversion (a
+bone plate for the active tab, file, or segment), colour is data, and the 力
+seal stays vermillion. Fraunces sets titles, Space Grotesk the language and
+numerals, Space Mono the tracked labels and paths, Noto Sans CJK JP the kanji
+gloss beside every sheet name.
+
+Navigation is three floating islands, like the default QS Bar: the seal, the
+sheets, and the daemon/hermes/prowl lamps with a clock. The Overview opens on
+the wallpaper that is on screen right now (`GET /api/wallpaper` serves the file
+`~/.local/state/ryoku-wallpaper` names; a live wallpaper plays muted while the
+sheet is visible), with the desktop clock's numerals and a sysmon readout over
+it. Motion is small and purposeful (a sheet eases in, the numerals rise once,
+bars sweep) and yields to the OS reduced-motion setting and to
+`theme.motion.reduce` in `shell.json`.
 
 | Panel | Content |
 |---|---|
-| Overview | Instrument band (CPU, memory, disk, GPU as segmented gauges with a redline mark), the code intelligence card led by measured token savings from the Prowl index, and the system summary block |
+| Overview | The live wallpaper with the clock, host, kernel, uptime, and a CPU/memory/disk/GPU sysmon readout, then the code intelligence card led by measured token savings from the Prowl index and the system summary card |
 | System | The machine as a home server, read-only: services (running/stopped/user), timers (firing and dormant), cron/anacron/at, docker containers, listening sockets with reach, top processes, filesystems, and deterministic tips whose commands copy to your clipboard; rashin never runs any of them |
 | Vault | Grouped tree (maps, memory, journal; the agent-facing source mirror collapsed), rendered markdown, reindex button, generated-file badges |
 | Memory | Provider tiles (builtin or external, with Obsidian vault detection), the 2D force graph of the vault's notes and their references with a data-driven legend, a 26-week activity heatmap, and the Hermes session history read from `~/.hermes/state.db` |

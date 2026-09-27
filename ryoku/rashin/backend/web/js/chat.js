@@ -289,7 +289,7 @@ if (typeof document !== "undefined") {
 
     // ---- render pieces ---------------------------------------------------
     const emptyHTML =
-      '<div class="chat-empty"><p>Ask about your machine. Enter sends, / lists commands.</p></div>';
+      '<div class="chat-empty"><p>Ask anything about this machine.</p></div>';
 
     function thumbStrip(images) {
       if (!images || !images.length) return "";
@@ -514,7 +514,7 @@ if (typeof document !== "undefined") {
     function renderDrawer() {
       if (!drawerList) return;
       if (!state.history.length) {
-        drawerList.innerHTML = '<p class="dim">no sessions yet</p>';
+        drawerList.innerHTML = '<p class="dim">No sessions yet.</p>';
         return;
       }
       drawerList.innerHTML = state.history.map((h) => {
@@ -529,7 +529,7 @@ if (typeof document !== "undefined") {
       const opening = drawer.hidden;
       drawer.hidden = !opening;
       if (opening) {
-        drawerList.innerHTML = '<p class="dim">loading...</p>';
+        drawerList.innerHTML = '<p class="dim">Reading sessions…</p>';
         send({ type: "history" });
         renderDrawer();
       }

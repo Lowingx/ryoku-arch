@@ -47,7 +47,7 @@ export function renderLedger(root, rows) {
   if (!root) return;
   const present = (rows || []).filter((h) => h.present);
   if (!present.length) {
-    root.innerHTML = '<p class="muted">no coding agents detected.</p>';
+    root.innerHTML = '<p class="muted">No coding agents on this box yet.</p>';
     return;
   }
   root.innerHTML = present
@@ -94,6 +94,6 @@ export function initLedger(container) {
   loadHarnesses()
     .then((rows) => renderLedger(container, rows))
     .catch(() => {
-      container.innerHTML = '<p class="muted">the daemon did not answer /api/harnesses.</p>';
+      container.innerHTML = '<p class="muted">The daemon did not answer, so the ledger is empty.</p>';
     });
 }

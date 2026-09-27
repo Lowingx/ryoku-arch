@@ -102,7 +102,7 @@ export function initSkills(root) {
     const cats = filterCategories(dataset(), query);
     const rows = cats.reduce((a, c) => a + (c.skills || []).length, 0);
     if (!cats.length) {
-      groupsEl.innerHTML = '<p class="empty">' + (query ? "nothing matches" : "no skills for this harness") + "</p>";
+      groupsEl.innerHTML = '<p class="empty">' + (query ? "Nothing matches." : "This agent carries no skills.") + "</p>";
       return;
     }
     groupsEl.innerHTML = cats
@@ -137,7 +137,7 @@ export function initSkills(root) {
             );
           })
           .join("")
-      : '<p class="muted">no toolbelt</p>';
+      : '<p class="muted">No tools enabled.</p>';
   }
 
   function paint() {
@@ -194,7 +194,7 @@ export function initSkills(root) {
       hermes = await api.hermesSkills();
     } catch (err) {
       hermes = null;
-      groupsEl.innerHTML = '<p class="muted">skills unavailable, start the daemon</p>';
+      groupsEl.innerHTML = '<p class="muted">The daemon is not running, so there are no skills to show.</p>';
     }
     try {
       harnesses = (await api.harnesses()).harnesses || [];

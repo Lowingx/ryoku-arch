@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"io/fs"
 	"net"
 	"net/http"
@@ -103,6 +104,34 @@ func Serve(cfg Config) error {
 	})
 	mux.HandleFunc("GET /api/system", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, SystemNow())
+	})
+	mux.HandleFunc("GET /api/theme", func(w http.ResponseWriter, r *http.Request) {
+		th := ThemeNow()
+		wall := map[string]any{"available": false}
+		if path, kind, ok := CurrentWallpaper(); ok {
+			h := fnv.New32a()
+			_, _ = h.Write([]byte(path))
+			rev := strconv.FormatUint(uint64(h.Sum32()), 36)
+			if st, err := os.Stat(path); err == nil {
+				rev += "-" + strconv.FormatInt(st.ModTime().UnixNano(), 36)
+			}
+			wall = map[string]any{"available": true, "kind": kind, "rev": rev}
+		}
+		writeJSON(w, map[string]any{
+			"roles":        th.Roles,
+			"source":       th.Source,
+			"reduceMotion": th.ReduceMotion,
+			"wallpaper":    wall,
+		})
+	})
+	mux.HandleFunc("GET /api/wallpaper", func(w http.ResponseWriter, r *http.Request) {
+		path, _, ok := CurrentWallpaper()
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+		w.Header().Set("Cache-Control", "no-cache")
+		http.ServeFile(w, r, path)
 	})
 	mux.HandleFunc("GET /api/vault", func(w http.ResponseWriter, r *http.Request) {
 		files, err := VaultTree()

@@ -7,7 +7,7 @@
 import { escapeHtml } from "./markdown.js";
 import { humanBytes } from "./format.js";
 
-const MONO = "'JetBrains Mono', monospace";
+const MONO = "'Space Mono', monospace";
 const MONTHS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
 
 // ---- pure helpers (node-testable) ------------------------------------------
@@ -235,24 +235,28 @@ export function initMemory(root) {
   const SETTLE = 0.6;
   const SETTLE_FRAMES = 20;
 
-  const C = {
-    text: "#d9dfe9",
-    dim: "#8b94a8",
-    line: "rgba(139,148,168,.18)",
-  };
+  // The graph wears the page's palette: groups differ by tone and by ring,
+  // not by a rainbow, and the accent marks only the hub and what was learned.
+  let C = null;
+  function palette() {
+    const cs = getComputedStyle(document.documentElement);
+    const v = (k) => cs.getPropertyValue(k).trim();
+    C = { ink: v("--ink"), dim: v("--ink-dim"), paper: v("--paper-lift"), sun: v("--sun"), line: v("--line") };
+    return C;
+  }
   const GROUPS = {
-    hub: { fill: "#e0533d", label: "hub" },
-    generated: { fill: "#d9a05b", label: "generated map" },
-    memory: { fill: "#3ecf8e", label: "memory" },
-    journal: { fill: "#5b9dd9", label: "journal" },
-    learned: { fill: "#e0a83d", label: "learned" },
-    hermes: { fill: "#8b94a8", label: "hermes", ring: "#e0a83d" },
-    skill: { fill: "#d9dfe9", label: "skill", ring: "#e0533d" },
+    hub: { label: "hub", style: (p) => ({ fill: p.sun }) },
+    generated: { label: "generated map", style: (p) => ({ fill: p.ink }) },
+    memory: { label: "memory", style: (p) => ({ fill: p.dim }) },
+    journal: { label: "journal", style: (p) => ({ fill: p.paper, ring: p.dim }) },
+    learned: { label: "learned", style: (p) => ({ fill: p.paper, ring: p.sun }) },
+    hermes: { label: "hermes", style: (p) => ({ fill: p.dim, ring: p.sun }) },
+    skill: { label: "skill", style: (p) => ({ fill: p.ink, ring: p.sun }) },
   };
 
   function nodeStyle(n) {
-    const g = GROUPS[n.group] || { fill: C.text };
-    return { fill: g.fill, ring: g.ring || null };
+    const g = GROUPS[n.group];
+    return g ? g.style(C) : { fill: C.ink };
   }
 
   function renderLegend() {
@@ -261,11 +265,15 @@ export function initMemory(root) {
     for (const key of Object.keys(GROUPS)) {
       if ((model ? model.nodes : []).some((n) => n.group === key)) present.push(key);
     }
+    const p = C || palette();
     legendEl.innerHTML = present
-      .map(
-        (k) =>
-          "<span><i style=\"background:" + GROUPS[k].fill + "\"\u003E\u003C/i\u003E" + GROUPS[k].label + "</span>"
-      )
+      .map((k) => {
+        const st = GROUPS[k].style(p);
+        return (
+          '<span><i style="background:' + st.fill + ";border-color:" + (st.ring || st.fill) + '"></i>' +
+          GROUPS[k].label + "</span>"
+        );
+      })
       .join("");
   }
 
@@ -358,7 +366,7 @@ export function initMemory(root) {
 
   function renderSessions(sessions) {
     if (!sessions || !sessions.length) {
-      sessEl.innerHTML = '<p class="dim">no sessions yet</p>';
+      sessEl.innerHTML = '<p class="dim">No sessions yet.</p>';
       return;
     }
     sessEl.innerHTML = sessions
@@ -441,7 +449,7 @@ export function initMemory(root) {
   function drawEmpty(msg) {
     if (!ctx) return;
     ctx.clearRect(0, 0, size.w, size.h);
-    ctx.fillStyle = C.dim;
+    ctx.fillStyle = (C || palette()).dim;
     ctx.font = "11px " + MONO;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
@@ -450,6 +458,7 @@ export function initMemory(root) {
 
   function draw() {
     if (!ctx) return;
+    palette();
     ctx.clearRect(0, 0, size.w, size.h);
     const nodes = model ? model.nodes : [];
     if (!nodes.length) {
@@ -549,6 +558,12 @@ export function initMemory(root) {
   function isVisible() {
     return !root.hidden && document.visibilityState !== "hidden";
   }
+
+  document.addEventListener("rashin:theme", () => {
+    palette();
+    renderLegend();
+    if (model) draw();
+  });
 
   // ---- pointer interactions ----
 
@@ -672,9 +687,9 @@ export function initMemory(root) {
       applyData(data);
     } catch (err) {
       if (!model) {
-        tilesEl.innerHTML = '<p class="dim">memory unavailable, start the daemon</p>';
-        heatEl.innerHTML = '<p class="dim">no activity yet</p>';
-        sessEl.innerHTML = '<p class="dim">no sessions yet</p>';
+        tilesEl.innerHTML = '<p class="dim">The daemon is not running, so memory is out of reach.</p>';
+        heatEl.innerHTML = '<p class="dim">No activity yet.</p>';
+        sessEl.innerHTML = '<p class="dim">No sessions yet.</p>';
         drawEmpty("the daemon is offline");
       }
     } finally {

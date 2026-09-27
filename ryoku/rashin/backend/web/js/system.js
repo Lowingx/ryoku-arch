@@ -36,7 +36,7 @@ function isWild(a) {
 }
 
 function table(cols, rows) {
-  if (!rows.length) return '<p class="empty">nothing here</p>';
+  if (!rows.length) return '<p class="empty">Nothing here.</p>';
   return (
     '<table class="data"><thead><tr>' +
     cols.map((c) => "<th" + (c[2] ? ' class="r"' : "") + ">" + c[0] + "</th>").join("") +
@@ -260,7 +260,7 @@ function paint(root) {
   const body = root.querySelector("[data-sys-body]");
   if (!body) return;
   if (!inv) {
-    body.innerHTML = '<p class="muted">the daemon is not answering /api/system</p>';
+    body.innerHTML = '<p class="muted">The daemon is not answering.</p>';
     return;
   }
   body.innerHTML = (TABS[active] || renderServices)();

@@ -87,7 +87,7 @@ export function initVault(root) {
       const md = await api.vaultFile(rel);
       pane.innerHTML = mdToHtml(md);
     } catch (err) {
-      pane.innerHTML = '<p class="muted">could not read ' + escapeHtml(rel) + "</p>";
+      pane.innerHTML = '<p class="muted">Could not read ' + escapeHtml(rel) + "</p>";
     }
   }
 
@@ -95,8 +95,8 @@ export function initVault(root) {
     try {
       tree = await api.vault();
     } catch (err) {
-      listEl.innerHTML = '<p class="muted">vault unavailable</p>';
-      pane.innerHTML = '<p class="muted">start the daemon to browse the vault.</p>';
+      listEl.innerHTML = '<p class="muted">The vault is out of reach.</p>';
+      pane.innerHTML = '<p class="muted">Start the daemon to browse the vault.</p>';
       return;
     }
     const files = tree.files || [];
@@ -141,7 +141,7 @@ export function initVault(root) {
         head.appendChild(ok);
         setTimeout(() => ok.remove(), 2000);
       } catch (err) {
-        pane.innerHTML = '<p class="muted">reindex failed</p>';
+        pane.innerHTML = '<p class="muted">Reindex failed.</p>';
       } finally {
         reindexBtn.disabled = false;
       }

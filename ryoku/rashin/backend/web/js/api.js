@@ -33,6 +33,7 @@ export const api = {
     return r.json();
   },
   system: () => getJSON("/api/system"),
+  theme: () => getJSON("/api/theme"),
   harnesses: () => getJSON("/api/harnesses"),
   providers: () => getJSON("/api/providers"),
   hermesSkills: () => getJSON("/api/hermes/skills"),

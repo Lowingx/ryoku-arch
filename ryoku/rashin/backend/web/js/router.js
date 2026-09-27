@@ -1,18 +1,17 @@
-// Hash router for the console shell: swaps the visible panel, marks the nav
-// item, and titles the header. No transition theater; the panel simply shows.
+// Hash router: shows one sheet, marks its island tab, and names the tab
+// title. A sheet eases in once when it is swapped to; nothing reflows after.
 
 const PANELS = {
-  overview: ["Overview", "the machine at rest"],
-  system: ["System", "live inventory, read-only"],
-  vault: ["Vault", "the maintained map"],
-  memory: ["Memory", "what the agent knows"],
-  skills: ["Skills", "procedures on the shelf"],
-  agents: ["Agents", "who can read this system"],
-  models: ["Models", "provider pool"],
-  chat: ["Chat", "ask the needle"],
-  about: ["About", "what rashin is"],
+  overview: "Overview",
+  system: "System",
+  vault: "Vault",
+  memory: "Memory",
+  skills: "Skills",
+  agents: "Agents",
+  models: "Models",
+  chat: "Chat",
+  about: "About",
 };
-const SHEET_NO = { overview: 1, system: 2, vault: 3, memory: 4, skills: 5, agents: 6, models: 7, chat: 8, about: 9 };
 
 function current() {
   const h = location.hash.replace(/^#\/?/, "");
@@ -22,18 +21,27 @@ function current() {
 export function initRouter(onChange) {
   const panels = document.querySelectorAll("[data-panel]");
   const links = document.querySelectorAll("[data-nav]");
-  const title = document.querySelector("[data-top-title]");
-  const sub = document.querySelector("[data-sheet-sub]");
-  const no = document.querySelector("[data-sheet-no]");
+  let shown = null;
 
   function show(name) {
     panels.forEach((p) => {
-      p.hidden = p.dataset.panel !== name;
+      const on = p.dataset.panel === name;
+      p.hidden = !on;
+      if (on && shown !== null && shown !== name) {
+        p.classList.remove("entering");
+        void p.offsetWidth;
+        p.classList.add("entering");
+      }
     });
-    links.forEach((l) => l.classList.toggle("active", l.dataset.nav === name));
-    if (title) title.textContent = PANELS[name][0];
-    if (sub) sub.textContent = PANELS[name][1];
-    if (no) no.textContent = "sheet " + String(SHEET_NO[name]).padStart(2, "0") + "/09";
+    links.forEach((l) => {
+      const on = l.dataset.nav === name;
+      l.classList.toggle("active", on);
+      if (on) l.setAttribute("aria-current", "page");
+      else l.removeAttribute("aria-current");
+    });
+    document.title = name === "overview" ? "Rashin" : PANELS[name] + " · Rashin";
+    if (shown !== name) window.scrollTo(0, 0);
+    shown = name;
     if (onChange) onChange(name);
   }
 

@@ -154,16 +154,17 @@ it under `~/.local/lib/qt6/qml`, and only the daemon injects that path
 `QML_IMPORT_PATH`. `hyprland/modules/env.lua` sets it for the session. If an
 import fails in dev and works on an installed box, that is why.
 
-### The one sanctioned brand takeover
+### The web dashboard is a Ryoku surface too
 
-**Rashin** (`hub/pages/RashinPage.qml`) fronts the Rashin/Hermes dashboard
-(`127.0.0.1:3600`), so it deliberately wears that product's identity instead of
-the Hub's: the cyanotype blueprint palette and IBM Plex Condensed + Plex Mono
-type mirrored from `ryoku/rashin/backend/web/css/base.css`, kept in one local
-palette object at the top of the page plus bundled
-`fonts/ibm-plex-sans-condensed-bold.ttf` and `fonts/ibm-plex-mono-regular.ttf`.
-It is a page-scoped brand takeover, not drift; keep it in step with that
-`base.css`, and do not copy the pattern into another page.
+Rashin's dashboard (`ryoku/rashin/backend/web`, served on `127.0.0.1:3600`) is
+HTML, so it cannot import `Tokens`, but it follows them. `GET /api/theme`
+resolves the same Material roles through the same chain (a named scheme, then
+the wallpaper while Match wallpaper is on, then the signature default), and
+`web/css/base.css` maps them onto its variables under the `Tokens` names:
+`--paper`, `--ink`, `--bone`, `--sun`, `--alert`, the hairlines and tints. The
+type is the same four families, bundled as subset woff2. The Hub's Rashin page
+reads `Tokens` like any other page. There is no brand takeover left: if the
+dashboard needs a value, it takes it from the palette, never a hex of its own.
 
 ### What follows the wallpaper, and what does not
 

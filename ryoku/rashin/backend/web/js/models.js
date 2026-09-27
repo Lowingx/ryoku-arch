@@ -86,7 +86,7 @@ function render(root) {
         })
         .join("") +
       "</tbody></table>"
-    : '<p class="empty">nothing matches. clear the filter or the search.</p>';
+    : '<p class="empty">Nothing matches. Clear the filter or the search.</p>';
 
   filters.querySelectorAll("[data-mfilter]").forEach((b) =>
     b.addEventListener("click", () => {
@@ -111,12 +111,12 @@ export function initModels(root) {
       state.harnesses = harnesses || [];
       if (!state.all.length) {
         root.querySelector("[data-models-list]").innerHTML =
-          '<p class="muted">the provider directory is unavailable: Prowl answers /api/providers, and nothing here gets invented.</p>';
+          '<p class="muted">The provider directory comes from Prowl, and Prowl did not answer. Nothing here is made up, so the list stays empty.</p>';
         return;
       }
       render(root);
     })
     .catch(() => {
-      root.querySelector("[data-models-list]").innerHTML = '<p class="muted">the daemon is not answering.</p>';
+      root.querySelector("[data-models-list]").innerHTML = '<p class="muted">The daemon is not answering.</p>';
     });
 }

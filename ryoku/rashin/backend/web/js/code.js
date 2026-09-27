@@ -96,7 +96,7 @@ export function initCode(root) {
       }
       if (!d.indexed) {
         repoEl.textContent = base(d.repo);
-        bodyEl.innerHTML = '<p class="muted">index missing: run <code class=mono>prowl init</code> in your repo</p>';
+        bodyEl.innerHTML = '<p class="muted">No index yet. Run <code class=mono>prowl init</code> in your repo.</p>';
         card.hidden = false;
         return;
       }
