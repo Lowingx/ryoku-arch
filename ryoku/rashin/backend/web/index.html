@@ -81,6 +81,7 @@
       </div>
 
       <div class="page ov-body">
+        <div class="health-band" data-health-band data-fix-scope hidden></div>
         <div class="ov-grid">
           <section class="card ov-code" data-code-card hidden>
             <div class="card-head">
@@ -112,7 +113,7 @@
       <header class="page-head">
         <p class="eyebrow"><span class="jp">力</span>Machine</p>
         <h1 class="page-title">System<span class="jp">演算</span></h1>
-        <p class="page-desc">Every unit, timer, socket and disk on this box. Read-only: Rashin shows the fix, you run it.</p>
+        <p class="page-desc">Every unit, timer, socket and disk on this box. When something is wrong, Fix with AI hands it to the agent, which reads the logs first and asks before it changes anything.</p>
       </header>
       <div class="seg" data-sys-tabs role="tablist">
         <button class="seg-btn active" data-tab="services" type="button">Services</button>
@@ -122,7 +123,8 @@
         <button class="seg-btn" data-tab="listeners" type="button">Network</button>
         <button class="seg-btn" data-tab="processes" type="button">Processes</button>
         <button class="seg-btn" data-tab="mounts" type="button">Storage</button>
-        <button class="seg-btn seg-tip" data-tab="tips" type="button">Tips <i class="badge" data-badge="tips"></i></button>
+        <button class="seg-btn seg-tip" data-tab="doctor" type="button">Doctor <i class="badge" data-badge="doctor"></i></button>
+        <button class="seg-btn" data-tab="tips" type="button">Tips <i class="badge" data-badge="tips"></i></button>
       </div>
       <div class="sys-toolbar">
         <input class="sys-search" data-sys-search type="search" placeholder="Filter" spellcheck="false" autocomplete="off">

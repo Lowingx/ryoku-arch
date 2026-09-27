@@ -62,6 +62,9 @@ Topic guides sit beside this file. Read the matching one first:
 - [`feature.md`](feature.md): the ladder for a feature the desktop does not
   have yet. Check the store, then the machine, then the built-ins; build a
   plugin only when all three come up empty.
+- [`troubleshoot.md`](troubleshoot.md): the break/fix playbook. Gather the logs
+  first (`ryoku-rashin logs <app>`), diagnose, fix through the owning command,
+  verify, and know the rollback paths.
 
 ## Answer policy: GUI first
 
@@ -84,6 +87,10 @@ and the dock are QS Bar Settings (`ryoku-shell bar settings`), not the Hub. See
 Ryoku separates the files it ships from the files you own, so an update can
 refresh the base freely while your changes stand. Respect the split:
 
+- **Ask `ryoku owner <path>` before you touch a file.** It classifies the path
+  (a shipped `ryoku` file, a `generated` one, a tool `store`, a `seed`, a
+  `user-override`, or the user's own) and prints where the change belongs. Never
+  edit a path it calls `ryoku`, `generated`, or `store`; edit where it points.
 - **Never edit a shipped file in place.** `/usr/share/ryoku/` (the packaged
   base) and the files Ryoku lays into `~/.config/quickshell/` are re-laid on
   every `ryoku update` (`ryoku materialize` clobbers every shipped file), so an

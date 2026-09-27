@@ -186,6 +186,8 @@ if (typeof document !== "undefined") {
   const STATUS_STAMP = {
     pending: "PENDING", in_progress: "IN PROGRESS", completed: "DONE", failed: "FAILED",
   };
+  // The daemon's Fix with AI turns open with this line (fixsession.go).
+  const FIX_PREFIX = "Fix with AI: ";
   const MAX_IMAGES = 3;
   const MAX_BYTES = 4 * 1024 * 1024;
   const MAX_EDGE = 1568;
@@ -311,6 +313,12 @@ if (typeof document !== "undefined") {
             '<span class="tool-kind">' + esc(it.kind2) + "</span></div>" +
             '<span class="stamp stamp-status">' + (STATUS_STAMP[it.status] || it.status) + "</span>" +
             "</div>"
+          );
+        }
+        if (it.role === "user" && it.text.startsWith(FIX_PREFIX)) {
+          return (
+            '<div class="msg msg-fix"><div class="msg-head">Fix with AI</div>' +
+            '<div class="msg-body">' + esc(it.text.slice(FIX_PREFIX.length)) + "</div></div>"
           );
         }
         if (it.role === "user") {

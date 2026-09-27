@@ -39,6 +39,8 @@ The vault is the knowledge base every agent reads and writes, at
 | `ryoku-repo.md` | Generated: the Ryoku source tree map, pre-indexed and shipped |
 | `user.md` | Generated: where this user's config diverges from the shipped baseline |
 | `habits.md` | Generated: this user's directories, tool stack, and shell rhythms (feeds both ask lanes) |
+| `ownership.md` | Generated: who owns each config path and where a change belongs |
+| `logs.md` | Generated: where the logs live and the one command that gathers them |
 | `memory/` | Agent-writable; Hermes `MEMORY.md` and `USER.md` live here |
 | `journal/` | Agent-writable dated notes, one file per day |
 
@@ -51,12 +53,18 @@ by the user and agents.
 **Write rules for agents.**
 
 - Generated files (`system.md`, `desktop.md`, `packages.md`, `ryoku-repo.md`,
-  `user.md`) are read-only. Do not edit inside the fence; a reindex overwrites it.
+  `user.md`, `habits.md`, `ownership.md`, `logs.md`) are read-only. Do not edit
+  inside the fence; a reindex overwrites it.
 - Read `desktop.md` before searching the filesystem or guessing paths. It names
   where every config lives, which binary owns it, and how to reload it.
 - Changes listed in `user.md` are the user's own choices; never revert them to
   shipped defaults without being asked.
 - Write durable notes to `memory/` and dated notes to `journal/YYYY-MM-DD.md`.
+- Before editing any file, run `ryoku owner <path>`; it says who writes the file
+  and where the change belongs. `ownership.md` is those rules for the whole box.
+  Never edit a path it calls `ryoku`, `generated`, or `store`.
+- When something breaks, run `ryoku-rashin logs <app>` first and read `logs.md`;
+  gather before you change anything.
 
 Reindex triggers: daemon start, `ryoku-rashin index`, a 6h timer, the
 dashboard's reindex button, and `ryoku update` (both channels reindex after
@@ -90,25 +98,65 @@ everything listed there as the user's own choices, distinct from Ryoku
 defaults. On a dev checkout without the base tree, the layer degrades to a
 note saying the diff is unavailable.
 
+## Ownership and logs
+
+Two generated docs and one command make the wired agents Linux- and Ryoku-aware
+when they act, not just when they read.
+
+`ownership.md` is the machine's ownership map: the rules in plain words, the
+overlay path and its current forks, the user-override files and what each is for,
+the generated files, the tool stores and their writers, the seeds, and the
+Ryoku-owned trees as a compact table. Its body is `ryoku owner --map`; a single
+path is classified by `ryoku owner <path> [--json]` (see `docs/cli.md`), which
+names the class, the writer, and the path a change should edit instead. Until the
+CLI carries the verb, the doc falls back to the rules in prose.
+
+`logs.md` records where the logs live on this box, discovered at index time: the
+Ryoku user units and their journal commands, the running Quickshell instances
+and their `qs log` lines, the compositor's journal and runtime log (resolved
+through the window-manager seam, never a hardcoded compositor), ryogami's log
+files, the doctor report and update log, `/var/log/pacman.log`, and coredumps.
+
+`ryoku-rashin logs <target>` (also `rashin logs <target>`) gathers all of it for
+one target into a bounded markdown bundle, each section headed by the exact
+command or file it came from. `<target>` is a component alias (`shell`,
+`wallpaper`, `hub`, `idle`, `audio`, `portals`, `updates`, `compositor`,
+`rashin`) or any program name; for a program it pulls the matching units, the
+journal by `_COMM=`, coredumps, OOM kills, the app's own `*.log` files, and its
+package's recent pacman transactions. Every probe is read-only, short-timeout,
+and never needs root; `--since` (default 6h) and `--lines` (default 60) size the
+window.
+
+The `AGENTS.md` contract carries these as two rules every wired agent reads:
+before you edit a file, run `ryoku owner <path>` and edit where it points, never
+a `ryoku`, `generated`, or `store` path; when something breaks, run
+`ryoku-rashin logs <app>` first, read `logs.md`, check the doctor report and
+recent package changes, prefer a reversible fix, and record what you did in
+`journal/YYYY-MM-DD.md`. The `ryoku` skill's `troubleshoot.md` is the full
+playbook.
+
 ## The ryoku skill
 
 Rashin ships an agent skill, `ryoku`, so any agent finds the desktop's safety
 rules and command catalogue the way it finds a hub- or agent-grown skill, not
 only through the vault pointer block. It lives in the repo at
 `ryoku/rashin/skills/ryoku/` (`SKILL.md`, `gui.md`, `bar.md`, `plugins.md`,
-`feature.md`); the package
+`feature.md`, `troubleshoot.md`); the package
 installs it to `/usr/share/ryoku/skills/ryoku`, and a dev deploy resolves the
 checkout copy through the repo pointer.
 
-`SKILL.md` covers when to use it, the vault-first rule, the safety split (never
-edit a shipped file; a user override goes to `~/.config/ryoku/user_edits` or a
+`SKILL.md` covers when to use it, the vault-first rule, the safety split (lead
+with `ryoku owner <path>`, never edit a shipped file; a user override goes to
+`~/.config/ryoku/user_edits` or a
 command), the command catalogue (`ryoku`, `ryoku-shell`, `ryoku-hub`,
 `ryogami`, `ryoku-rashin`), the decision framework, and worked examples.
 `bar.md` is the QS Bar and dock guide; `plugins.md` is the plugin contract and
 the `ryoku plugin` CLI; `feature.md` is the ladder for a feature the desktop
 does not have: `ryostore catalog` first, then the machine's own catalogues,
-and only then a new plugin. The vault's `AGENTS.md` and `desktop.md` point at
-the same ladder, so an agent that only reads the vault still climbs it.
+and only then a new plugin; `troubleshoot.md` is the break/fix playbook (gather
+logs with `ryoku-rashin logs`, diagnose, fix through the owning command, verify,
+roll back). The vault's `AGENTS.md` and `desktop.md` point at the same ladder,
+so an agent that only reads the vault still climbs it.
 
 `ryoku-rashin wire` symlinks the skill dir into every agent's skills directory:
 `~/.agents/skills/ryoku`, `~/.claude/skills/ryoku`, `~/.codex/skills/ryoku`,
@@ -139,7 +187,9 @@ Subcommands:
 | Command | Job |
 |---|---|
 | `serve [--if-enabled]` | HTTP and WebSocket on `127.0.0.1:3600`, embedded dashboard. `--if-enabled` exits 0 immediately when the gate is off (the autostart path) |
-| `index` | Regenerate all vault maps: `system.md`, `desktop.md`, `packages.md`, `ryoku-repo.md`, `user.md` |
+| `index` | Regenerate all vault maps: `system.md`, `desktop.md`, `packages.md`, `ryoku-repo.md`, `user.md`, `habits.md`, `ownership.md`, `logs.md` |
+| `logs <target> [--since <dur>] [--lines <n>]` | Gather everything relevant to `<target>` (a component alias or a program name) when it broke: units, journal, coredumps, OOM kills, the app's own logs, and its package history, in one bounded bundle. Read-only, no root; always exits 0. Also `rashin logs <target>` |
+| `fix doctor [finding]` / `fix tip <id>` / `fix app <name> [what happened]` | Fix with AI from anywhere: asks the running daemon to open a fresh chat briefed on the problem, then opens it in the dashboard (`--no-open` skips the browser). Also `rashin fix doctor`; `rashin fix the wifi` stays a plain ask |
 | `repo-index <root> [out]` | Build the Ryoku source map from a checkout; used by the PKGBUILD and `deploy.sh` |
 | `ask <question>` | One-shot quick ask, built for the launcher's `\` prefix: POSTs to `/api/ask` and pipes streamed `@working`/`@perm`/`@answer` markers to stdout. `ask --recent` prints the resume history as JSON; `ask --cancel` stops the running turn. See "Quick asks: two lanes" below |
 | `setup` | One-click actuator: install Hermes, run its onboarding, wire, enable |
@@ -166,9 +216,12 @@ coding agent with its own skills, memories, sessions, model choice, and
 credential sources, names only), `GET /api/hermes/skills`,
 `GET /api/hermes/memory`, `GET /api/prowl` and `GET /api/prowl/search?q=`,
 `GET /api/code/*` (the live Prowl index proxy, below), `GET /api/providers`
-(the consolidated free/paid/subscription directory), `GET /api/about`, and
-`WS /ws/chat` for the Hermes bridge. Vitals come from `/proc` and `statfs`,
-with GPU via `nvidia-smi` when present.
+(the consolidated free/paid/subscription directory), `GET /api/about`,
+`GET /api/doctor` (Ryoku's health check, `ryoku doctor --json` run read-only and
+cached for two minutes; `?refresh=1` reruns it), `POST /api/fix` (Fix with AI,
+below; JSON only, and refused unless the request comes from this dashboard or a
+local process), and `WS /ws/chat` for the Hermes bridge. Vitals come from
+`/proc` and `statfs`, with GPU via `nvidia-smi` when present.
 
 ## Quick asks: two lanes
 
@@ -280,8 +333,8 @@ bars sweep) and yields to the OS reduced-motion setting and to
 
 | Panel | Content |
 |---|---|
-| Overview | The live wallpaper with the clock, host, kernel, uptime, and a CPU/memory/disk/GPU sysmon readout, then the code intelligence card led by measured token savings from the Prowl index and the system summary card |
-| System | The machine as a home server, read-only: services (running/stopped/user), timers (firing and dormant), cron/anacron/at, docker containers, listening sockets with reach, top processes, filesystems, and deterministic tips whose commands copy to your clipboard; rashin never runs any of them |
+| Overview | The live wallpaper with the clock, host, kernel, uptime, and a CPU/memory/disk/GPU sysmon readout; a health band when Ryoku's health check found something a person must decide, with Fix with AI; then the code intelligence card led by measured token savings from the Prowl index and the system summary card |
+| System | The machine as a home server: services (running/stopped/user), timers (firing and dormant), cron/anacron/at, docker containers, listening sockets with reach, top processes, filesystems, the Doctor tab (`ryoku doctor --json`, read-only: every finding that needs attention, advisory notes folded away), and deterministic tips. Commands copy to your clipboard; Fix with AI on a tip or finding hands it to the agent. The sheet itself never runs anything |
 | Vault | Grouped tree (maps, memory, journal; the agent-facing source mirror collapsed), rendered markdown, reindex button, generated-file badges |
 | Memory | Provider tiles (builtin or external, with Obsidian vault detection), the 2D force graph of the vault's notes and their references with a data-driven legend, a 26-week activity heatmap, and the Hermes session history read from `~/.hermes/state.db` |
 | Skills | One tab per installed harness: Hermes skills grouped by category with origin counts (bundled, hub, agent-grown) and the enabled toolbelt grouped into families; every other harness lists the skills it carries, grouped by origin when long |
@@ -319,6 +372,28 @@ tool cards, and permission prompts, it carries:
 
 Terminal `hermes` and web chat share the same memory, because both run in the
 vault workspace.
+
+### Fix with AI
+
+Wherever Ryoku already knows something is wrong, one button hands it to the
+agent: every tip on the System sheet, every finding on the Doctor tab (and "Fix
+all" for the lot), the Overview's health band, the Hub's Updates page after an
+update whose health check found issues, and `ryoku doctor` itself, which offers
+`ryoku-rashin fix doctor` when Rashin is on. From a terminal,
+`rashin fix app firefox it crashes when I open a PDF` does the same for any app.
+
+The daemon (`POST /api/fix`) resolves the request against what the machine
+reports right now (the tip by id from the live scan, the findings from the
+doctor scan), clears the chat, starts a fresh agent session, and sends one turn:
+the Needle identity, a `[fix: ...]` brief only the agent sees, and a one-line
+display text (`Fix with AI: <problem>`) that the chat shows as a task card. The
+brief names the problem, the commands most relevant to it, and how to work:
+gather the evidence with `ryoku-rashin logs`, check `ryoku owner` before editing
+any file, explain the cause, ask before anything destructive or anything that
+needs sudo, verify, say how to undo it, and write the findings to the vault
+journal. Replays and the history drawer strip the brief, so a loaded session
+shows the task line, not the prompt. Nothing runs without the chat's approval
+stamps; the dashboard only opened the conversation.
 
 ## Prowl ships with Rashin
 

@@ -1,10 +1,14 @@
-// The SYSTEM panel: this machine as a home server, read-only. One tab per
-// surface, dense tables, a search box that filters the active tab, and tips
-// whose commands copy to your clipboard. Rashin never runs any of them.
+// The SYSTEM panel: this machine as a home server. One tab per surface, dense
+// tables, and a search box that filters the active tab. The panel itself only
+// reads: tips and Ryoku's health check (the Doctor tab) show what is wrong,
+// their commands copy to your clipboard, and Fix with AI hands a problem to the
+// agent, which investigates first and asks before it changes anything.
 
-import { escapeHtml } from "./markdown.js";
+import { escapeHtml, escapeAttr } from "./markdown.js";
 import { api } from "./api.js";
 import { humanBytes } from "./format.js";
+import { fixButton, bindFixButtons } from "./fixai.js";
+import { healthScan, healthLoading, healthIssues, loadHealth, onHealth } from "./health.js";
 
 const REFRESH_MS = 30_000;
 const esc = (s) => escapeHtml(String(s == null ? "" : s));
@@ -14,6 +18,7 @@ let serviceSub = "running";
 let query = "";
 let inv = null;
 let timer = 0;
+let panelRoot = null;
 
 function ago(iso) {
   if (!iso) return "";
@@ -219,28 +224,107 @@ function renderMounts() {
   );
 }
 
+function cmdButton(command) {
+  return (
+    '<button class="cmd-btn" type="button" data-copy="' + escapeAttr(command) + '"><code>' + esc(command) +
+    '</code><span class="cmd-copy">copy</span></button>'
+  );
+}
+
 function renderTips() {
   const tips = inv.tips || [];
   if (!tips.length) return '<p class="empty">Nothing needs attention.</p>';
   const sev = { act: ["bad", "Act"], watch: ["warn", "Watch"], info: ["info", "Info"] };
   return (
-    '<p class="muted tips-line">Commands are yours to run; Rashin never executes them.</p>' +
+    '<p class="muted tips-line">Copy a command to look yourself, or hand the tip to the agent: it reads the logs first and asks before it changes anything.</p>' +
     tips
       .map((t) => {
         const [cls, label] = sev[t.severity] || sev.info;
         return (
-          '<div class="card tip tip-' + esc(t.severity) + '">' +
+          '<div class="card tip tip-' + esc(t.severity) + '" data-fix-scope>' +
           '<span class="state ' + cls + '">' + label + "</span>" +
           "<b>" + esc(t.title) + "</b>" +
           "<p>" + esc(t.detail) + "</p>" +
-          (t.command
-            ? '<button class="cmd-btn" type="button" data-copy="' + esc(t.command) + '"><code>' + esc(t.command) + '</code><span class="cmd-copy">copy</span></button>'
-            : "") +
+          '<div class="tip-actions">' +
+          (t.command ? cmdButton(t.command) : "") +
+          fixButton({ kind: "tip", id: t.id }) +
+          "</div>" +
+          '<p class="fix-err" hidden></p>' +
           "</div>"
         );
       })
       .join("")
   );
+}
+
+// ---- doctor: Ryoku's own health check, read-only ----
+
+const DOC_STATE = {
+  fail: ["bad", "Fail"],
+  warn: ["warn", "Warn"],
+  todo: ["info", "Doctor can fix"],
+};
+
+// remedyHtml renders doctor's remedy prose with its `command` spans as code.
+function remedyHtml(s) {
+  return esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+function renderDoctor() {
+  const doc = healthScan();
+  const docLoading = healthLoading();
+  if (!doc) {
+    return docLoading
+      ? '<p class="muted">Running Ryoku\'s health check (ryoku doctor, read-only). This takes a few seconds.</p>'
+      : '<p class="muted">The health check has not run yet.</p>';
+  }
+  if (doc.error) return '<p class="muted">' + esc(doc.error) + "</p>";
+  const findings = doc.findings || [];
+  const all = healthIssues();
+  const issues = all.filter((f) => matches([f.name, f.detail, f.remedy]));
+  const passing = findings.filter((f) => f.status === "ok" || f.status === "fixed").length;
+  const notes = findings.filter((f) => f.status === "note");
+  const head =
+    '<div class="doc-head" data-fix-scope>' +
+    '<span class="doc-sum">' + passing + " of " + findings.length + " checks pass" +
+    (doc.collectedAt ? '<span class="dim"> · checked ' + esc(ago(doc.collectedAt) || "just now") + "</span>" : "") +
+    "</span>" +
+    '<button class="btn" type="button" data-doc-rerun' + (docLoading ? " disabled" : "") + ">" +
+    (docLoading ? "Checking" : "Check again") + "</button>" +
+    (all.length ? fixButton({ kind: "doctor" }, all.length === 1 ? "Fix with AI" : "Fix all with AI") : "") +
+    '<p class="fix-err" hidden></p>' +
+    "</div>";
+  const cards = issues.length
+    ? issues
+        .map((f) => {
+          const [cls, label] = DOC_STATE[f.status];
+          return (
+            '<div class="card tip doc-' + esc(f.status) + '" data-fix-scope>' +
+            '<span class="state ' + cls + '">' + label + "</span>" +
+            "<b>" + esc(f.name) + "</b>" +
+            "<p>" + esc(f.detail) + "</p>" +
+            (f.remedy ? '<p class="doc-remedy">' + remedyHtml(f.remedy) + "</p>" : "") +
+            '<div class="tip-actions">' + fixButton({ kind: "doctor", name: f.name }) + "</div>" +
+            '<p class="fix-err" hidden></p>' +
+            "</div>"
+          );
+        })
+        .join("")
+    : '<p class="empty">' + (query ? "Nothing matches." : "Every check passes. Nothing to fix.") + "</p>";
+  const noteList = notes.length
+    ? '<details class="doc-notes"><summary>' + notes.length + " advisory " + (notes.length === 1 ? "note" : "notes") + "</summary>" +
+      notes.map((f) => "<p><b>" + esc(f.name) + "</b> " + esc(f.detail) + "</p>").join("") +
+      "</details>"
+    : "";
+  return head + cards + noteList;
+}
+
+function paintDoctorBadge() {
+  const badge = document.querySelector("[data-badge=doctor]");
+  if (!badge) return;
+  const n = healthIssues().filter((f) => f.status !== "todo").length;
+  badge.textContent = n || "";
+  badge.classList.toggle("zero", !n);
 }
 
 const TABS = {
@@ -251,6 +335,7 @@ const TABS = {
   listeners: renderListeners,
   processes: renderProcesses,
   mounts: renderMounts,
+  doctor: renderDoctor,
   tips: renderTips,
 };
 
@@ -259,11 +344,12 @@ const TABS = {
 function paint(root) {
   const body = root.querySelector("[data-sys-body]");
   if (!body) return;
-  if (!inv) {
+  if (!inv && active !== "doctor") {
     body.innerHTML = '<p class="muted">The daemon is not answering.</p>';
     return;
   }
   body.innerHTML = (TABS[active] || renderServices)();
+  if (!inv) return;
 
   const stamp = root.querySelector("[data-sys-stamp]");
   if (stamp) {
@@ -295,6 +381,7 @@ function countRows() {
   if (active === "listeners") return (inv.listeners?.rows || []).length;
   if (active === "processes") return (inv.processes?.rows || []).length;
   if (active === "mounts") return (inv.mounts?.rows || []).length;
+  if (active === "doctor") return healthIssues().length;
   return (inv.tips || []).length;
 }
 
@@ -309,18 +396,37 @@ async function refresh(root, force) {
   paintOverviewStrip(inv);
 }
 
+function selectTab(root, name) {
+  active = name;
+  root.querySelectorAll("[data-sys-tabs] .seg-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
+  const search = root.querySelector("[data-sys-search]");
+  if (search) search.value = "";
+  query = "";
+  paint(root);
+  if (name === "doctor" && !healthScan()) loadHealth(false);
+}
+
+// showSystemTab opens the System sheet on one tab (the overview's health band
+// links straight to the Doctor tab).
+export function showSystemTab(name) {
+  active = name;
+  if (panelRoot) selectTab(panelRoot, name);
+  location.hash = "#/system";
+}
+
 export function initSystem(root) {
   if (!root) return;
+  panelRoot = root;
+  bindFixButtons(root);
+  onHealth(() => {
+    paintDoctorBadge();
+    if (active === "doctor") paint(root);
+  });
+  paintDoctorBadge();
 
   root.querySelector("[data-sys-tabs]").addEventListener("click", (e) => {
     const btn = e.target.closest("[data-tab]");
-    if (!btn) return;
-    active = btn.dataset.tab;
-    root.querySelectorAll("[data-sys-tabs] .seg-btn").forEach((b) => b.classList.toggle("active", b === btn));
-    const search = root.querySelector("[data-sys-search]");
-    if (search) search.value = "";
-    query = "";
-    paint(root);
+    if (btn) selectTab(root, btn.dataset.tab);
   });
 
   root.querySelector("[data-sys-body]").addEventListener("click", (e) => {
@@ -328,6 +434,10 @@ export function initSystem(root) {
     if (sub) {
       serviceSub = sub.dataset.sub;
       paint(root);
+      return;
+    }
+    if (e.target.closest("[data-doc-rerun]")) {
+      loadHealth(true);
       return;
     }
     const cmd = e.target.closest("[data-copy]");
@@ -353,8 +463,13 @@ export function initSystem(root) {
   }
 
   const rescan = root.querySelector("[data-sys-refresh]");
-  if (rescan) rescan.addEventListener("click", () => refresh(root, true));
+  if (rescan)
+    rescan.addEventListener("click", () => {
+      if (active === "doctor") loadHealth(true);
+      else refresh(root, true);
+    });
 
+  selectTab(root, active);
   refresh(root, true);
   timer = setInterval(() => {
     if (!root.hidden && !document.hidden) refresh(root, false);

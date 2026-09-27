@@ -368,6 +368,9 @@ func Run(args []string) error {
 			noun = i18n.T("issues")
 		}
 		fmt.Fprintf(os.Stderr, "\n  %s %s\n", sys.Brand("➜"), sys.Bold(fmt.Sprintf(i18n.T("found %d %s"), warns+fails, noun)))
+		if rashinOn() {
+			fmt.Fprintf(os.Stderr, "    %s  %s\n", sys.Brand("ryoku-rashin fix doctor"), sys.Dim(i18n.T("let Rashin's agent investigate and fix these")))
+		}
 		fmt.Fprintf(os.Stderr, "    %s  %s\n", sys.Brand("ryoku doctor --explain"), sys.Dim(i18n.T("AI diagnosis and a suggested fix")))
 		if path != "" {
 			fmt.Fprintf(os.Stderr, "    %s\n", sys.Dim(i18n.Tf("report saved: %s", path)))

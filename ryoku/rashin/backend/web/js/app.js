@@ -10,7 +10,8 @@ import { initMemory } from "./memory.js";
 import { initSkills } from "./skills.js";
 import { initAbout } from "./about.js";
 import { initCode } from "./code.js";
-import { initSystem, paintOverviewStrip } from "./system.js";
+import { initSystem, paintOverviewStrip, showSystemTab } from "./system.js";
+import { initHealthBand } from "./health.js";
 import { initModels } from "./models.js";
 import { initTheme, heroVisible } from "./theme.js";
 import { api } from "./api.js";
@@ -88,6 +89,7 @@ function boot() {
   initVitals(document.querySelector('[data-panel="overview"]'));
   initCode(document.querySelector('[data-panel="overview"]'));
   api.system().then(paintOverviewStrip).catch(() => {});
+  initHealthBand(document.querySelector("[data-health-band]"), () => showSystemTab("doctor"));
   const origin = document.querySelector("[data-origin]");
   if (origin) origin.textContent = location.host;
   tick();

@@ -134,6 +134,29 @@ found: /usr/share/ryoku/config`) because that path only exists once the package
 is installed; use `ryoku deploy` there instead. To point it at a base tree
 yourself, set `RYOKU_CONFIG_BASE`.
 
+### `ryoku owner <path>...`
+
+Answers the question a coding agent (or you) has before touching a config file:
+who writes this, and where does my change belong so an update does not overwrite
+it. It classifies each path against the same materialize contract an update
+follows, so the verdict always matches what actually happens on the next update.
+A path can be absolute, `~/...`, or relative to `~/.config`.
+
+Each path prints its class (`overlay`, `forked`, `generated`, `store`, `seed`,
+`user-override`, `ryoku`, `user`, `package`, `unmanaged`), who writes it, and the
+file to edit instead, if any. `--json` prints the same as an array for a tool to
+read; `--map` prints a markdown ownership summary of the whole machine, which is
+what the Rashin vault carries so every wired agent knows the rules.
+
+```
+$ ryoku owner ~/.config/kitty/kitty.conf
+/home/you/.config/kitty/kitty.conf
+  class:   ryoku
+  writer:  the ryoku-desktop package, through materialize
+  advice:  Ryoku ships this and overwrites it on every update. Put your change in ~/.config/kitty/user.conf instead.
+  edit:    /home/you/.config/kitty/user.conf
+```
+
 ## Keyring
 
 ### `ryoku keyring`

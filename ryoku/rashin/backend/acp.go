@@ -384,26 +384,44 @@ func (c *acpConn) ListSessions() []SessionMeta {
 	return list
 }
 
-// cleanTitle drops a session title that is only the injected identity preamble;
-// hermes occasionally titles a fresh session from the whole first prompt.
+// cleanTitle drops what only the agent saw from a session title (hermes
+// occasionally titles a fresh session from the whole first prompt): a Fix with
+// AI session keeps its display line; a title cut off inside a preamble is
+// dropped.
 func cleanTitle(t string) string {
-	if len(t) >= 8 && t[:8] == "[system:" {
+	if !hasInjectedBlock(t) {
+		return t
+	}
+	rest := stripIdentityPreamble(t)
+	if hasInjectedBlock(rest) {
 		return ""
 	}
-	return t
+	return rest
 }
 
-// stripIdentityPreamble removes the injected Needle identity from a replayed
-// user message, so a loaded session shows the question the user actually typed
-// (hermes stores the full prompt, preamble and all, and replays it verbatim).
-func stripIdentityPreamble(s string) string {
-	if len(s) < 8 || s[:8] != "[system:" {
-		return s
-	}
-	for i := 0; i+1 < len(s); i++ {
-		if s[i] == ']' && s[i+1] == ' ' {
-			return s[i+2:]
+// injectedBlocks are the bracketed notes Rashin puts in front of a user turn:
+// the Needle identity and a Fix with AI brief.
+var injectedBlocks = []string{"[system:", "[fix:"}
+
+func hasInjectedBlock(s string) bool {
+	for _, p := range injectedBlocks {
+		if strings.HasPrefix(s, p) {
+			return true
 		}
+	}
+	return false
+}
+
+// stripIdentityPreamble removes the injected notes from a replayed user
+// message, so a loaded session shows what the user actually typed or clicked
+// (hermes stores the full prompt, notes and all, and replays it verbatim).
+func stripIdentityPreamble(s string) string {
+	for hasInjectedBlock(s) {
+		end := strings.Index(s, "] ")
+		if end < 0 {
+			return s
+		}
+		s = s[end+2:]
 	}
 	return s
 }

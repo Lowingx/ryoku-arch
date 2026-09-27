@@ -120,6 +120,20 @@
   align-items: start;
 }
 
+/* The health band: only when doctor found something a person must decide. */
+.health-band {
+  display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap;
+  margin-bottom: var(--s4);
+  padding: var(--s3) var(--s3) var(--s3) var(--s4);
+  background: var(--paper-lift);
+  border: 1px solid color-mix(in srgb, var(--alert) 40%, var(--line));
+  border-radius: var(--radius);
+  animation: sheetIn var(--t-mid) var(--ease) both;
+}
+.band-seal { font-size: 15px; font-weight: 700; color: var(--alert); }
+.band-text { flex: 1; min-width: 240px; margin: 0; font-size: 14px; color: var(--ink); }
+.health-band .fix-err { flex-basis: 100%; }
+
 a.sys-card { display: block; transition: border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
 a.sys-card:hover { border-color: var(--line-strong); background: color-mix(in srgb, var(--paper-lift) 90%, var(--ink) 4%); }
 .sys-list { list-style: none; margin: 0; padding: 0; }

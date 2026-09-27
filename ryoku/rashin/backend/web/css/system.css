@@ -28,17 +28,39 @@
 
 .tips-line { margin: 0 0 var(--s4); font-size: 13px; }
 .tip {
-  display: grid;
-  grid-template-columns: 88px minmax(0, 1fr);
-  column-gap: var(--s4);
-  row-gap: 6px;
+  position: relative;
+  display: flex; flex-direction: column; gap: 6px;
   margin-bottom: var(--s2);
-  padding: var(--s4) var(--s5);
+  padding: var(--s4) var(--s5) var(--s4) calc(var(--s5) + 104px);
 }
-.tip .state { grid-row: 1 / span 3; align-self: start; padding-top: 2px; }
+.tip .state { position: absolute; left: var(--s5); top: calc(var(--s4) + 2px); }
 .tip b { font-weight: 500; font-size: 15px; color: var(--ink); }
 .tip p { margin: 0; font-size: 13.5px; color: var(--ink-muted); max-width: 78ch; }
-.tip-act { border-color: color-mix(in srgb, var(--alert) 45%, var(--line)); }
+.tip-act, .doc-fail { border-color: color-mix(in srgb, var(--alert) 45%, var(--line)); }
+
+.tip-actions { display: flex; align-items: center; gap: var(--s2); max-width: 78ch; margin-top: var(--s1); }
+.tip-actions .cmd-btn { flex: 1; min-width: 0; margin-top: 0; }
+.tip-actions .fix-btn { flex: none; }
+
+.doc-head {
+  display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap;
+  margin-bottom: var(--s4);
+  padding: var(--s3) var(--s4);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+}
+.doc-sum { margin-right: auto; font-size: 13.5px; color: var(--ink); }
+.doc-head .fix-err { flex-basis: 100%; }
+.doc-remedy { font-size: 13px; }
+.doc-remedy code { font-family: var(--mono); font-size: 12px; color: var(--ink); background: var(--tint10); padding: 1px 5px; border-radius: 4px; }
+.doc-notes { margin-top: var(--s4); font-size: 13px; color: var(--ink-muted); }
+.doc-notes summary {
+  cursor: pointer;
+  font-family: var(--mono); font-size: 11px; letter-spacing: var(--track-label); text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.doc-notes p { margin: var(--s2) 0 0; max-width: 78ch; }
+.doc-notes b { font-weight: 500; color: var(--ink); }
 
 .cmd-btn {
   display: flex; align-items: center; gap: var(--s3);

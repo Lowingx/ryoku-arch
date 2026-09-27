@@ -39,6 +39,12 @@ func Reindex() error {
 	if err := WriteHabits(); err != nil {
 		return err
 	}
+	if err := writeOwnershipVaultDoc(); err != nil {
+		return err
+	}
+	if err := writeLogsMapVaultDoc(); err != nil {
+		return err
+	}
 	// Best effort, bounded, and never fatal: mirror the live config under the
 	// vault and refresh its prowl index so search_code works off a checkout.
 	_ = RefreshSourceMirror()

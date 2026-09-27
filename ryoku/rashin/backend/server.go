@@ -105,6 +105,10 @@ func Serve(cfg Config) error {
 	mux.HandleFunc("GET /api/system", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, SystemNow())
 	})
+	mux.HandleFunc("GET /api/doctor", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, DoctorNow(r.URL.Query().Get("refresh") == "1"))
+	})
+	mux.HandleFunc("POST /api/fix", hub.handleFix)
 	mux.HandleFunc("GET /api/theme", func(w http.ResponseWriter, r *http.Request) {
 		th := ThemeNow()
 		wall := map[string]any{"available": false}
@@ -315,14 +319,23 @@ func agentMutation(f func(string) error) http.HandlerFunc {
 	}
 }
 
+// loopbackOrigin reports whether a browser request came from this machine's
+// own dashboard. A request with no Origin (the CLI, curl) is local by the
+// listener's own bind.
+func loopbackOrigin(r *http.Request) bool {
+	o := r.Header.Get("Origin")
+	if o == "" {
+		return true
+	}
+	u, err := url.Parse(o)
+	return err == nil && (u.Hostname() == "127.0.0.1" || u.Hostname() == "localhost")
+}
+
 // acceptWS upgrades only when the Origin is this machine's own dashboard.
 func acceptWS(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
-	if o := r.Header.Get("Origin"); o != "" {
-		u, err := url.Parse(o)
-		if err != nil || (u.Hostname() != "127.0.0.1" && u.Hostname() != "localhost") {
-			http.Error(w, "forbidden origin", http.StatusForbidden)
-			return nil, errors.New("bad origin")
-		}
+	if !loopbackOrigin(r) {
+		http.Error(w, "forbidden origin", http.StatusForbidden)
+		return nil, errors.New("bad origin")
 	}
 	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
 		OriginPatterns: []string{"127.0.0.1:*", "localhost:*"},
