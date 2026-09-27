@@ -3,6 +3,17 @@
 ## Unreleased
 
 ### Fixed
+- **The edge field's top and bottom edges light up again.** The EDGES chips in
+  the visualizer's editing bar passed their lit state to `armed`, which `Btn`
+  treats as enabled, so an unlit edge could never be tapped: with the default
+  left+right rails on, T and B sat inert and the look appeared locked to the
+  vertical edges. Lit edges now wear the filled plate and every chip stays
+  clickable. The same pass made the look honest where it deviated from the
+  others: a single pinned colour now tints the field (it used to demand a
+  complete triad and silently ignore one), the placement guide and the
+  drag/scroll box gestures stand down for it (it owns the whole screen and
+  never reads a box, so they only rang the display with a dead rectangle), and
+  the bar's hint names only the keys that actually edit it.
 - **The launcher no longer takes the shell down on niri.** The blurred frost
   behind the hero and palette cards is a still of the desktop, so it needs a
   capture surface that lives as long as the launcher does. niri recreates its
