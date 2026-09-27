@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- **The base set gained the iRiS frame's fonts.** `ttf-rubik-vf` and
+  `ttf-readex-pro` join `base.packages`, both shipped from [ryoku], so every
+  install and update carries the numerals and title faces the frame's QML
+  hardcodes; without them the desktop renders on a fallback face with wrong
+  metrics.
+
 - **Lock, wake and lid each have one owner, and suspend now fails closed.** The
   shell daemon bound to the foreground graphical session owns login1's delay
   inhibitor and long-lived hard block. Before ownership moves, the outgoing

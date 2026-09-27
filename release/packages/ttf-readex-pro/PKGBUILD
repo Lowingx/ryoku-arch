@@ -1,0 +1,30 @@
+# Maintainer: Ryoku <releases@ryoku.dev>
+#
+# ttf-readex-pro = Readex Pro, the display sans the iRiS frame renders its
+# headlines and titles with (IrisStyle.fontTitle: island clock face, card
+# headers, the studio's titles).
+#
+# Shipped from [ryoku], not the AUR, for the same reason as ttf-rubik-vf: the
+# face is hardcoded in shell QML, and a box without it falls back to Noto Sans
+# with different metrics. The upstream repo has no release assets, so this
+# installs the variable TTF from a pinned commit, like the AUR recipe does; the
+# commit is immutable and the checksum is pinned for real.
+#
+# fixed-version package: it tracks the upstream Readex Pro release, not the
+# monorepo RYOKU_PKGVER. bump pkgver + _commit + sha256sums for a new release.
+pkgname=ttf-readex-pro
+pkgver=1.204
+pkgrel=1
+pkgdesc="Readex Pro variable TTF (the iRiS frame's title face)"
+arch=('any')
+url="https://github.com/ThomasJockin/readexpro"
+license=('OFL-1.1')
+_commit=1a5aaa4c15edb043c37113a8cddf020235917050
+_pkgsrc="readexpro-$_commit"
+source=("$_pkgsrc.tar.gz::$url/archive/$_commit.tar.gz")
+sha256sums=('128848eba1ae8fe0454f279a367f5ef0e932949e131382f7b3e26b9373c9a7e4')
+
+package() {
+  install -Dm644 "$_pkgsrc/fonts/variable/Readexpro[HEXP,wght].ttf" -t "$pkgdir/usr/share/fonts/TTF"
+  install -Dm644 "$_pkgsrc/OFL.txt" "$pkgdir/usr/share/licenses/$pkgname/OFL.txt"
+}

@@ -1,0 +1,36 @@
+# Maintainer: Ryoku <releases@ryoku.dev>
+#
+# ttf-rubik-vf = Rubik, the slightly-rounded sans the iRiS frame renders every
+# numeral with (IrisStyle.fontNumbers: island clock, card metrics, gauges).
+#
+# Shipped from [ryoku], not the AUR, on purpose, like otf-space-grotesk before
+# it: the face is hardcoded in shell QML, so a box without it silently falls
+# back to Noto Sans and the frame's number layout shifts (tight card rows clip
+# their unit glyphs). Prebuilt TTFs from a pinned upstream commit: no build to
+# fail, it always resolves, and it reaches every box on install (pacstrapped
+# from base.packages) and on `ryoku update`.
+#
+# fixed-version package: it tracks the upstream Rubik release, not the monorepo
+# RYOKU_PKGVER. GitHub raw assets at a commit are immutable, so the checksum is
+# pinned for real. bump pkgver + _commit + sha256sums for a new upstream release.
+pkgname=ttf-rubik-vf
+pkgver=2.3.0
+pkgrel=1
+pkgdesc="Rubik variable TTF (the iRiS frame's numerals face)"
+arch=('any')
+url="https://github.com/googlefonts/rubik"
+license=('OFL-1.1')
+_commit=e337a5f69a9bea30e58d05bd40184d79cc099628
+source=(
+  "Rubik[wght].ttf::$url/raw/$_commit/fonts/variable/Rubik%5Bwght%5D.ttf"
+  "Rubik-Italic[wght].ttf::$url/raw/$_commit/fonts/variable/Rubik-Italic%5Bwght%5D.ttf"
+  "OFL.txt::$url/raw/$_commit/OFL.txt"
+)
+sha256sums=('1b3a7437ba2af80e465e773ed60c5036d1ba6ace492d89046dbcf18fb31e4e88'
+            '08c6c4018a5ada8b517407b46897e46cf6ebb106853fbd3e89addb51d3b59c62'
+            '472cbe7c25441df63e9c7864b43eb3c0f4b3df950c66a76224e6cfe1eae843fb')
+
+package() {
+  install -Dm644 "Rubik[wght].ttf" "Rubik-Italic[wght].ttf" -t "$pkgdir/usr/share/fonts/TTF"
+  install -Dm644 OFL.txt "$pkgdir/usr/share/licenses/$pkgname/OFL.txt"
+}

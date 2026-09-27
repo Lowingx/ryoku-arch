@@ -321,3 +321,13 @@ otf-space-grotesk
 # the upstream prebuilt NF release, so it pacstraps on install and updates with
 # `ryoku update`; same reliable model as otf-space-grotesk.
 ttf-maple-mono-nf
+
+# ttf-rubik-vf + ttf-readex-pro: the numerals face (Rubik) and the title face
+# (Readex Pro) the iRiS frame hardcodes in QML (IrisStyle.fontNumbers /
+# fontTitle). They ship from [ryoku] (release/packages/ttf-rubik-vf,
+# release/packages/ttf-readex-pro) as prebuilt TTFs from pinned upstream
+# commits, so they pacstrap on install and reach existing boxes through the
+# `ryoku update` Base lane. Without them the frame silently falls back to Noto
+# Sans: different metrics, and tight card rows clip their unit glyphs.
+ttf-rubik-vf
+ttf-readex-pro

@@ -3,6 +3,13 @@
 ## Unreleased
 
 ### Added
+- **`ttf-rubik-vf` and `ttf-readex-pro` ship from [ryoku].** The iRiS frame
+  hardcodes Rubik for every numeral and Readex Pro for its titles; neither face
+  shipped, so boxes silently fell back to Noto Sans and the frame's tight card
+  rows clipped their unit glyphs. Both are prebuilt TTFs from pinned upstream
+  commits (no build to fail headless), pacstrapped from `base.packages`, and
+  reach existing boxes through the `ryoku update` Base lane. Same model as
+  `otf-space-grotesk`.
 - **`ryoku-desktop` ships the `ryoku-gpu-trim` initramfs hook.**
   `/usr/lib/initcpio/install/ryoku-gpu-trim`, from
   `system/boot/mkinitcpio/install/`. The HOOKS drop-in names it and mkinitcpio
