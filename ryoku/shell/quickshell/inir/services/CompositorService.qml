@@ -116,11 +116,33 @@ Singleton {
             && active.some(ws => ws.id === w.workspace_id));
     }
 
-    function activeWorkspaceCovers(outputName) {
+    function activeWorkspaceFor(outputName) {
         for (const w of root.allWorkspaces)
             if (w.output === outputName && w.is_active)
                 return w;
         return null;
+    }
+
+    // True when the tiled windows of the output's active workspace span its
+    // width, so only gaps of the wallpaper remain visible.
+    function activeWorkspaceCovers(outputName) {
+        const ws = root.activeWorkspaceFor(outputName);
+        const width = Number(root.outputs[outputName]?.logical?.width ?? 0);
+        if (!ws || width <= 0)
+            return false;
+        const spans = root.windows
+            .filter(w => w.workspace_id === ws.id && !w.is_floating && !w.is_minimized && w.width > 0)
+            .map(w => [w.x, w.x + w.width])
+            .sort((a, b) => a[0] - b[0]);
+        let covered = 0;
+        let reach = -Infinity;
+        for (const [start, end] of spans) {
+            if (end <= reach)
+                continue;
+            covered += end - Math.max(start, reach);
+            reach = end;
+        }
+        return covered >= width * 0.95;
     }
 
     function tilingWindowCount(id) {
@@ -137,9 +159,6 @@ Singleton {
             if (!w.toplevel)
                 continue;
             const ws = Wm.workspaceByName(w.workspace);
-            // The seam's window key doubles as the frame's niri-shaped ids.
-            w.toplevel.nativeWindowId = w.id;
-            w.toplevel.nativeWorkspaceId = w.workspace || "";
             out.push({
                 id: w.id,
                 app_id: w.appId || "",
@@ -179,12 +198,50 @@ Singleton {
         return root.windows.filter(w => w.workspace_id === workspaceId);
     }
 
+    // The frame's toplevel shape: the foreign-toplevel handle's facts plus the
+    // seam's window id, with activate/close routed through the seam so a dock
+    // click focuses the window on whichever workspace it lives.
+    readonly property var toplevels: {
+        const focusedId = Wm.focusedWindow ? Wm.focusedWindow.id : "";
+        const outputs = root.outputs;
+        const rank = w => {
+            const o = outputs[w.output]?.logical;
+            return [o ? o.x : 1e6, o ? o.y : 1e6, Number(w.workspace_id) || 1e6, w.x, w.y];
+        };
+        const sorted = root.windows.slice().sort((a, b) => {
+            const ra = rank(a), rb = rank(b);
+            for (let i = 0; i < ra.length; i++)
+                if (ra[i] !== rb[i])
+                    return ra[i] - rb[i];
+            return 0;
+        });
+        return sorted.map(w => {
+            const handle = w.toplevel;
+            const id = w.id;
+            return {
+                appId: handle.appId || w.app_id,
+                title: handle.title || w.title,
+                activated: id === focusedId,
+                minimized: handle.minimized === true,
+                urgent: handle.urgent === true,
+                fullscreen: handle.fullscreen === true,
+                maximized: handle.maximized === true,
+                screens: handle.screens,
+                nativeWindowId: id,
+                nativeWorkspaceId: w.workspace_id,
+                _sourceKey: "wm:" + id,
+                _sourceToplevel: handle,
+                activate: () => root.focusWindow(id),
+                close: () => root.closeWindow(id)
+            };
+        });
+    }
+
     function filterCurrentWorkspace(toplevels, screen) {
-        const name = screen ? screen.name : "";
-        const ws = root.activeWorkspaceCovers(name);
+        const ws = root.activeWorkspaceFor(screen ? screen.name : "");
         if (!ws)
             return toplevels;
-        return root.windows.filter(w => w.workspace_id === ws.id && !w.is_minimized);
+        return toplevels.filter(t => t.nativeWorkspaceId === ws.id && !t.minimized);
     }
 
     function focusWindow(id) {
@@ -289,18 +346,11 @@ Singleton {
         Wm._act("session.exit", "sessionExit", []);
     }
 
-    // ---- ordering consumers (no-op: the seam already orders by focus) ----
-    property var sortedToplevels: root.windows
-    property var _sortingConsumers: ({})
+    // ---- ordering consumers (the seam list is always ordered by layout, so the
+    // reference's sort leases have nothing to switch on) ----
+    readonly property var sortedToplevels: root.toplevels
 
     function setSortingConsumer(name, active) {
-        const next = Object.assign({}, root._sortingConsumers);
-        if (active)
-            next[name] = true;
-        else
-            delete next[name];
-        root._sortingConsumers = next;
-        root.sortedToplevels = root.windows;
     }
 
     function acquireSortingConsumer() {
@@ -329,7 +379,6 @@ Singleton {
     }
 
     function sortToplevels() {
-        root.sortedToplevels = root.windows;
     }
 
     function maximizeColumn() {
@@ -342,10 +391,7 @@ Singleton {
     Connections {
         target: Wm
         function onWindowsChanged() {
-            root.sortedToplevels = root.windows;
             root.windowOrderChanged();
-        }
-        function onWorkspacesChanged() {
         }
     }
 }

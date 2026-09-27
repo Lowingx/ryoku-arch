@@ -25,7 +25,6 @@ Singleton {
     Connections {
         target: CompositorService
         function onSortedToplevelsChanged() { root.scheduleAppsRebuild() }
-        function onIsNiriChanged() { root.scheduleAppsRebuild() }
     }
 
     Connections {

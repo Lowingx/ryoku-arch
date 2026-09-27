@@ -65,7 +65,7 @@ function config() {
    "highlight": "orange",
    "figureWeight": "bold",
    "numbersFontFamily": "",
-   "density": 1.0,
+   "density": 1,
    "motion": true,
    "motionDuration": 220,
    "accent": "blue",
@@ -91,7 +91,7 @@ function config() {
     "contrast": 100,
     "shadow": 100,
     "shape": 100,
-    "melt": 0,
+    "melt": 100,
     "bounce": 100,
     "text": 100,
     "rim": true,
@@ -461,8 +461,8 @@ function config() {
     "session": true,
     "hotcorners": true,
     "rippleDuration": 3000,
-    "sparkleIntensity": 1.0,
-    "glowIntensity": 1.0,
+    "sparkleIntensity": 1,
+    "glowIntensity": 1,
     "ringWidth": 0.15
    },
    "thumbnailBlurStrength": 50,
@@ -475,22 +475,22 @@ function config() {
    "autoVertical": false,
    "enableSidebar": true,
    "enableWorkspace": true,
-   "workspaceShift": 1.0,
+   "workspaceShift": 1,
    "vertical": true,
-   "zoom": 1.0,
+   "zoom": 1,
    "panelShift": 0.15,
    "widgetDepth": 1.2,
    "pauseDuringTransitions": true,
    "transitionSettleMs": 220,
    "widgetsFactor": 1.2,
-   "workspaceZoom": 1.0
+   "workspaceZoom": 1
   },
   "thumbnailPath": "",
   "wallpaperPath": "",
   "pan": {
-   "x": 0.0,
-   "y": 0.0,
-   "zoom": 1.0
+   "x": 0,
+   "y": 0,
+   "zoom": 1
   },
   "autoWallpaper": {
    "enable": false,
@@ -517,7 +517,7 @@ function config() {
    "duration": 800,
    "bezier": [
     0.54,
-    0.0,
+    0,
     0.34,
     0.99
    ]
@@ -791,11 +791,11 @@ function config() {
     "locked": false,
     "placementStrategy": "free",
     "preset": "exhibition",
-    "primaryText": "\u590f\u306e\u8a18\u61b6",
-    "secondaryText": "\u6f6e\u98a8\u3068\u3001\u3042\u306e\u5b50\u3068\u3001\u7d42\u308f\u3089\u306a\u3044\u590f",
-    "sealText": "\u7279\u5225\u5c55",
+    "primaryText": "夏の記憶",
+    "secondaryText": "潮風と、あの子と、終わらない夏",
+    "sealText": "特別展",
     "footerText": "PACIFIC DRIVE-IN",
-    "dateText": "7.12 \u2014 8.31",
+    "dateText": "7.12 — 8.31",
     "showSecondary": true,
     "showSeal": true,
     "showFooter": true,
@@ -1070,7 +1070,16 @@ function config() {
     "snap": true
    },
    "custom": {},
-   "style": "panel"
+   "style": "panel",
+   "outputOverrides": [],
+   "worldClock": {
+    "enable": false,
+    "timezones": [
+     "Asia/Tokyo",
+     "Europe/London",
+     "America/New_York"
+    ]
+   }
   },
   "edgeWidgets": {
    "organic": {
@@ -1265,8 +1274,8 @@ function config() {
     "quickActions"
    ],
    "sectionWeights": {
-    "notifications": 1.0,
-    "widgets": 1.0
+    "notifications": 1,
+    "widgets": 1
    }
   },
   "screenTime": {
@@ -1429,7 +1438,8 @@ function config() {
      "cmd": "/usr/bin/code"
     }
    ]
-  }
+  },
+  "screenList": []
  },
  "wallpaperSelector": {
   "selectionTarget": "main",
@@ -1591,7 +1601,8 @@ function config() {
   "timeout": 3000,
   "timeoutCritical": 0,
   "timeoutLow": 5000,
-  "timeoutNormal": 7000
+  "timeoutNormal": 7000,
+  "silent": false
  },
  "appearance": {
   "globalStyle": "material",
@@ -1611,7 +1622,7 @@ function config() {
    "glassTintTransparency": 0.52,
    "glassSurfaceOpacity": 0.6,
    "glassSaturation": 0.12,
-   "radiusScale": 1.0
+   "radiusScale": 1
   },
   "aurora": {
    "transparency": {
@@ -1642,13 +1653,13 @@ function config() {
    "titleWeight": 650,
    "titleTracking": -0.6,
    "typography": "poster",
-   "titleScale": 1.0,
+   "titleScale": 1,
    "warmth": 0.55,
    "accentStrength": 0.55,
-   "spacing": 1.0,
-   "radiusScale": 1.0,
+   "spacing": 1,
+   "radiusScale": 1,
    "ornaments": true,
-   "motionScale": 1.0
+   "motionScale": 1
   },
   "zzz": {
    "shape": "square",
@@ -1658,7 +1669,7 @@ function config() {
     "ghost": true,
     "grid": true,
     "ticks": true,
-    "burstSize": 1.0
+    "burstSize": 1
    }
   },
   "extraBackgroundTint": true,
@@ -1786,7 +1797,7 @@ function config() {
    "enableSteam": false,
    "enablePearDesktop": true,
    "enableNeovim": false,
-   "colorStrength": 1.0,
+   "colorStrength": 1,
    "useBackdropForColors": false,
    "colorsOnlyMode": false,
    "previewSourcePath": "",
@@ -1831,13 +1842,14 @@ function config() {
     "melty": true,
     "pearai": true,
     "aide": true
-   }
+   },
+   "enableCava": false
   },
   "typography": {
    "mainFont": "Roboto Flex",
    "titleFont": "Gabarito",
    "monospaceFont": "JetBrainsMono Nerd Font",
-   "sizeScale": 1.0,
+   "sizeScale": 1,
    "syncWithSystem": true,
    "variableAxes": {
     "wght": 300,
@@ -1845,7 +1857,7 @@ function config() {
     "grad": 150
    }
   },
-  "shellScale": 1.0,
+  "shellScale": 1,
   "iconTheme": "WhiteSur-dark",
   "dockIconTheme": "",
   "desaturation": {
@@ -1860,10 +1872,10 @@ function config() {
    "popups": true
   },
   "animationSpeed": {
-   "movement": 1.0,
-   "enterExit": 1.0,
-   "clickBounce": 1.0,
-   "scroll": 1.0
+   "movement": 1,
+   "enterExit": 1,
+   "clickBounce": 1,
+   "scroll": 1
   },
   "animationCurve": {
    "movement": "default",
@@ -1897,7 +1909,8 @@ function config() {
   "separatePinnedFromRunning": true,
   "enableDragReorder": true,
   "notificationBadge": true,
-  "style": "m3"
+  "style": "m3",
+  "position": "bottom"
  },
  "language": {
   "translator": {
@@ -1915,7 +1928,7 @@ function config() {
   "chromeLayout": "",
   "overlayAppearance": {
    "scrimDim": 35,
-   "backgroundOpacity": 1.0,
+   "backgroundOpacity": 1,
    "backdropBlur": 0
   }
  },
@@ -1980,7 +1993,10 @@ function config() {
    "audioBitrateKbps": 96,
    "preset": "slow",
    "maxDimension": 1280
-  }
+  },
+  "audioMode": "system",
+  "microphoneSource": "",
+  "systemAudioSource": ""
  },
  "light": {
   "antiFlashbang": {
@@ -2083,6 +2099,102 @@ function config() {
   "irisNotificationPopup",
   "irisOnScreenDisplay",
   "irisSessionScreen"
- ]
+ ],
+ "bar": {
+  "appearanceStyle": "m3",
+  "bottom": false,
+  "cornerStyle": 1,
+  "height": 40,
+  "pill": {
+   "appGap": 1,
+   "barMode": false,
+   "expandedHeight": 66,
+   "restHeight": 44,
+   "scale": 1,
+   "topGap": 1
+  },
+  "resources": {
+   "cpuWarningThreshold": 90,
+   "gpuWarningThreshold": 90,
+   "memoryWarningThreshold": 95,
+   "tempCautionThreshold": 65,
+   "tempWarningThreshold": 80
+  },
+  "screenList": [],
+  "showBackground": true,
+  "verbose": true,
+  "vertical": false,
+  "weather": {
+   "city": "",
+   "enable": true,
+   "enableGPS": false,
+   "fetchInterval": 10,
+   "manualLat": 0,
+   "manualLon": 0,
+   "useUSCS": false
+  }
+ },
+ "battery": {
+  "automaticSuspend": false,
+  "chargeLimit": {
+   "enable": false,
+   "threshold": 80
+  },
+  "critical": 5,
+  "full": 101,
+  "low": 20,
+  "suspend": 3
+ },
+ "display": {
+  "primaryMonitor": ""
+ },
+ "mascot": {
+  "chaos": {
+   "artStyle": "jrpg"
+  },
+  "enable": false,
+  "surfacePoses": {
+   "about": "",
+   "aiChat": "",
+   "bootGreeting": "",
+   "calendar": "",
+   "cheatsheet": "",
+   "clipboard": "",
+   "dashboard": "",
+   "dialogs": "",
+   "emptyStates": "",
+   "mediaControls": "",
+   "notifications": "",
+   "session": "",
+   "startMenu": "",
+   "todo": "",
+   "updates": "",
+   "wallpaperSelector": "",
+   "wifi": ""
+  },
+  "surfaces": {
+   "about": true,
+   "aiChat": true,
+   "bootGreeting": true,
+   "cheatsheet": true,
+   "dashboard": true,
+   "dialogs": true,
+   "emptyStates": true,
+   "session": true,
+   "updates": true
+  }
+ },
+ "media": {
+  "filterDuplicatePlayers": true,
+  "screenList": []
+ },
+ "osd": {
+  "mediaEnabled": true
+ },
+ "updates": {
+  "adviseUpdateThreshold": 75,
+  "checkInterval": 120,
+  "stronglyAdviseUpdateThreshold": 200
+ }
 }
 }

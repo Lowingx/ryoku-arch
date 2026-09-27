@@ -69,10 +69,14 @@ QtObject {
     readonly property string pieceJoin: root.piecesAttached ? String(root.bubbles?.join ?? "notch") : "float"
     readonly property bool piecesMelt: root.pieceJoin === "notch" || root.pieceJoin === "weld"
     readonly property real pieceGap: root.pieceJoin === "gap" ? Math.max(root.islandMargin, Math.round(8 * root.d)) : 0
-    readonly property real pieceInset: root.band + root.pieceGap
+    // A melted bubble's circle would otherwise sit flush on the band, leaving its
+    // ring a hair off the frame's edge; seat it a little inward so the ring
+    // keeps even air on every side.
+    readonly property real pieceSeat: root.piecesMelt ? Math.round(4 * root.d) : 0
+    readonly property real pieceInset: root.band + root.pieceGap + root.pieceSeat
     readonly property real pieceScale: Math.max(0.6, Math.min(1.4, Number(root.bubbles?.scale ?? 100) / 100))
     readonly property real pieceBand: Math.round(root.islandBand * root.pieceScale)
-    readonly property real pieceDepth: root.pieceGap + root.pieceBand
+    readonly property real pieceDepth: root.pieceGap + root.pieceSeat + root.pieceBand
     function edgeOf(place: string): string {
         if (place.startsWith("edge:")) return ["top", "bottom", "left", "right"].includes(place.slice(5)) ? place.slice(5) : ""
         if (place === "top-left" || place === "top-right") return "top"

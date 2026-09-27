@@ -2,7 +2,24 @@
 
 ## Unreleased
 
+### Changed
+- **iRiS cards and the Control Center grow out of the frame.** The default
+  iRiS theme now melts an opened body into the bubble or edge it came from, so
+  it reads as one silhouette with the frame instead of a panel floating beside
+  it. The sharp themes keep their crisp joins, and the Fusion slider still
+  sets it. Edge bubbles also sit a little off the band so their ring never
+  grazes the frame.
+
 ### Fixed
+- **Clicking an app in the iRiS dock takes you to it.** The frame's toplevel
+  list was the compositor's plain window records, which carry no `activate`,
+  so every click died on a TypeError; it now hands the dock real toplevels
+  whose activate and close go through the window-manager seam, on Hyprland and
+  niri alike.
+- **The Island's weather shows the temperature.** The frame's defaults never
+  carried the `bar` block the weather service reads, so it stayed disabled and
+  the Island showed a bare icon. Every option path the frame reads now has the
+  reference's fresh-install default.
 - **The iRiS frame's spotlight searches again.** The port pruned the reference's
   global-actions daemon but left the search pipeline calling it, so every typed
   query died on a TypeError and the palette showed nothing. A trimmed action

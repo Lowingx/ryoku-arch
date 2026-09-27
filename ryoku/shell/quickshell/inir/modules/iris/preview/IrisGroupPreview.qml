@@ -775,7 +775,7 @@ ClippingRectangle {
             id: fuseRoot
             readonly property real naturalWidth: Math.round(620 * root.d)
             readonly property real naturalHeight: Math.round(300 * root.d)
-            readonly property real melt: Number(root.opt("iris.appearance.theme.melt", 0))
+            readonly property real melt: Number(root.opt("iris.appearance.theme.melt", 100))
             readonly property real corners: Number(root.opt("iris.appearance.theme.shape", 100))
             readonly property real bubble: IrisFrame.islandBand
             property real t: 0
