@@ -6,8 +6,6 @@
 
 import { escapeHtml } from "./markdown.js";
 import { humanBytes } from "./format.js";
-import { motion } from "./motion.js";
-import { initOrbit, supportsWebGL } from "./orbit3d.js";
 
 const MONO = "'JetBrains Mono', monospace";
 const MONTHS = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
@@ -214,15 +212,13 @@ export function initMemory(root) {
   const canvas = root.querySelector("[data-mem-graph]");
   const heatEl = root.querySelector("[data-mem-heatmap]");
   const sessEl = root.querySelector("[data-mem-sessions]");
-  const wrap3d = root.querySelector("[data-mem-graph-3d]");
-  const orbitCanvas = root.querySelector("[data-mem-orbit]");
-  const viewToggle = root.querySelector("[data-mem-view-toggle]");
+  const legendEl = root.querySelector("[data-mem-legend]");
+  const graphMeta = root.querySelector("[data-mem-graph-meta]");
   const ctx = canvas ? canvas.getContext("2d") : null;
   const reduce =
     typeof matchMedia !== "undefined" &&
     matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const C = readColors();
   const size = { w: 600, h: 420 };
   const center = { x: 300, y: 210 };
   let model = null;
@@ -236,75 +232,63 @@ export function initMemory(root) {
   let settleFrames = 0;
   let hover = null;
   let drag = null;
-  let view = "links";
-  let orbit = null;
   const SETTLE = 0.6;
   const SETTLE_FRAMES = 20;
 
-  function readColors() {
-    const cs = getComputedStyle(document.documentElement);
-    const g = (name, fb) => (cs.getPropertyValue(name) || "").trim() || fb;
-    return {
-      ink: g("--ink", "#e8d8c9"),
-      red: g("--red", "#C94E44"),
-      tan: g("--tan", "#CDA47B"),
-      teal: g("--teal", "#3E6868"),
-      slate: g("--slate", "#4b607f"),
-      orange: g("--orange", "#f3701e"),
-      dim: g("--ink-dim", "#8f8378"),
-      line: g("--line", "rgba(232,216,201,.18)"),
-      paper: g("--paper", "#0e0d0b"),
-    };
-  }
+  const C = {
+    text: "#d9dfe9",
+    dim: "#8b94a8",
+    line: "rgba(139,148,168,.18)",
+  };
+  const GROUPS = {
+    hub: { fill: "#e0533d", label: "hub" },
+    generated: { fill: "#d9a05b", label: "generated map" },
+    memory: { fill: "#3ecf8e", label: "memory" },
+    journal: { fill: "#5b9dd9", label: "journal" },
+    learned: { fill: "#e0a83d", label: "learned" },
+    hermes: { fill: "#8b94a8", label: "hermes", ring: "#e0a83d" },
+    skill: { fill: "#d9dfe9", label: "skill", ring: "#e0533d" },
+  };
 
   function nodeStyle(n) {
-    switch (n.group) {
-      case "hub":
-        return { fill: C.red, ring: null };
-      case "generated":
-        return { fill: C.tan, ring: null };
-      case "memory":
-        return { fill: C.teal, ring: null };
-      case "journal":
-        return { fill: C.slate, ring: null };
-      case "hermes":
-        return { fill: C.ink, ring: C.orange };
-      case "learned":
-        return { fill: C.orange, ring: null };
-      case "skill":
-        return { fill: C.ink, ring: C.red };
-      default:
-        return { fill: C.ink, ring: null };
+    const g = GROUPS[n.group] || { fill: C.text };
+    return { fill: g.fill, ring: g.ring || null };
+  }
+
+  function renderLegend() {
+    if (!legendEl) return;
+    const present = [];
+    for (const key of Object.keys(GROUPS)) {
+      if ((model ? model.nodes : []).some((n) => n.group === key)) present.push(key);
     }
+    legendEl.innerHTML = present
+      .map(
+        (k) =>
+          "<span><i style=\"background:" + GROUPS[k].fill + "\"\u003E\u003C/i\u003E" + GROUPS[k].label + "</span>"
+      )
+      .join("");
   }
 
   function radius(n) {
-    const base = 5 + Math.log((n.size || 1) + 1) * 2;
-    const r = Math.max(5, Math.min(22, base));
-    return n.group === "hub" ? r * 1.5 : r;
+    const r = Math.max(3.5, Math.min(10, 3 + Math.log((n.size || 1) + 1)));
+    return n.group === "hub" ? r * 1.4 : r;
   }
 
   // ---- tiles / heatmap / sessions ----
 
-  function tile(accent, label, main, sub, isStamp) {
-    const body = isStamp
-      ? '<div class="mem-tile-stamp">' + main + "</div>"
-      : '<b class="stat-num mem-tile-num">' + escapeHtml(main) + "</b>";
-    const subEl = isStamp
-      ? sub
-      : '<span class="stat-sub">' + escapeHtml(sub) + "</span>";
+  function tileShell(label, main, sub) {
     return (
-      '<div class="stat mem-tile" data-accent="' +
-      accent +
-      '"><span class="stat-corner" aria-hidden="true"></span>' +
-      '<em class="eyebrow">' +
-      label +
-      "</em>" +
-      body +
-      subEl +
-      "</div>"
+      '<div class="mem-tile"><span class="mem-tile-label">' +
+      escapeHtml(label) +
+      '</span><span class="mem-tile-num">' +
+      main +
+      '</span><span class="mem-tile-sub">' +
+      escapeHtml(sub) +
+      "</span></div>"
     );
   }
+  const tile = (label, html, sub) => tileShell(label, html, sub);
+  const tileRaw = (label, val, sub) => tileShell(label, escapeHtml(val), sub);
 
   function renderTiles(data) {
     const p = data.provider || {};
@@ -312,34 +296,27 @@ export function initMemory(root) {
     const learned = data.learned || {};
     const external = p.kind && p.kind !== "builtin";
     const provStamp =
-      '<span class="stamp ' +
-      (external ? "stamp-vermillion" : "stamp-ok") +
-      '">' +
-      escapeHtml((p.kind || "none").toUpperCase()) +
-      "</span>";
-    const vault = p.obsidianVault
-      ? '<span class="stat-sub dim">' + escapeHtml(p.obsidianVault) + "</span>"
-      : '<span class="stat-sub dim">no obsidian vault</span>';
+      '<span class="chip ' + (external ? "info" : "ok") + '">' + escapeHtml(p.kind || "none") + "</span>";
     const sessions = (data.sessions || []).length;
     const memBytes = files.memoryMd ? humanBytes(files.memoryBytes || 0) : "--";
-    // The growth ledger: everything the agent accumulated on its own. Starts
-    // near zero on a fresh install and fills as hermes runs.
+    // The growth ledger: everything the agent accumulated on its own, beyond
+    // the maps Ryoku generates. It fills as hermes runs.
     const grown =
       (learned.memoryEntries || 0) +
       (learned.userFacts || 0) +
       (learned.agentSkills || 0) +
       (learned.vaultNotes || 0);
     const grownSub =
-      (learned.memoryEntries || 0) + " memories / " +
-      (learned.userFacts || 0) + " user facts / " +
-      (learned.agentSkills || 0) + " skills / " +
+      (learned.memoryEntries || 0) + " memories · " +
+      (learned.userFacts || 0) + " user facts · " +
+      (learned.agentSkills || 0) + " skills · " +
       (learned.vaultNotes || 0) + " notes";
     tilesEl.innerHTML =
-      tile("teal", "PROVIDER", provStamp, vault, true) +
-      tile("vermillion", "LEARNED", String(grown), grownSub) +
-      tile("orange", "MEMORY.MD", memBytes, files.memoryMd ? "on disk" : "absent") +
-      tile("slate", "SESSIONS", String(sessions), "recorded") +
-      tile("tan", "JOURNAL DAYS", String((data.learned || {}).journalDays || 0), "active");
+      tile("Provider", provStamp, p.obsidianVault || "no obsidian vault") +
+      tileRaw("Learned", String(grown), grownSub) +
+      tileRaw("memory.md", memBytes, files.memoryMd ? "on disk" : "absent") +
+      tileRaw("Sessions", String(sessions), "recorded") +
+      tileRaw("Journal days", String(learned.journalDays || 0), "active");
   }
 
   function renderHeatmap(entries) {
@@ -498,7 +475,7 @@ export function initMemory(root) {
     }
     ctx.restore();
 
-    const showAll = nodes.length <= 80;
+    const showAll = nodes.length <= 160;
     for (const n of nodes) {
       const st = nodeStyle(n);
       const r = radius(n);
@@ -553,7 +530,7 @@ export function initMemory(root) {
   }
 
   function wake() {
-    if (reduce || !motion.on) return;
+    if (reduce) return;
     if (!isVisible()) return;
     if (!model || !model.nodes.length) {
       drawEmpty("no notes yet");
@@ -572,68 +549,6 @@ export function initMemory(root) {
   function isVisible() {
     return !root.hidden && document.visibilityState !== "hidden";
   }
-
-  // ---- 3D orbit view ----
-
-  function rebuildOrbit() {
-    if (!wrap3d || !orbitCanvas || view !== "orbit") return;
-    wrap3d.hidden = false;
-    if (canvas) canvas.hidden = true;
-    if (!orbit) {
-      orbit = initOrbit(orbitCanvas, {
-        nodes: model ? model.nodes : [],
-        links: model ? model.links : [],
-        onSelect: (n) => {
-          if (n && String(n.id).slice(-3) === ".md") location.hash = "#/vault";
-        },
-      });
-    } else if (orbit.step) {
-      orbit.step(model ? model.nodes : []);
-    }
-    if (orbit && orbit.resume) orbit.resume();
-  }
-
-  function showOrbit(on) {
-    view = on ? "orbit" : "links";
-    if (wrap3d) wrap3d.hidden = !on;
-    if (canvas) canvas.hidden = on;
-    if (viewToggle) {
-      viewToggle.querySelectorAll(".chip").forEach((b) => b.classList.toggle("active", (b.dataset.view === "orbit") === on));
-    }
-    if (on) {
-      rebuildOrbit();
-      stop();
-    } else {
-      resize();
-      wake();
-      if (settled && model && model.nodes.length) draw();
-    }
-  }
-
-  if (viewToggle) {
-    if (!supportsWebGL()) {
-      const chip = viewToggle.querySelector('[data-view="orbit"]');
-      if (chip) {
-        chip.disabled = true;
-        chip.title = "webgl unavailable on this machine";
-      }
-    }
-    viewToggle.addEventListener("click", (e) => {
-      const b = e.target.closest("[data-view]");
-      if (!b || b.disabled) return;
-      showOrbit(b.dataset.view === "orbit");
-    });
-  }
-
-  // the motion switch parks or restarts both renderers
-  motion.onChange((on) => {
-    if (on) {
-      wake();
-      if (view === "orbit" && orbit && orbit.resume) orbit.resume();
-    } else if (model && model.nodes.length) {
-      draw();
-    }
-  });
 
   // ---- pointer interactions ----
 
@@ -723,6 +638,9 @@ export function initMemory(root) {
     renderSessions(data.sessions || []);
     model = buildGraphModel(data);
     buildIndex();
+    renderLegend();
+    if (graphMeta)
+      graphMeta.textContent = model.nodes.length + " nodes · " + model.links.length + " links";
     resize();
     seedPositions();
     if (!model.nodes.length) {
@@ -741,7 +659,6 @@ export function initMemory(root) {
       settleFrames = 0;
       wake();
     }
-    if (view === "orbit") rebuildOrbit();
   }
 
   async function fetchMemory(force) {
@@ -769,7 +686,6 @@ export function initMemory(root) {
     if (isVisible()) {
       fetchMemory(false);
       wake();
-      if (view === "orbit" && orbit && orbit.resume) orbit.resume();
     } else {
       stop();
     }

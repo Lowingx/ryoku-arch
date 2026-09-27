@@ -10,6 +10,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -857,21 +858,44 @@ func DeriveTips(inv *SystemInventory) []Tip {
 	var tips []Tip
 	add := func(t Tip) { tips = append(tips, t) }
 
+	// Failed and dead units group into one tip each: four clones of the same
+	// advice is noise, and the unit names are already visible in the table.
+	var failedUnits, deadUnits []string
+	var failedCmd, deadCmd string
 	for _, u := range inv.Services.Stopped {
-		if !strings.Contains(u.LoadState, "not-found") && u.ActiveState != "failed" {
-			continue
-		}
 		if strings.Contains(u.LoadState, "not-found") {
-			add(Tip{ID: "dead-" + u.Name, Severity: "watch",
-				Title:   u.Name + " is dead: the unit file no longer exists",
-				Detail:  "something still asks systemd for it (a dependency or a leftover enable). Read where the request comes from, then drop it from the boot order.",
-				Command: "systemctl list-dependencies " + u.Name + " && systemctl disable " + u.Name})
+			deadUnits = append(deadUnits, u.Name)
+			if deadCmd == "" {
+				deadCmd = "systemctl list-dependencies " + u.Name
+			}
 			continue
 		}
-		add(Tip{ID: "failed-" + u.Name, Severity: "act",
-			Title:   u.Name + " is in failed state",
-			Detail:  "It exited with an error. Read the journal before restarting anything; a service that keeps failing usually says why in its last lines.",
-			Command: "journalctl -u " + strings.TrimSuffix(u.Name, ".service") + " -n 50 --no-pager"})
+		if u.ActiveState == "failed" {
+			failedUnits = append(failedUnits, u.Name)
+			if failedCmd == "" {
+				failedCmd = "journalctl -u " + strings.TrimSuffix(u.Name, ".service") + " -n 50 --no-pager"
+			}
+		}
+	}
+	if len(failedUnits) > 0 {
+		title := failedUnits[0] + " is in failed state"
+		if len(failedUnits) > 1 {
+			title = strconv.Itoa(len(failedUnits)) + " services are in failed state: " + listTitle(failedUnits)
+		}
+		add(Tip{ID: "failed-services", Severity: "act",
+			Title:   title,
+			Detail:  "They exited with an error. Read the journal before restarting anything; a service that keeps failing usually says why in its last lines.",
+			Command: failedCmd})
+	}
+	if len(deadUnits) > 0 {
+		verb := " has no unit file"
+		if len(deadUnits) > 1 {
+			verb = " have no unit file"
+		}
+		add(Tip{ID: "dead-units", Severity: "watch",
+			Title:   listTitle(deadUnits) + verb,
+			Detail:  "Something still asks systemd for them (a dependency or a leftover enable). Read where the request comes from, then drop them from the boot order.",
+			Command: deadCmd})
 	}
 	if inv.Services.TotalN > 0 && inv.Services.RunningN > 60 {
 		add(Tip{ID: "boot-load", Severity: "info",
@@ -950,6 +974,15 @@ func DeriveTips(inv *SystemInventory) []Tip {
 
 func isWildcardAddr(a string) bool {
 	return a == "*" || a == "::" || a == "0.0.0.0"
+}
+
+// listTitle keeps a tip title readable: the first few names, the rest counted.
+func listTitle(names []string) string {
+	const head = 3
+	if len(names) <= head {
+		return strings.Join(names, ", ")
+	}
+	return strings.Join(names[:head], ", ") + fmt.Sprintf(" and %d more", len(names)-head)
 }
 
 func sevRank(s string) int {

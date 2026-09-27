@@ -141,11 +141,25 @@ func TestDeriveTipsGrounded(t *testing.T) {
 	for _, tip := range tips {
 		byID[tip.ID] = tip
 	}
-	if _, ok := byID["failed-broken.service"]; !ok {
-		t.Error("failed unit must tip")
+	failed, ok := byID["failed-services"]
+	if !ok {
+		t.Fatal("failed units must tip")
 	}
-	if _, ok := byID["dead-ghost.service"]; !ok {
-		t.Error("not-found unit must tip as dead")
+	// one grouped card naming the unit, not a clone per unit
+	if failed.Title != "broken.service is in failed state" {
+		t.Errorf("single failed unit title = %q", failed.Title)
+	}
+	dead, ok := byID["dead-units"]
+	if !ok {
+		t.Fatal("not-found unit must tip as dead")
+	}
+	if !strings.Contains(dead.Title, "ghost.service") {
+		t.Errorf("dead tip should name the unit: %q", dead.Title)
+	}
+	for _, tip := range tips {
+		if strings.HasPrefix(tip.ID, "failed-") && tip.ID != "failed-services" {
+			t.Errorf("per-unit failed tip should be gone: %+v", tip)
+		}
 	}
 	if _, ok := byID["container-restart-loop"]; !ok {
 		t.Error("crash-looping container must tip")

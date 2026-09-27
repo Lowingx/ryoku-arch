@@ -289,9 +289,7 @@ if (typeof document !== "undefined") {
 
     // ---- render pieces ---------------------------------------------------
     const emptyHTML =
-      '<div class="chat-empty">' +
-      '<img src="assets/chat-empty.webp" alt="" onerror="this.parentElement.hidden = true">' +
-      "<p>The compass is listening. Ask about your machine.</p></div>";
+      '<div class="chat-empty"><p>Ask about your machine. Enter sends, / lists commands.</p></div>';
 
     function thumbStrip(images) {
       if (!images || !images.length) return "";

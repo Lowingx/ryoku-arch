@@ -1,0 +1,89 @@
+/* Vault: grouped tree on the left, rendered markdown on the right. */
+
+.vault-grid {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 18px;
+  height: calc(100vh - 150px);
+  min-height: 420px;
+}
+
+.vault-side { overflow-y: auto; scrollbar-width: thin; }
+.vault-side-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.vault-side-head .field-label { margin: 0; }
+.vault-side-head .btn { margin-left: auto; }
+
+.vgroup { margin-bottom: 6px; }
+.vgroup-head {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  background: none; border: 0;
+  color: var(--muted);
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.07em; text-transform: uppercase;
+  cursor: pointer;
+}
+.vgroup-head::before {
+  content: "";
+  width: 0; height: 0;
+  border-left: 4px solid currentColor;
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  transition: transform 120ms var(--ease);
+}
+.vgroup.open > .vgroup-head::before { transform: rotate(90deg); }
+.vgroup-head .dim { margin-left: auto; font-weight: 500; text-transform: none; letter-spacing: 0; }
+.vgroup-items { padding-left: 6px; }
+
+.vfile {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  width: 100%;
+  padding: 5px 8px 5px 18px;
+  background: none; border: 0; border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.vfile:hover { background: var(--raised); }
+.vfile.active { background: var(--raised); box-shadow: inset 2px 0 0 var(--accent); }
+.vfile-name { font-family: var(--font-mono); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vfile-size { font-family: var(--font-mono); font-size: 11px; color: var(--faint); flex: none; }
+.vmore { margin: 4px 0 4px 18px; font-size: 11px; padding: 3px 8px; }
+.vmore-note { margin: 2px 0 4px 20px; font-size: 11px; }
+
+.vault-pane {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 20px 24px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* Markdown rendering (the pane's only content source). */
+.md { max-width: 78ch; line-height: 1.65; font-size: 13.5px; }
+.md h1, .md h2, .md h3, .md h4 { font-weight: 650; margin: 1.2em 0 0.4em; line-height: 1.3; }
+.md h1 { font-size: 22px; margin-top: 0; }
+.md h2 { font-size: 17px; }
+.md h3 { font-size: 14.5px; }
+.md h4 { font-size: 13px; }
+.md p { margin: 0.55em 0; }
+.md a { color: var(--accent); text-decoration: underline; }
+.md code { font-family: var(--font-mono); font-size: 12px; background: var(--raised); padding: 1px 5px; border-radius: 4px; }
+.md pre { background: var(--raised); border: 1px solid var(--line-soft); border-radius: 6px; padding: 12px; overflow-x: auto; }
+.md pre code { background: none; padding: 0; }
+.md ul, .md ol { padding-left: 20px; margin: 0.5em 0; }
+.md li { margin: 2px 0; }
+.md blockquote { border-left: 2px solid var(--line); margin: 0.6em 0; padding-left: 12px; color: var(--muted); }
+.md table { width: 100%; border-collapse: collapse; margin: 0.8em 0; font-size: 12.5px; }
+.md th { text-align: left; font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--faint); padding: 5px 10px 5px 0; border-bottom: 1px solid var(--line); }
+.md td { padding: 5px 10px 5px 0; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+.md hr { border: 0; border-top: 1px solid var(--line-soft); margin: 1.2em 0; }
+.md img { max-width: 100%; }
+
+@media (max-width: 980px) {
+  .vault-grid { grid-template-columns: 1fr; height: auto; }
+  .vault-side { max-height: 300px; }
+}

@@ -1,11 +1,8 @@
-// The MODELS panel: every provider this machine's agent stack can reach, in
-// one view. The free/credits/paid directory is Prowl's shipped catalogue
-// (consolidated from the free-tier trackers), served through rashin's single
-// origin at /api/providers. The "on this box" band shows what is actually
-// usable right now: which provider env keys exist (names only) and what each
-// harness is pointed at, joined from /api/harnesses. Counts and filters work
-// over both. Nothing here is scraped live and nothing is invented: an absent
-// daemon leaves the panel dim, and a provider with no free models says so.
+// The MODELS panel: every provider the agent stack can reach, in one table.
+// The directory is Prowl's shipped catalogue (free / credits / paid tiers)
+// served through rashin at /api/providers; "on this box" joins the harness
+// credential names (names only) onto it. Nothing is scraped live and nothing
+// is invented: an absent daemon leaves the panel honest about its source.
 
 import { escapeHtml } from "./markdown.js";
 import { api } from "./api.js";
@@ -13,8 +10,7 @@ import { loadHarnesses } from "./harnesses.js";
 
 const esc = (s) => escapeHtml(String(s == null ? "" : s));
 
-const CLASS_LABEL = { free: "FREE", credits: "CREDITS", paid: "PAID" };
-
+const CLASS_CHIP = { free: "ok", credits: "warn", paid: "info", oauth: "", local: "" };
 const state = { all: [], harnesses: [], filter: "all", query: "" };
 
 function onBox() {
@@ -26,11 +22,12 @@ function onBox() {
 }
 
 function match(p, keys) {
-  const cls = state.filter;
-  if (cls === "free" && p.class !== "free") return false;
-  if (cls === "credits" && p.class !== "credits") return false;
-  if (cls === "paid" && p.class !== "paid") return false;
-  if (cls === "on" && !(p.env && keys.has(p.env.toUpperCase()))) return false;
+  const f = state.filter;
+  if (f === "free" || f === "credits" || f === "paid") {
+    if (p.class !== f) return false;
+  } else if (f === "on") {
+    if (!(p.env && keys.has(p.env.toUpperCase()))) return false;
+  }
   if (state.query) {
     const hay = (p.name + " " + p.id + " " + (p.modalities || []).join(" ")).toLowerCase();
     if (!hay.includes(state.query)) return false;
@@ -39,67 +36,59 @@ function match(p, keys) {
 }
 
 function ctxLabel(n) {
-  if (!n) return "";
+  if (!n) return '<span class="dim">-</span>';
   if (n >= 1e6) return (n / 1e6).toFixed(n % 1e6 ? 1 : 0) + "M";
   return Math.round(n / 1000) + "k";
-}
-
-function card(p, keys) {
-  const here = p.env && keys.has(p.env.toUpperCase());
-  const mods = (p.modalities || [])
-    .slice(0, 6)
-    .map((m) => '<span class="m-tag">' + esc(m) + "</span>")
-    .join("");
-  return (
-    '<article class="prov' + (here ? " here" : "") + " prov-" + esc(p.class) + '">' +
-    "<header><b>" +
-    esc(p.name) +
-    "</b>" +
-    '<span class="prov-class">' +
-    esc(CLASS_LABEL[p.class] || p.class) +
-    "</span>" +
-    (here ? '<span class="prov-here">KEY ON BOX</span>' : "") +
-    "</header>" +
-    '<div class="prov-num"><b>' +
-    (p.freeModels || 0) +
-    "</b><span>free models</span>" +
-    (p.maxContext ? '<span class="dim">' + ctxLabel(p.maxContext) + " ctx</span>" : "") +
-    "</div>" +
-    '<p class="prov-sign"><em>signup</em> ' +
-    esc(p.friction || "-") +
-    (p.routable ? ' <span class="dim">· gateway-routable</span>' : ' <span class="dim">· not proxied</span>') +
-    "</p>" +
-    (mods ? '<div class="prov-mods">' + mods + "</div>" : "") +
-    (p.apiKeyUrl
-      ? '<a class="prov-key" href="' + esc(p.apiKeyUrl) + '" target="_blank" rel="noopener">GET A KEY ↗</a>'
-      : '<span class="prov-key dim">no signup page published</span>') +
-    "</article>"
-  );
 }
 
 function render(root) {
   const keys = onBox();
   const list = root.querySelector("[data-models-list]");
-  const counts = root.querySelector("[data-models-counts]");
-  const shown = state.all.filter((p) => match(p, keys));
+  const filters = root.querySelector("[data-models-filters]");
   const byClass = (c) => state.all.filter((p) => p.class === c).length;
   const withKey = state.all.filter((p) => p.env && keys.has(p.env.toUpperCase())).length;
-  counts.innerHTML = [["all", state.all.length], ["free", byClass("free")], ["credits", byClass("credits")], ["paid", byClass("paid")], ["on", withKey]]
+
+  filters.innerHTML = [
+    ["all", "All", state.all.length],
+    ["free", "Free", byClass("free")],
+    ["credits", "Credits", byClass("credits")],
+    ["paid", "Paid", byClass("paid")],
+    ["on", "On this box", withKey],
+  ]
     .map(
-      ([k, n]) =>
-        '<button class="chip' +
-        (state.filter === k ? " active" : "") +
-        '" data-mfilter="' +
-        k +
-        '" type="button">' +
-        (k === "on" ? "ON THIS BOX" : k.toUpperCase()) +
-        " <b>" +
-        n +
-        "</b></button>"
+      ([k, label, n]) =>
+        '<button class="seg-btn' + (state.filter === k ? " active" : "") + '" data-mfilter="' + k + '" type="button">' +
+        label + " <b>" + n + "</b></button>"
     )
     .join("");
-  list.innerHTML = shown.length ? shown.map((p) => card(p, keys)).join("") : '<p class="dim">nothing matches. clear the filter or the search.</p>';
-  root.querySelectorAll("[data-mfilter]").forEach((b) =>
+
+  const rows = state.all.filter((p) => match(p, keys));
+  list.innerHTML = rows.length
+    ? '<table class="data"><thead><tr><th>Provider</th><th>Class</th><th class="r">Free models</th><th class="r">Context</th><th>Signup</th><th>Routable</th><th>Key</th></tr></thead><tbody>' +
+      rows
+        .map((p) => {
+          const here = p.env && keys.has(p.env.toUpperCase());
+          return (
+            "<tr>" +
+            '<td><b>' + esc(p.name) + '</b> <span class="mono dim">' + esc(p.id) + "</span></td>" +
+            '<td><span class="chip ' + (CLASS_CHIP[p.class] || "") + '">' + esc(p.class) + "</span></td>" +
+            '<td class="r mono">' + (p.freeModels || 0) + "</td>" +
+            '<td class="r mono">' + ctxLabel(p.maxContext) + "</td>" +
+            '<td class="muted">' + esc(p.friction || "-") + "</td>" +
+            "<td>" + (p.routable ? '<span class="state ok">yes</span>' : '<span class="state idle">no</span>') + "</td>" +
+            "<td>" +
+            (here ? '<span class="chip ok">on box</span> ' : "") +
+            (p.apiKeyUrl
+              ? '<a class="prov-key" href="' + esc(p.apiKeyUrl) + '" target="_blank" rel="noopener">get key ↗</a>'
+              : '<span class="dim">-</span>') +
+            "</td></tr>"
+          );
+        })
+        .join("") +
+      "</tbody></table>"
+    : '<p class="empty">nothing matches. clear the filter or the search.</p>';
+
+  filters.querySelectorAll("[data-mfilter]").forEach((b) =>
     b.addEventListener("click", () => {
       state.filter = b.dataset.mfilter;
       render(root);
@@ -122,12 +111,12 @@ export function initModels(root) {
       state.harnesses = harnesses || [];
       if (!state.all.length) {
         root.querySelector("[data-models-list]").innerHTML =
-          '<p class="dim">Prowl is not answering on this machine, so the provider directory has no source. Nothing here gets invented.</p>';
+          '<p class="muted">the provider directory is unavailable: Prowl answers /api/providers, and nothing here gets invented.</p>';
         return;
       }
       render(root);
     })
     .catch(() => {
-      root.querySelector("[data-models-list]").innerHTML = '<p class="dim">the daemon is not answering.</p>';
+      root.querySelector("[data-models-list]").innerHTML = '<p class="muted">the daemon is not answering.</p>';
     });
 }

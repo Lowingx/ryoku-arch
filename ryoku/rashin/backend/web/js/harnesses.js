@@ -1,8 +1,7 @@
 // The harness ledger: every installed coding agent, what it knows, where it
-// keeps it. Backs both the Agents panel ledger and the Skills panel "by
-// harness" strip from one /api/harnesses fetch. Credential rows show names
-// only, because the daemon reports names only: an agent OS that leaked keys
-// through its own dashboard would be a joke.
+// keeps it. Backs the Agents panel from one /api/harnesses fetch shared with
+// the Models panel (loadHarnesses caches, single in-flight). Credential rows
+// are names only, because the daemon reports names only.
 
 import { escapeHtml } from "./markdown.js";
 import { humanBytes } from "./format.js";
@@ -10,8 +9,10 @@ import { api } from "./api.js";
 
 export const harnessCache = { data: null, at: 0, promise: null };
 
-// loadHarnesses shares one in-flight fetch between the two panels so a panel
-// swap never doubles the scan; 60s freshness matches the daemon TTL.
+const esc = (s) => escapeHtml(String(s == null ? "" : s));
+
+// loadHarnesses shares one in-flight fetch between panels; 60s freshness
+// matches the daemon TTL.
 export function loadHarnesses() {
   const now = Date.now();
   if (harnessCache.data && now - harnessCache.at < 60_000) return Promise.resolve(harnessCache.data);
@@ -20,7 +21,7 @@ export function loadHarnesses() {
       .harnesses()
       .then((d) => {
         harnessCache.data = d.harnesses || [];
-        harnessCache.at = Date.now();
+        harnessCache.at = now;
         harnessCache.promise = null;
         return harnessCache.data;
       })
@@ -42,78 +43,49 @@ function ago(iso) {
   return Math.round(s / 86400) + " d ago";
 }
 
-const esc = (s) => escapeHtml(String(s == null ? "" : s));
-
-function kindIcon(kind) {
-  return kind === "db" ? "▤" : kind === "dir" ? "▣" : "▢";
-}
-
 export function renderLedger(root, rows) {
   if (!root) return;
-  const present = rows.filter((h) => h.present);
+  const present = (rows || []).filter((h) => h.present);
   if (!present.length) {
-    root.innerHTML = '<p class="dim">no coding agents detected on this machine.</p>';
+    root.innerHTML = '<p class="muted">no coding agents detected.</p>';
     return;
   }
   root.innerHTML = present
     .map((h) => {
-      const skills = h.skills || [];
-      const origins = {};
-      skills.forEach((s) => (origins[s.origin] = (origins[s.origin] || 0) + 1));
-      const chips = Object.entries(origins)
-        .map(([k, v]) => '<span class="h-chip">' + esc(k) + " " + v + "</span>")
-        .join("");
+      const stats = [
+        (h.skillCount || 0) + " skills",
+        (h.sessions || 0) + " sessions",
+        h.lastActive ? "active " + ago(h.lastActive) : "",
+      ]
+        .filter(Boolean)
+        .join(" · ");
       const mem = (h.memories || [])
         .map(
           (m) =>
-            '<li title="' + esc(m.path) + '"><span class="dim">' + kindIcon(m.kind) + "</span> " +
+            '<span class="chip" title="' +
+            esc(m.path) +
+            '">' +
             esc(m.name) +
-            (m.bytes ? ' <span class="dim">' + humanBytes(m.bytes) + "</span>" : "") +
-            (m.entries ? ' <span class="dim">' + m.entries + " files</span>" : "") +
-            (m.modified ? ' <span class="dim">' + ago(m.modified) + "</span>" : "") +
-            "</li>"
+            (m.bytes ? " " + humanBytes(m.bytes) : m.entries ? " ×" + m.entries : "") +
+            "</span>"
         )
         .join("");
-      const creds = (h.creds || []).map((c) => '<code class="cred">' + esc(c.label) + "</code>").join(" ");
+      const creds = (h.creds || [])
+        .map((c) => '<span class="chip dim">' + esc(c.kind === "env" ? "env:" : "file:") + esc(c.label) + "</span>")
+        .join("");
       return (
-        '<article class="h-card' + (h.wired ? " wired" : "") + '" data-harness="' + esc(h.id) + '">' +
+        '<div class="card hcard">' +
         '<header><b>' + esc(h.name) + "</b>" +
         '<span class="dim">' + esc(h.version || "") + "</span>" +
-        '<span class="h-state">' + (h.wired ? "WIRED" : "PRESENT") + "</span></header>" +
-        '<p class="h-meta"><em>' + esc(h.home) + "</em>" +
-        (h.model ? ' · model <code>' + esc(h.model) + "</code>" : "") +
-        (h.provider ? ' <span class="dim">(' + esc(h.provider) + ")</span>" : "") +
-        (h.sessions ? ' · ' + h.sessions + " sessions" + (h.lastActive ? ' <span class="dim">' + ago(h.lastActive) + "</span>" : "") : "") +
-        "</p>" +
-        '<div class="h-skills"><b>' + (h.skillCount || 0) + "</b> skills " + chips + "</div>" +
-        (mem ? '<ul class="h-mem">' + mem + "</ul>" : "") +
-        (creds ? '<p class="h-creds"><em>keys by name only</em> ' + creds + "</p>" : "") +
-        "</article>"
+        (h.wired ? '<span class="state ok">wired</span>' : '<span class="state idle">present</span>') +
+        "</header>" +
+        '<p class="hstats">' + esc(stats) + "</p>" +
+        (h.model ? '<p class="hmodel"><span class="chip mono">' + esc(h.model) + "</span>" + (h.provider ? ' <span class="dim">' + esc(h.provider) + "</span>" : "") + "</p>" : "") +
+        (mem ? '<div class="hchips">' + mem + "</div>" : "") +
+        (creds ? '<div class="hchips">' + creds + "</div>" : "") +
+        "</div>"
       );
     })
-    .join("");
-}
-
-export function renderHarnessSkills(root, rows) {
-  if (!root) return;
-  const present = rows.filter((h) => h.present && (h.skillCount || 0) > 0);
-  if (!present.length) {
-    root.innerHTML = '<p class="dim">no harness skills found.</p>';
-    return;
-  }
-  root.innerHTML = present
-    .map(
-      (h) =>
-        '<a class="h-skill-cell" href="#/skills" data-harness-skill="' + esc(h.id) + '">' +
-        "<b>" + esc(h.name) + "</b><span>" + h.skillCount + " skills</span>" +
-        '<span class="dim">' +
-        (h.skills || [])
-          .slice(0, 4)
-          .map((s) => esc(s.name))
-          .join(" · ") +
-        ((h.skills || []).length > 4 ? " …" : "") +
-        "</span></a>"
-    )
     .join("");
 }
 
@@ -122,6 +94,6 @@ export function initLedger(container) {
   loadHarnesses()
     .then((rows) => renderLedger(container, rows))
     .catch(() => {
-      container.innerHTML = '<p class="dim">the daemon did not answer /api/harnesses.</p>';
+      container.innerHTML = '<p class="muted">the daemon did not answer /api/harnesses.</p>';
     });
 }

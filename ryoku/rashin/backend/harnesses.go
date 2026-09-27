@@ -504,11 +504,17 @@ func scanHarnessCreds(id, dir string) []CredSource {
 	return dedupeCreds(out)
 }
 
+// isCredKey names a provider credential, not any secret-ish variable:
+// KITTY_PUBLIC_KEY or STARSHIP_SESSION_KEY are not model access and would
+// only add noise to the ledger.
 func isCredKey(k string) bool {
 	u := strings.ToUpper(k)
-	return strings.HasSuffix(u, "_API_KEY") || strings.HasSuffix(u, "_APIKEY") ||
-		strings.HasSuffix(u, "_TOKEN") || strings.HasSuffix(u, "_KEY") ||
-		u == "AUTH_MODE" || strings.Contains(u, "CREDENTIAL")
+	if strings.Contains(u, "API_KEY") || strings.HasSuffix(u, "APIKEY") ||
+		strings.Contains(u, "CREDENTIAL") || u == "AUTH_MODE" {
+		return true
+	}
+	return strings.HasSuffix(u, "_ACCESS_TOKEN") || strings.HasSuffix(u, "_REFRESH_TOKEN") ||
+		strings.HasSuffix(u, "_PAT") || u == "OPENAI_API_KEY"
 }
 
 func dedupeCreds(in []CredSource) []CredSource {

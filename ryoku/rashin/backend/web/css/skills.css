@@ -1,0 +1,51 @@
+/* Skills: harness tabs, origin chips, collapsible groups, toolbelt. */
+
+[data-skills-tabs] { margin-top: 4px; }
+.skills-toolbar { display: flex; align-items: center; gap: 12px; margin: 12px 0; flex-wrap: wrap; }
+.skills-search { flex: 1; max-width: 280px; }
+.skills-counts { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+
+.skgroup { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); margin-bottom: 8px; }
+.skgroup-head {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%;
+  padding: 9px 12px;
+  background: none; border: 0;
+  color: var(--text);
+  font-size: 12.5px; font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.skgroup-head::before {
+  content: "";
+  width: 0; height: 0;
+  border-left: 4px solid var(--faint);
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+  transition: transform 120ms var(--ease);
+}
+.skgroup.open > .skgroup-head::before { transform: rotate(90deg); }
+.skgroup-head .count { margin-left: auto; font-weight: 500; }
+.skgroup-items { display: none; }
+.skgroup.open .skgroup-items { display: block; }
+
+.skrow {
+  display: grid;
+  grid-template-columns: 240px 92px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  padding: 6px 12px 7px 14px;
+  border-top: 1px solid var(--line-soft);
+}
+.skrow-name { font-family: var(--font-mono); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.skrow-desc { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.belt-family { margin: 10px 0 4px; font-size: 12px; font-weight: 600; }
+.belt-tools { display: flex; flex-wrap: wrap; gap: 5px; }
+.belt-more { cursor: pointer; }
+.toolbelt-wrap.gone { display: none; }
+
+@media (max-width: 1000px) {
+  .skrow { grid-template-columns: minmax(0, 1fr) auto; }
+  .skrow-desc { grid-column: 1 / -1; }
+}

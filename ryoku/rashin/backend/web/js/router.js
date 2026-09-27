@@ -1,37 +1,34 @@
-// Hash router: maps #/<panel> to the visible panel and the active nav item, and
-// plays a clip-path wipe on swap (skipped under prefers-reduced-motion).
+// Hash router for the console shell: swaps the visible panel, marks the nav
+// item, and titles the header. No transition theater; the panel simply shows.
 
-const PANELS = ["overview", "system", "vault", "memory", "skills", "agents", "models", "chat", "about"];
-const reduce = () =>
-  typeof matchMedia !== "undefined" &&
-  matchMedia("(prefers-reduced-motion: reduce)").matches;
+const PANELS = {
+  overview: "Overview",
+  system: "System",
+  vault: "Vault",
+  memory: "Memory",
+  skills: "Skills",
+  agents: "Agents",
+  models: "Models",
+  chat: "Chat",
+  about: "About",
+};
 
 function current() {
   const h = location.hash.replace(/^#\/?/, "");
-  return PANELS.includes(h) ? h : "overview";
+  return h in PANELS ? h : "overview";
 }
 
 export function initRouter(onChange) {
   const panels = document.querySelectorAll("[data-panel]");
   const links = document.querySelectorAll("[data-nav]");
+  const title = document.querySelector("[data-top-title]");
 
   function show(name) {
     panels.forEach((p) => {
-      const active = p.dataset.panel === name;
-      p.hidden = !active;
-      if (active && !reduce()) {
-        p.classList.remove("wipe-in");
-        void p.offsetWidth; // restart the animation
-        p.classList.add("wipe-in");
-        // A throttled tab can freeze the animation at t=0 with the panel
-        // fully clipped (and unclickable). Drop the class once it ends, and
-        // unconditionally after its duration, so the wipe can never wedge.
-        const clear = () => p.classList.remove("wipe-in");
-        p.addEventListener("animationend", clear, { once: true });
-        setTimeout(clear, 700);
-      }
+      p.hidden = p.dataset.panel !== name;
     });
     links.forEach((l) => l.classList.toggle("active", l.dataset.nav === name));
+    if (title) title.textContent = PANELS[name];
     if (onChange) onChange(name);
   }
 

@@ -1,6 +1,6 @@
-// Dashboard entry point. Boots the router and each panel controller, and paints
-// the overview daemon/hermes status stamps from /api/status. Everything degrades
-// to dim placeholders when the daemon is absent.
+// Console entry point: boots the router and each panel controller once, and
+// paints the header status chips from /api/status + /api/code/status.
+// Everything degrades to dim placeholders when the daemon is absent.
 
 import { initRouter } from "./router.js";
 import { initVitals } from "./vitals.js";
@@ -10,61 +10,45 @@ import { initMemory } from "./memory.js";
 import { initSkills } from "./skills.js";
 import { initAbout } from "./about.js";
 import { initCode } from "./code.js";
-import { initSystem } from "./system.js";
+import { initSystem, paintOverviewStrip } from "./system.js";
 import { initModels } from "./models.js";
-import { initMotion } from "./motion.js";
-import { initHero } from "./hero3d.js";
-import { paintOverviewStrip } from "./system.js";
 import { api } from "./api.js";
-import { motion } from "./motion.js";
 import "./chat.js";
-import { animate, stagger } from "../vendor/anime.min.js";
 
-function stamp(el, ok, okText, badText) {
+function chip(sel, ok) {
+  const el = document.querySelector(sel);
   if (!el) return;
-  el.textContent = ok ? okText : badText;
-  el.className = "stamp " + (ok ? "stamp-ok" : "stamp-bad");
+  el.classList.toggle("ok", !!ok);
+  el.classList.toggle("bad", ok === false);
 }
 
 async function paintStatus() {
   try {
     const s = await api.status();
-    stamp(document.querySelector("[data-s=daemon]"), s.running, "OK", "DOWN");
+    chip("[data-s=daemon]", s.running);
     const h = s.hermes || {};
-    stamp(document.querySelector("[data-s=hermes]"), h.installed && h.wired, "OK", "MISSING");
+    chip("[data-s=hermes]", h.installed && h.wired);
   } catch (err) {
-    stamp(document.querySelector("[data-s=daemon]"), false, "OK", "DOWN");
-    stamp(document.querySelector("[data-s=hermes]"), false, "OK", "MISSING");
+    chip("[data-s=daemon]", false);
+    chip("[data-s=hermes]", false);
   }
-}
-
-// One orchestrated entrance on the poster page: stat blocks and the system
-// strip land staggered, like a print sheet being set by hand. It runs once
-// per session, never under the motion switch, and touches nothing else.
-let revealed = false;
-function revealOverview() {
-  if (revealed || !motion.on) return;
-  revealed = true;
-  const targets = document.querySelectorAll('[data-panel="overview"] .stat, [data-panel="overview"] .sys-strip > div, [data-panel="overview"] .code-card');
-  animate(targets, {
-    opacity: [0, 1],
-    translateY: [14, 0],
-    delay: stagger(55),
-    duration: 520,
-    ease: "outExpo",
-  });
+  try {
+    const c = await api.codeStatus();
+    chip("[data-s=prowl]", c.installed && c.serving);
+  } catch (err) {
+    chip("[data-s=prowl]", false);
+  }
+  const dot = document.querySelector("[data-live-dot]");
+  if (dot) dot.classList.toggle("live", document.visibilityState === "visible");
 }
 
 function boot() {
-  initMotion();
-  initHero(document.querySelector("[data-hero-3d]"));
   const started = {};
   initRouter((name) => {
     if (started[name]) return;
     started[name] = true;
-    if (name === "overview") revealOverview();
-    if (name === "vault") initVault(document.querySelector('[data-panel="vault"]'));
-    else if (name === "system") initSystem(document.querySelector('[data-panel="system"]'));
+    if (name === "system") initSystem(document.querySelector('[data-panel="system"]'));
+    else if (name === "vault") initVault(document.querySelector('[data-panel="vault"]'));
     else if (name === "memory") initMemory(document.querySelector('[data-panel="memory"]'));
     else if (name === "skills") initSkills(document.querySelector('[data-panel="skills"]'));
     else if (name === "about") initAbout(document.querySelector('[data-panel="about"]'));
@@ -78,6 +62,8 @@ function boot() {
   initVitals(document.querySelector('[data-panel="overview"]'));
   initCode(document.querySelector('[data-panel="overview"]'));
   api.system().then(paintOverviewStrip).catch(() => {});
+  const host = document.querySelector("[data-hostname]");
+  if (host) host.textContent = location.hostname;
   paintStatus();
   setInterval(paintStatus, 5000);
 }

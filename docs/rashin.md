@@ -255,21 +255,21 @@ recipes (`rr-<name>` fish abbreviations). Full design and UX in
 
 ## The dashboard
 
-Hand-authored HTML, CSS, and JS embedded in the binary. No node, no build step,
-no CDN; fonts, art, and the two vendored libraries (three.js for the 3D views,
-anime.js for the one orchestrated entrance) ship in the repo. It deliberately
-does not use the desktop Tokyo Night language: the look is Japanese retro
-poster and print brutalism, near black paper with cream ink and a vermillion
-sun disc. A rail switch turns all motion off at once (the OS
-reduced-motion setting does too), and every render loop parks itself under it.
+Hand-authored HTML, CSS, and JS embedded in the binary. No node, no build
+step, no CDN; fonts and art ship in the repo. The look is a neutral dark
+system console: a left nav rail, a header with live daemon/hermes/prowl
+status dots, sans for chrome and mono for paths, ids, and numbers. It is
+deliberately not the desktop's Tokyo Night palette and carries no poster art.
+Motion is functional only (bar widths, panel swaps) and yields to the OS
+reduced-motion setting.
 
 | Panel | Content |
 |---|---|
-| Overview | Hero poster with a live 3D compass needle that follows the cursor, vitals as poster stat blocks, daemon and hermes state, the system summary strip, and the code intelligence card (live counts, clusters, and doctor score from the Prowl API, falling back to the cached report) |
+| Overview | KPI strip (CPU, memory, disk, GPU with load bars), the code intelligence card led by measured token savings from the Prowl index, the system summary strip, and the host line |
 | System | The machine as a home server, read-only: services (running/stopped/user), timers (firing and dormant), cron/anacron/at, docker containers, listening sockets with reach, top processes, filesystems, and deterministic tips whose commands copy to your clipboard; rashin never runs any of them |
-| Vault | File tree, rendered markdown, reindex button, generated-fence badges |
-| Memory | Provider tiles (builtin or external, with Obsidian vault detection), the graph of the vault's notes in two renderers behind a toggle (the 2D force layout, and a 3D orbit you drag), a 26-week activity heatmap, and the Hermes session history read from `~/.hermes/state.db` |
-| Skills | Every Hermes skill grouped by category with origin counts (bundled, hub, agent-grown), live search, the enabled toolbelt grouped into families, and a by-harness strip of what every other agent installed |
+| Vault | Grouped tree (maps, memory, journal; the agent-facing source mirror collapsed), rendered markdown, reindex button, generated-file badges |
+| Memory | Provider tiles (builtin or external, with Obsidian vault detection), the 2D force graph of the vault's notes and their references with a data-driven legend, a 26-week activity heatmap, and the Hermes session history read from `~/.hermes/state.db` |
+| Skills | One tab per installed harness: Hermes skills grouped by category with origin counts (bundled, hub, agent-grown) and the enabled toolbelt grouped into families; every other harness lists the skills it carries, grouped by origin when long |
 | Agents | Detected CLIs, wiring state per agent, wire and unwire actions, and the harness ledger: each agent's own skills, memory files, session counts, model choice, and credential names |
 | Models | The consolidated provider directory (free, credits, paid) from Prowl's shipped catalogue, with signup friction, model counts, and a key-on-box mark joined from the harness scan |
 | Chat | The full Hermes conversation surface (below) |

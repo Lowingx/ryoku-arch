@@ -98,7 +98,9 @@ func TestHarnessModelChoice(t *testing.T) {
 }
 
 func TestScanHarnessCredsNamesNotValues(t *testing.T) {
-	t.Setenv("TEST_ONLY_PROVIDER_KEY", "super-secret-value")
+	t.Setenv("GEMINI_API_KEY", "super-secret-value")
+	t.Setenv("KITTY_PUBLIC_KEY", "not-a-model-key")
+	t.Setenv("STARSHIP_SESSION_KEY", "not-a-model-key")
 	home := t.TempDir()
 	putFile(t, filepath.Join(home, ".env"), "OPENAI_API_KEY=sk-real-thing\nPLAIN=ok\n")
 	putFile(t, filepath.Join(home, "auth.json"), `{"OPENAI_API_KEY":"k","tokens":{"access":"x"}}`)
@@ -114,11 +116,14 @@ func TestScanHarnessCredsNamesNotValues(t *testing.T) {
 	if _, ok := labels["OPENAI_API_KEY"]; !ok {
 		t.Fatalf("env/file key not reported: %+v", creds)
 	}
-	if _, ok := labels["TEST_ONLY_PROVIDER_KEY"]; !ok {
-		t.Fatalf("process env key not reported: %+v", creds)
+	if _, ok := labels["GEMINI_API_KEY"]; !ok {
+		t.Fatalf("process provider key not reported: %+v", creds)
 	}
-	if _, ok := labels["PLAIN"]; ok {
-		t.Fatalf("non-credential key reported: %+v", creds)
+	// session/tooling variables are not model credentials and must stay out
+	for _, noise := range []string{"PLAIN", "KITTY_PUBLIC_KEY", "STARSHIP_SESSION_KEY"} {
+		if _, ok := labels[noise]; ok {
+			t.Fatalf("non-credential key reported: %s", noise)
+		}
 	}
 	// dedupe: OPENAI_API_KEY appears in file and env; each kind once at most.
 	seen := map[string]int{}

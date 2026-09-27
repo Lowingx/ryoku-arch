@@ -1,347 +1,385 @@
-// The SYSTEM panel: this machine as a home server, read-only. Seven sections
-// from one /api/system snapshot plus the deterministic tips. Every command
-// shown is a copy target for the reader's own terminal: the page exposes no
-// start/stop/prune button anywhere, because rashin watching your machine must
-// never be rashin touching it. Sections stamp their own collection time and
-// mark stale instead of hiding an old value or pretending it is fresh.
+// The SYSTEM panel: this machine as a home server, read-only. One tab per
+// surface, dense tables, a search box that filters the active tab, and tips
+// whose commands copy to your clipboard. Rashin never runs any of them.
 
 import { escapeHtml } from "./markdown.js";
 import { api } from "./api.js";
 import { humanBytes } from "./format.js";
 
 const REFRESH_MS = 30_000;
+const esc = (s) => escapeHtml(String(s == null ? "" : s));
 
-function stampAge(iso) {
+let active = "services";
+let serviceSub = "running";
+let query = "";
+let inv = null;
+let timer = 0;
+
+function ago(iso) {
   if (!iso) return "";
-  const s = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (!Number.isFinite(s) || s < 0) return "";
   if (s < 45) return "just now";
   if (s < 3600) return Math.round(s / 60) + " min ago";
   return Math.round(s / 3600) + " h ago";
 }
 
-function stale(meta) {
-  if (!meta || !meta.collectedAt) return true;
-  return (Date.now() - new Date(meta.collectedAt).getTime()) / 1000 > 120;
-}
-
-function table(rows, cols) {
-  if (!rows || !rows.length) return "";
-  return (
-    '<table class="sys-t"><thead><tr>' +
-    cols.map((c) => "<th>" + c[0] + "</th>").join("") +
-    "</tr></thead><tbody>" +
-    rows
-      .map(
-        (r) =>
-          "<tr>" +
-          cols.map((c) => "<td" + (c[2] ? ' class="' + c[2] + '"' : "") + ">" + c[1](r) + "</td>").join("") +
-          "</tr>"
-      )
-      .join("") +
-      "</tbody></table>"
-  );
-}
-
-function note(text) {
-  return text ? '<p class="sys-note dim">' + escapeHtml(text) + "</p>" : "";
-}
-
-function stateChip(active, sub) {
-  const cls = active === "active" && sub === "running" ? "ok" : active === "failed" ? "bad" : active === "active" ? "exited" : "off";
-  return '<span class="s-chip ' + cls + '">' + escapeHtml(active + (sub && sub !== active ? " / " + sub : "")) + "</span>";
-}
-
-function esc(s) {
-  return escapeHtml(String(s == null ? "" : s));
-}
-
-function shortRFC(s) {
+function shortDate(s) {
   if (!s || s === "-") return "-";
   const d = new Date(s);
   if (isNaN(d)) return s;
   return d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-export function renderSystem(root, inv) {
-  const sections = {
-    services: renderServices,
-    timers: renderTimers,
-    schedules: renderSchedules,
-    containers: renderContainers,
-    listeners: renderListeners,
-    processes: renderProcesses,
-    mounts: renderMounts,
-  };
-  for (const [key, fn] of Object.entries(sections)) {
-    const body = root.querySelector('[data-body="' + key + '"]');
-    const count = root.querySelector('[data-count="' + key + '"]');
-    if (!body) continue;
-    try {
-      fn(body, count, inv[key], inv);
-    } catch (err) {
-      body.innerHTML = '<p class="stamp-bad">this section could not be rendered</p>';
-    }
-  }
-  renderTips(root.querySelector("[data-sys-tips]"), inv.tips);
-  const stampEl = root.querySelector("[data-sys-stamp]");
-  if (stampEl) {
-    stampEl.textContent = "snapshot " + stampAge(inv.collectedAt);
-    stampEl.classList.toggle("stale", stale(inv));
-  }
+function isWild(a) {
+  return a === "*" || a === "::" || a === "0.0.0.0";
 }
 
-let serviceFilter = "running";
-
-export function bindSystemFilters(root, inv) {
-  root.querySelectorAll("[data-filter=services] .chip").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      serviceFilter = btn.dataset.state;
-      root.querySelectorAll("[data-filter=services] .chip").forEach((b) => b.classList.toggle("active", b === btn));
-      if (inv) renderServices(root.querySelector('[data-body="services"]'), root.querySelector('[data-count="services"]'), inv.services, inv);
-    });
-  });
-}
-
-function renderServices(body, count, s, inv) {
-  if (!body) return;
-  if (!s || !s.totalN) {
-    body.innerHTML = note(s && s.note ? s.note : "no service data");
-    if (count) count.textContent = "";
-    return;
-  }
-  const rows =
-    serviceFilter === "running" ? s.running || [] : serviceFilter === "user" ? s.userOnly || [] : s.stopped || [];
-  if (count) count.textContent = s.runningN + " running / " + s.totalN + " units" + (s.userOnly ? " · " + s.userOnly.length + " user" : "");
-  body.innerHTML =
-    (s.note && serviceFilter !== "running" ? note(s.note) : "") +
-    (rows.length
-      ? table(rows, [
-          ["UNIT", (r) => esc(r.name), "mono"],
-          ["", (r) => stateChip(r.activeState, r.subState)],
-          ["WHAT", (r) => esc(r.description)],
-        ])
-      : '<p class="dim">' + (serviceFilter === "user" ? "no user services" : "none") + "</p>");
-}
-
-function renderTimers(body, count, t) {
-  if (!body) return;
-  const active = (t && t.active) || [];
-  const passive = (t && t.passive) || [];
-  if (!active.length && !passive.length) {
-    body.innerHTML = note((t && t.note) || "no systemd timers");
-    if (count) count.textContent = "";
-    return;
-  }
-  if (count) count.textContent = active.length + " firing" + (passive.length ? " · " + passive.length + " passive" : "");
-  body.innerHTML =
-    table(active, [
-      ["TIMER", (r) => esc(r.unit), "mono"],
-      ["NEXT", (r) => (r.left ? esc(r.left) + " <span class='dim'>/ " + shortRFC(r.nextRun) + "</span>" : shortRFC(r.nextRun))],
-      ["LAST", (r) => shortRFC(r.last)],
-      ["FIRES", (r) => esc(r.activates || "-"), "mono dim"],
-    ]) +
-    (passive.length
-      ? note("dormant: loaded, enabled-looking, never firing") +
-        table(passive, [
-          ["TIMER", (r) => esc(r.unit), "mono"],
-          ["NEXT", () => "-"],
-          ["LAST", (r) => shortRFC(r.last)],
-          ["FIRES", (r) => esc(r.activates || "-"), "mono dim"],
-        ])
-      : "");
-}
-
-function renderSchedules(body, count, s) {
-  if (!body) return;
-  const rows = [
-    ...(s.crontabs || []).map((e) => ({ ...e, kind: "cron" })),
-    ...(s.anacron || []).map((e) => ({ ...e, kind: "periodic" })),
-    ...(s.atJobs || []).map((e) => ({ ...e, kind: "at" })),
-  ];
-  if (count) count.textContent = rows.length + " entries" + (s.cronActive === false ? " · cron daemon stopped" : s.cronActive ? " · daemon up" : "");
-  if (!rows.length && !s.note) {
-    body.innerHTML = '<p class="dim">no crontab, anacron, or at entries</p>';
-    return;
-  }
-  const daemon =
-    s.cronActive === false
-      ? '<p class="sys-note stamp-bad">the cron daemon is not running: none of these fire</p>'
-      : "";
-  body.innerHTML =
-    daemon +
-    note(s.note || "") +
-    table(rows, [
-      ["SCHEDULE", (r) => esc(r.schedule), "mono"],
-      ["KIND", (r) => esc(r.kind)],
-      ["COMMAND", (r) => esc(r.command), "mono"],
-      ["FROM", (r) => esc(r.origin), "dim"],
-    ]);
-}
-
-function renderContainers(body, count, c) {
-  if (!body) return;
-  if (count) count.textContent = c ? (c.runningN || 0) + " up / " + (c.totalN || 0) + " total" : "";
-  if (!c || !c.installed) {
-    body.innerHTML = note((c && c.note) || "docker not installed");
-    return;
-  }
-  if (!c.rows || !c.rows.length) {
-    body.innerHTML = note(c.note || "the daemon answers; no containers exist");
-    return;
-  }
-  body.innerHTML =
-    note(c.note || "") +
-    table(c.rows, [
-      ["NAME", (r) => esc(r.name), "mono"],
-      ["", (r) => '<span class="s-chip ' + (r.state === "running" ? "ok" : "off") + '">' + esc(r.state) + "</span>"],
-      ["IMAGE", (r) => esc(r.image), "dim"],
-      ["STATUS", (r) => esc(r.status), "mono"],
-      ["CREATED", (r) => esc(r.created), "dim"],
-    ]);
-}
-
-function renderListeners(body, count, l) {
-  if (!body) return;
-  const rows = (l && l.rows) || [];
-  const loop = rows.filter((r) => r.loopback).length;
-  if (count) count.textContent = rows.length + " sockets · " + loop + " loopback";
-  body.innerHTML =
-    note(l && l.note ? l.note : "") +
-    table(rows, [
-      ["PROTO", (r) => esc(r.proto), "mono"],
-      ["ADDRESS", (r) => esc(r.address) + ":" + esc(r.port), "mono"],
-      ["REACH", (r) =>
-        r.loopback
-          ? '<span class="s-chip ok">this machine</span>'
-          : r.address === "*" || r.address === "::" || r.address === "0.0.0.0"
-            ? '<span class="s-chip exited">any interface</span>'
-            : '<span class="s-chip bad">' + "named interface" + "</span>"],
-      ["PROCESS", (r) => esc(r.process || "-"), "dim"],
-    ]);
-}
-
-function renderProcesses(body, count, p) {
-  if (!body) return;
-  if (count) count.textContent = ((p && p.rows) || []).length ? "top " + p.rows.length : "";
-  body.innerHTML =
-    note(p && p.note ? p.note : "") +
-    table((p && p.rows) || [], [
-      ["CPU %", (r) => Number(r.cpuPct).toFixed(1), "mono num"],
-      ["PID", (r) => esc(r.pid), "mono dim"],
-      ["PROCESS", (r) => esc(r.command), "mono"],
-      ["RSS", (r) => humanBytes(r.memRss), "num dim"],
-    ]);
-}
-
-function renderMounts(body, count, m) {
-  if (!body) return;
-  const rows = (m && m.rows) || [];
-  if (count) count.textContent = rows.length + " filesystems";
-  body.innerHTML =
-    note(m && m.note ? m.note : "") +
-    table(rows, [
-      ["MOUNT", (r) => esc(r.mountpoint), "mono"],
-      ["FS", (r) => esc(r.fstype), "dim"],
-      ["SIZE", (r) => humanBytes(r.size), "num"],
-      ["USED", (r) => humanBytes(r.used), "num"],
-      [
-        "",
-        (r) =>
-          '<span class="bar' + (r.usePct >= 90 ? " hot" : r.usePct >= 75 ? " warm" : "") + '"><i style="width:' + Math.min(100, r.usePct).toFixed(0) + '%"></i></span>' +
-          '<span class="bar-label num">' + r.usePct.toFixed(0) + "%</span>",
-      ],
-    ]);
-}
-
-function renderTips(body, tips) {
-  if (!body) return;
-  if (!tips || !tips.length) {
-    body.innerHTML = '<p class="dim">nothing asks for attention. the inventory above is current.</p>';
-    return;
-  }
-  body.innerHTML =
-    '<h3 class="panel-sub">TIPS <span class="dim">/ read-only advice; the commands are yours to run</span></h3>' +
-    tips
+function table(cols, rows) {
+  if (!rows.length) return '<p class="empty">nothing here</p>';
+  return (
+    '<table class="data"><thead><tr>' +
+    cols.map((c) => "<th" + (c[2] ? ' class="r"' : "") + ">" + c[0] + "</th>").join("") +
+    "</tr></thead><tbody>" +
+    rows
       .map(
-        (t) =>
-          '<article class="tip tip-' + esc(t.severity) + '" data-tip="' + esc(t.id) + '">' +
-          '<span class="tip-sev" aria-hidden="true">' + (t.severity === "act" ? "要" : t.severity === "watch" ? "視" : "情") + "</span>" +
-          "<div><b>" +
-          esc(t.title) +
-          "</b><p>" +
-          esc(t.detail) +
-          "</p>" +
-          (t.command
-            ? '<button class="cmd" type="button" data-copy="' + esc(t.command) + '" title="copy command"><code>' +
-              esc(t.command) +
-              "</code><span class='cmd-copy dim'>COPY</span></button>"
-            : "") +
-          "</div></article>"
+        (r) =>
+          "<tr>" +
+          cols.map((c) => "<td" + (c[2] ? ' class="r"' : "") + ">" + c[1](r) + "</td>").join("") +
+          "</tr>"
       )
-      .join("");
+      .join("") +
+    "</tbody></table>"
+  );
 }
 
-export function copyButtons(root) {
-  root.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-copy]");
+function note(text) {
+  return text ? '<p class="muted">' + esc(text) + "</p>" : "";
+}
+
+function matches(cells) {
+  if (!query) return true;
+  return cells.join(" ").toLowerCase().includes(query);
+}
+
+// ---- tabs ----
+
+function renderServices() {
+  const s = inv.services || {};
+  const subs = [
+    ["running", "Running", (s.running || []).length],
+    ["stopped", "Stopped", (s.stopped || []).length],
+    ["user", "User", (s.userOnly || []).length],
+  ];
+  const seg =
+    '<div class="seg">' +
+    subs
+      .map(
+        ([k, label, n]) =>
+          '<button class="seg-btn' + (serviceSub === k ? " active" : "") + '" data-sub="' +
+          k + '" type="button">' + label + " <b>" + n + "</b></button>"
+      )
+      .join("") +
+    "</div>";
+  const rows = s[serviceSub] || [];
+  const filtered = rows.filter((r) => matches([r.name, r.activeState, r.subState, r.description]));
+  return (
+    seg +
+    (s.note && serviceSub !== "running" ? note(s.note) : "") +
+    table(
+      [
+        ["Unit", (r) => '<span class="mono">' + esc(r.name) + "</span>"],
+        ["", (r) =>
+          r.activeState === "active" && r.subState === "running"
+            ? '<span class="state ok">running</span>'
+            : r.activeState === "failed"
+              ? '<span class="state bad">failed</span>'
+              : '<span class="state idle">' + esc(r.activeState) + "</span>"],
+        ["Detail", (r) => '<span class="muted" title="' + esc(r.description) + '">' + esc(r.description) + "</span>"],
+      ],
+      filtered
+    )
+  );
+}
+
+function renderTimers() {
+  const t = inv.timers || {};
+  const rows = [...(t.active || []), ...(t.passive || [])];
+  const filtered = rows.filter((r) => matches([r.unit, r.activates, r.nextRun, r.left]));
+  return table(
+    [
+      ["Timer", (r) => '<span class="mono">' + esc(r.unit) + "</span>"],
+      ["Next", (r) =>
+        r.passive
+          ? '<span class="state idle">idle</span>'
+          : r.left
+            ? esc(r.left) + ' <span class="dim">' + shortDate(r.nextRun) + "</span>"
+            : shortDate(r.nextRun)],
+      ["Fires", (r) => '<span class="mono dim">' + esc(r.activates || "-") + "</span>"],
+    ],
+    filtered
+  );
+}
+
+function renderSchedules() {
+  const s = inv.schedules || {};
+  const rows = [
+    ...(s.crontabs || []).map((e) => ({ ...e, kind: "" })),
+    ...(s.anacron || []).map((e) => ({ ...e, kind: "periodic" })),
+    ...(s.atJobs || []).map((e) => ({ ...e, kind: "one-shot" })),
+  ];
+  const head =
+    (s.cronActive === false
+      ? '<p><span class="chip bad">cron daemon stopped</span></p>'
+      : "") + note(s.note);
+  const filtered = rows.filter((r) => matches([r.schedule, r.command, r.origin, r.kind]));
+  return (
+    head +
+    table(
+      [
+        ["Schedule", (r) => '<span class="mono">' + esc(r.schedule) + "</span>"],
+        ["Command", (r) => '<span class="mono muted" title="' + esc(r.command) + '">' + esc(r.command) + "</span>"],
+        ["Kind", (r) => (r.kind ? '<span class="chip">' + esc(r.kind) + "</span>" : "")],
+        ["Source", (r) => '<span class="dim">' + esc(r.origin) + "</span>"],
+      ],
+      filtered
+    )
+  );
+}
+
+function renderContainers() {
+  const c = inv.containers || {};
+  if (!c.installed || !(c.rows || []).length) return note(c.note || "docker not installed");
+  const filtered = c.rows.filter((r) => matches([r.name, r.image, r.state, r.status]));
+  return table(
+    [
+      ["Name", (r) => '<span class="mono">' + esc(r.name) + "</span>"],
+      ["", (r) => (r.state === "running" ? '<span class="state ok">up</span>' : '<span class="state idle">' + esc(r.state) + "</span>")],
+      ["Image", (r) => '<span class="mono muted" title="' + esc(r.image) + '">' + esc(r.image) + "</span>"],
+      ["Status", (r) => '<span class="muted">' + esc(r.status) + "</span>"],
+      ["Created", (r) => '<span class="dim">' + esc(r.created) + "</span>"],
+    ],
+    filtered
+  );
+}
+
+function renderListeners() {
+  const l = inv.listeners || {};
+  const rank = (r) => (r.loopback ? 2 : isWild(r.address) ? 1 : 0);
+  const rows = [...(l.rows || [])].sort((a, b) => rank(a) - rank(b) || a.port - b.port);
+  const filtered = rows.filter((r) => matches([r.proto, r.address, String(r.port), r.process]));
+  return table(
+    [
+      ["Proto", (r) => '<span class="chip">' + esc(r.proto) + "</span>"],
+      ["Address", (r) => '<span class="mono">' + esc(r.address) + ":" + esc(r.port) + "</span>"],
+      ["Reach", (r) =>
+        r.loopback
+          ? '<span class="state ok">loopback</span>'
+          : isWild(r.address)
+            ? '<span class="state warn">all interfaces</span>'
+            : '<span class="state bad">' + esc(r.address) + "</span>"],
+      ["Process", (r) => '<span class="mono dim">' + esc(r.process || "-") + "</span>"],
+    ],
+    filtered
+  );
+}
+
+function renderProcesses() {
+  const p = inv.processes || {};
+  const filtered = (p.rows || []).filter((r) => matches([r.command, String(r.pid)]));
+  return table(
+    [
+      ["CPU %", (r) => '<span class="mono">' + Number(r.cpuPct).toFixed(1) + "</span>", true],
+      ["PID", (r) => '<span class="mono dim">' + esc(r.pid) + "</span>", true],
+      ["Command", (r) => '<span class="mono">' + esc(r.command) + "</span>"],
+      ["RSS", (r) => '<span class="mono dim">' + humanBytes(r.memRss) + "</span>", true],
+    ],
+    filtered
+  );
+}
+
+function renderMounts() {
+  const m = inv.mounts || {};
+  const filtered = (m.rows || []).filter((r) => matches([r.mountpoint, r.fstype, r.device]));
+  return table(
+    [
+      ["Mount", (r) => '<span class="mono">' + esc(r.mountpoint) + "</span>"],
+      ["FS", (r) => '<span class="chip">' + esc(r.fstype) + "</span>"],
+      ["Size", (r) => '<span class="mono dim">' + humanBytes(r.size) + "</span>", true],
+      ["Used", (r) => '<span class="mono">' + humanBytes(r.used) + "</span>", true],
+      [
+        "Use",
+        (r) =>
+          '<span class="bar' + (r.usePct >= 90 ? " bad" : r.usePct >= 75 ? " warn" : "") + '"><i style="width:' +
+          Math.min(100, r.usePct).toFixed(0) + '%"></i></span> <span class="mono dim">' + r.usePct.toFixed(0) + "%</span>",
+        true,
+      ],
+    ],
+    filtered
+  );
+}
+
+function renderTips() {
+  const tips = inv.tips || [];
+  if (!tips.length) return '<p class="empty">Nothing needs attention.</p>';
+  const sev = { act: ["bad", "Act"], watch: ["warn", "Watch"], info: ["info", "Info"] };
+  return (
+    '<p class="muted tips-line">Commands are yours to run; Rashin never executes them.</p>' +
+    tips
+      .map((t) => {
+        const [cls, label] = sev[t.severity] || sev.info;
+        return (
+          '<div class="card tip tip-' + esc(t.severity) + '">' +
+          '<span class="state ' + cls + '">' + label + "</span>" +
+          "<b>" + esc(t.title) + "</b>" +
+          "<p>" + esc(t.detail) + "</p>" +
+          (t.command
+            ? '<button class="cmd-btn" type="button" data-copy="' + esc(t.command) + '"><code>' + esc(t.command) + '</code><span class="cmd-copy">copy</span></button>'
+            : "") +
+          "</div>"
+        );
+      })
+      .join("")
+  );
+}
+
+const TABS = {
+  services: renderServices,
+  timers: renderTimers,
+  schedules: renderSchedules,
+  containers: renderContainers,
+  listeners: renderListeners,
+  processes: renderProcesses,
+  mounts: renderMounts,
+  tips: renderTips,
+};
+
+// ---- shell ----
+
+function paint(root) {
+  const body = root.querySelector("[data-sys-body]");
+  if (!body) return;
+  if (!inv) {
+    body.innerHTML = '<p class="muted">the daemon is not answering /api/system</p>';
+    return;
+  }
+  body.innerHTML = (TABS[active] || renderServices)();
+
+  const stamp = root.querySelector("[data-sys-stamp]");
+  if (stamp) {
+    const total = countRows();
+    const shown = body.querySelectorAll("tbody tr").length;
+    stamp.textContent = (query ? shown + " of " + total + " · " : "") + "updated " + (ago(inv.collectedAt) || "-");
+    stamp.classList.toggle("stale", !inv.collectedAt || Date.now() - new Date(inv.collectedAt).getTime() > 120_000);
+  }
+  const badge = root.querySelector("[data-badge=tips]");
+  if (badge) {
+    const act = (inv.tips || []).filter((t) => t.severity === "act").length;
+    badge.textContent = act || "";
+    badge.classList.toggle("zero", !act);
+  }
+}
+
+function countRows() {
+  if (!inv) return 0;
+  if (active === "services") {
+    const s = inv.services || {};
+    return (s[serviceSub] || []).length;
+  }
+  if (active === "timers") return (inv.timers?.active || []).length + (inv.timers?.passive || []).length;
+  if (active === "schedules") {
+    const s = inv.schedules || {};
+    return (s.crontabs || []).length + (s.anacron || []).length + (s.atJobs || []).length;
+  }
+  if (active === "containers") return (inv.containers?.rows || []).length;
+  if (active === "listeners") return (inv.listeners?.rows || []).length;
+  if (active === "processes") return (inv.processes?.rows || []).length;
+  if (active === "mounts") return (inv.mounts?.rows || []).length;
+  return (inv.tips || []).length;
+}
+
+async function refresh(root, force) {
+  try {
+    inv = await api.system();
+  } catch (err) {
+    if (!force) return;
+    inv = null;
+  }
+  paint(root);
+  paintOverviewStrip(inv);
+}
+
+export function initSystem(root) {
+  if (!root) return;
+
+  root.querySelector("[data-sys-tabs]").addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-tab]");
     if (!btn) return;
-    const text = btn.getAttribute("data-copy");
-    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(
+    active = btn.dataset.tab;
+    root.querySelectorAll("[data-sys-tabs] .seg-btn").forEach((b) => b.classList.toggle("active", b === btn));
+    const search = root.querySelector("[data-sys-search]");
+    if (search) search.value = "";
+    query = "";
+    paint(root);
+  });
+
+  root.querySelector("[data-sys-body]").addEventListener("click", (e) => {
+    const sub = e.target.closest("[data-sub]");
+    if (sub) {
+      serviceSub = sub.dataset.sub;
+      paint(root);
+      return;
+    }
+    const cmd = e.target.closest("[data-copy]");
+    if (!cmd) return;
+    const span = cmd.querySelector(".cmd-copy");
+    (navigator.clipboard ? navigator.clipboard.writeText(cmd.getAttribute("data-copy")) : Promise.reject()).then(
       () => {
-        const s = btn.querySelector(".cmd-copy");
-        if (s) {
-          s.textContent = "COPIED";
-          setTimeout(() => (s.textContent = "COPY"), 1200);
+        if (span) {
+          span.textContent = "copied";
+          setTimeout(() => (span.textContent = "copy"), 1200);
         }
       },
       () => {}
     );
   });
+
+  const search = root.querySelector("[data-sys-search]");
+  if (search) {
+    search.addEventListener("input", () => {
+      query = search.value.trim().toLowerCase();
+      paint(root);
+    });
+  }
+
+  const rescan = root.querySelector("[data-sys-refresh]");
+  if (rescan) rescan.addEventListener("click", () => refresh(root, true));
+
+  refresh(root, true);
+  timer = setInterval(() => {
+    if (!root.hidden && !document.hidden) refresh(root, false);
+  }, REFRESH_MS);
 }
 
-export function initSystem(root) {
-  if (!root) return;
-  let inv = null;
-  let timer = 0;
-  copyButtons(root);
-
-  async function refresh() {
-    try {
-      inv = await api.system();
-      renderSystem(root, inv);
-      bindSystemFilters(root, inv);
-      paintOverviewStrip(inv);
-    } catch (err) {
-      const body = root.querySelector('[data-body="services"]');
-      if (body) body.innerHTML = '<p class="stamp-bad">the daemon is not answering /api/system</p>';
-    }
-  }
-
-  function start() {
-    if (timer) return;
-    refresh();
-    timer = setInterval(refresh, REFRESH_MS);
-  }
-  function stop() {
-    clearInterval(timer);
-    timer = 0;
-  }
-  start();
-  document.addEventListener("visibilitychange", () => (document.hidden ? stop() : start()));
-}
-
-// Overview strip: the same snapshot feeds the summary row on the poster page.
+// Overview strip: the same snapshot feeds the summary card on the poster page.
 export function paintOverviewStrip(inv) {
+  if (!inv) return;
   const get = (k) => document.querySelector('[data-sys="' + k + '"]');
   if (!get("services")) return;
-  get("services").textContent = inv.services ? inv.services.runningN + "/" + inv.services.totalN : "--";
-  get("timers").textContent = inv.timers ? (inv.timers.active || []).length + ((inv.timers.passive || []).length ? " +" + inv.timers.passive.length + " idle" : "") : "--";
-  get("containers").textContent = inv.containers ? (inv.containers.runningN || 0) + "/" + (inv.containers.totalN || 0) : "--";
-  get("listeners").textContent = inv.listeners ? (inv.listeners.rows || []).length : "--";
-  get("tips").textContent = inv.tips ? inv.tips.length : "--";
-  const tipsEl = get("tips");
-  if (tipsEl) {
-    const act = (inv.tips || []).filter((t) => t.severity === "act").length;
-    tipsEl.textContent = act ? act + " act · " + (inv.tips || []).length : String((inv.tips || []).length);
+  const s = inv.services || {};
+  const t = inv.timers || {};
+  const c = inv.containers || {};
+  const l = inv.listeners || {};
+  const tips = inv.tips || [];
+  const act = tips.filter((x) => x.severity === "act").length;
+  get("services").textContent = (s.runningN || 0) + "/" + (s.totalN || 0);
+  get("timers").textContent = (t.active || []).length + ((t.passive || []).length ? " · " + t.passive.length + " idle" : "");
+  get("containers").textContent = (c.runningN || 0) + "/" + (c.totalN || 0);
+  get("listeners").textContent = String((l.rows || []).length);
+  get("tips").textContent = act ? act + " act · " + tips.length : String(tips.length);
+  const side = document.querySelector("[data-badge=system]");
+  if (side) {
+    side.textContent = act || "";
+    side.classList.toggle("zero", !act);
   }
 }
