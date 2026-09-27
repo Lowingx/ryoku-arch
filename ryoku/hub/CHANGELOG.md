@@ -47,6 +47,11 @@
   `pages/WindowRulesPage.qml`, `SettingsSheet.qml`, `Singletons/Settings.qml`).
 
 ### Fixed
+- **The security-key enrolment terminal opens clean in Ghostty.** It launched
+  with `--class ryoku-passkey`; Ghostty wants `--class=NAME` and validates the
+  value as a GTK application id (a dot is required), so the old form raised its
+  configuration-error dialog on every enrol and the class never landed. The
+  launch now uses `--class=dev.ryoku.passkey` (`pages/LockscreenPage.qml`).
 - **No Hyprland wording or dead compositor toggles on niri.** The search
   vocabulary derives from the active provider's rows and name, the import
   wizard names the desktop you run and stands down where it cannot read its

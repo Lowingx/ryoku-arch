@@ -34,6 +34,17 @@
   v0.56.0-beta.19") via `ryoku version --pretty` (`config.jsonc`).
 
 ### Fixed
+- `ryovm/`: **opening a remote in Ghostty no longer raises the terminal's own
+  config error window, and the float rule matches again.** The launches built
+  `--class <name>` (kitty's form) and Ghostty wants `--class=<name>`, so it read
+  the bare flag as valueless, then parsed the name as a second field: every
+  connect showed `cli1:class: value required` plus `cli2:ryoport-ssh: invalid
+  field`. The flag is now the `=` form, which kitty accepts too. The value moved
+  to `dev.ryoku.ryoport_ssh` because Ghostty validates `--class` as a GTK
+  application id, which needs a dot: with the old name Ghostty ignored the class
+  even in the right form, the window kept `com.mitchellh.ghostty`, and the
+  float-and-centre rule could never match it. `ryossh connect` gained the
+  missing Ghostty branch in its terminal switch (issue #280).
 - `fastfetch/`: **the greeting reports the real shell again.** The wrapper
   bounded fastfetch with `timeout 8`, but fastfetch's shell module walks the
   parent chain and skips known wrappers (`time`, `sudo`, ...) without knowing

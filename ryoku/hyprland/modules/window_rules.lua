@@ -101,8 +101,12 @@ hl.window_rule({
 })
 
 hl.window_rule({
+    -- The launch asks every terminal for this id (see ryossh.go's ryoportAppID):
+    -- Ghostty validates --class as a GTK application id and rejects a name
+    -- without a dot, so a bare "ryoport-ssh" never reached the window and this
+    -- rule could not match it.
     name   = "float-ryoport-ssh",
-    match  = { class = "ryoport-ssh" },
+    match  = { class = "^dev\\.ryoku\\.ryoport_ssh$" },
     float  = true,
     size   = fit(900, 560),
     center = true,
