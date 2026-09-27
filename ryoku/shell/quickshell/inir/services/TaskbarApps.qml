@@ -11,22 +11,15 @@ Singleton {
 
     readonly property bool sortingEnabled:
         (Config.options?.panelFamily ?? "ii") === "waffle"
-    property int _identityRulesRevision: 0
     readonly property var apps: _apps
     property var _apps: []
 
+    // The config mirror is a plain JSON object: it has no per-key change
+    // signals, so every write lands through the singleton's configChanged.
+    // Watching that is what keeps pins, ignores and identity rules live.
     Connections {
-        target: Config.options?.windows
-        function onAppIdentityRulesChanged() {
-            root._identityRulesRevision++
-            root.scheduleAppsRebuild()
-        }
-    }
-
-    Connections {
-        target: Config.options?.dock
-        function onPinnedAppsChanged() { root.scheduleAppsRebuild() }
-        function onIgnoredAppRegexesChanged() { root.scheduleAppsRebuild() }
+        target: Config
+        function onConfigChanged() { root.scheduleAppsRebuild() }
     }
 
     Connections {
@@ -77,7 +70,6 @@ Singleton {
     }
 
     function _buildApps(): var {
-        const identityRulesRevision = root._identityRulesRevision;
         var map = new Map();
 
         // Pinned apps

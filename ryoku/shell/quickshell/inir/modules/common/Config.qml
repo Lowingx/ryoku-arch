@@ -71,8 +71,12 @@ Singleton {
     }
 
     function setNestedValue(path, value) {
+        // Callers pass either a dotted string or a segment array; an array
+        // must join before it becomes an object key, or "dock,pinnedApps"
+        // lands as one dead key instead of dock.pinnedApps.
+        const key = Array.isArray(path) ? path.join(".") : String(path)
         const patch = {};
-        patch[path] = value;
+        patch[key] = value;
         root.setNestedValues(patch);
     }
 
