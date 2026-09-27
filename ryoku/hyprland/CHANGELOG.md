@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Changed
+- **Super+Q asks first when iRiS is set to.** The close bind reads
+  `shell.json` in place and only goes through the shell when the iRiS bar
+  style is active with its close confirmation on; every other close stays a
+  native dispatch. Super+Shift+S opens the iRiS region toolbar while iRiS is
+  the bar style and ryoshot otherwise (`modules/binds.lua`).
+
 ### Fixed
 - **Ryoku Settings opens inside the work area.** Its full-page float was sized
   from the whole monitor, so it slid under whatever the shell reserves (the
