@@ -231,6 +231,11 @@ Item {
         Quickshell.execDetached(["ryoku-shell", "bar", "settings"]);
     }
 
+    // The frame family opens its own settings overlay through the shell IPC.
+    function openIrisSettings() {
+        Quickshell.execDetached(["qs", "-c", "shell", "ipc", "call", "iris", "settings", ""]);
+    }
+
     CatalogLabels { id: labels }
 
     // ── head: the eyebrow band, the title, the blurb ─────────────────────────
@@ -513,12 +518,45 @@ Item {
                 }
             }
 
+            // iRiS arranges itself live: the island opens its own settings
+            // overlay and Studio, so this card only routes there, like QS Bar.
+            SettingCard {
+                id: irisSect
+                width: col.colWidth
+                visible: page.activeStyle === "iris"
+                title: I18n.tr("IRIS")
+                kana: "虹"
+
+                Item {
+                    width: parent.width
+                    height: irisBody.height + Tokens.s3 + Tokens.s4
+                    Column {
+                        id: irisBody
+                        anchors { left: parent.left; right: parent.right; top: parent.top }
+                        anchors.leftMargin: Tokens.s4; anchors.rightMargin: Tokens.s4; anchors.topMargin: Tokens.s3
+                        spacing: Tokens.s3
+                        Text {
+                            width: parent.width
+                            text: I18n.tr("iRiS arranges its own island, bubbles, dock and look in its settings overlay: hover the island and press the gear, or use the button below.")
+                            color: Tokens.inkMuted
+                            font.family: Tokens.ui
+                            font.pixelSize: Tokens.fBody
+                            wrapMode: Text.WordWrap
+                        }
+                        Btn {
+                            text: I18n.tr("OPEN IRIS SETTINGS")
+                            onAct: page.openIrisSettings()
+                        }
+                    }
+                }
+            }
+
             // A folder style owns its own frame, rails and widgets inside its
             // barstyles/<id>/ folder, so the Sumi editors below stand down.
             SettingCard {
                 id: folderNote
                 width: col.colWidth
-                visible: !page.sumiActive && page.activeStyle !== "qsbar"
+                visible: !page.sumiActive && page.activeStyle !== "qsbar" && page.activeStyle !== "iris"
                 title: I18n.tr("LAYOUT")
 
                 Text {

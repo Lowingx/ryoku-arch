@@ -48,11 +48,12 @@ Singleton {
 
     // Built-in folder styles ship inside the shell and resolve relative to the
     // Frame Loader, so no store install is needed. "sumi" stays the painted
-    // frame scene (empty scene url); "qsbar" is the shipped QS Bar folder and
-    // "kairos" the shipped island clock.
+    // frame scene (empty scene url); "qsbar" is the shipped QS Bar folder,
+    // "kairos" the shipped island clock and "iris" the shipped frame family.
     readonly property var builtins: ({
         "qsbar": "barstyles/qsbar/Scene.qml",
-        "kairos": "barstyles/kairos/Scene.qml"
+        "kairos": "barstyles/kairos/Scene.qml",
+        "iris": "barstyles/iris/Scene.qml"
     })
 
     function sceneUrl(id) {
