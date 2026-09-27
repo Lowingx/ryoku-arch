@@ -2,6 +2,15 @@
 
 
 ### Added
+- **The Visualizer tab edits the new edge field.** The Desktop page's
+  Visualizer tab grew an EDGE FIELD section - lit edges, reach, material,
+  movement, effect, colour mode, corners and flow up front, the deep drives
+  under Advanced - and the live preview renders the same `AuraField` the
+  desktop paints with, so the look retunes as you drag. Box-only rows (place,
+  angle, leans, gradient, bloom) now hide while `aura` is chosen, so no knob
+  that does nothing for the look is on screen
+  (`quickshell/schema/DesktopPage.js`, `quickshell/VizPreview.qml`,
+  `quickshell/Hub.qml`).
 - **The Machine page owns the two switches it used to describe.** The
   hardware display-routing knob (GPU Mode / MUX / Optimus) and the live CPU
   power profile were CLI-only, and both the render card's Hybrid and the

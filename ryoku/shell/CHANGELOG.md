@@ -22,6 +22,17 @@
   the click moved (issue #276).
 
 ### Added
+- **The visualizer grew an `aura` look: a living current of light along the
+  screen's edges.** Twelve eased spectrum sectors flow over whichever edges you
+  light - left and right rails, a bottom horizon, or all four as one joined
+  frame - as a single organic field rather than a row of bars, in four
+  materials (silk, aurora, contour, liquid), four movements and seven effects,
+  painted wallpaper-lit or by a pinned triad. It is a twelfth look: the gallery,
+  the desktop editing bar (EDGES, MATERIAL, REACH) and the Hub's Visualizer tab
+  (a new EDGE FIELD section, every knob gated to the look) all carry it, and
+  box-only knobs stay hidden while it is chosen (`modules/visualizer/`,
+  `ryoku/ui/AuraField.qml`, `shaders/aura.frag`, `lib/aura.js`). Ported from
+  the iNiR shell's spectrum wings and rebuilt on Ryoku's own renderer rules.
 - **The warm screen and the palette can follow the real sun.** The night
   light grew a "Follow the sun" switch and an edge margin: it warms the screen
   from sunset+margin until sunrise-margin using the sunrise/sunset the weather
