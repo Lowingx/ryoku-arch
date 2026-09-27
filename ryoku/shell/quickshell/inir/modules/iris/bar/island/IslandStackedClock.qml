@@ -10,7 +10,7 @@ Column {
 
     property real pixelSize: 14 * IrisStyle.typeScale
     property color color: IrisStyle.text
-    property color accent: IrisStyle.secondaryAccent
+    property color accent: IrisStyle.frameAccent
     property bool showDay: false
 
     readonly property var parts: {

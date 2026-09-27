@@ -92,6 +92,9 @@ Scope {
         function settings(section: string): void {
             GlobalStates.openSettingsPage(-1, section)
         }
+        function wallpaper(action: string): void {
+            GlobalStates.wallpaperSelectorOpen = action !== "close"
+        }
         function bubble(slot: string, place: string): string {
             const extra = IrisPieces.extraIds.includes(slot)
             if (!extra && !IrisPieces.slotIds.includes(slot)) return "Unknown bubble"

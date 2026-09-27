@@ -10,7 +10,7 @@ import inir.modules.iris.components
 Row {
     id: dateMark
     property real pixelSize: 12 * IrisStyle.typeScale
-    property color dayColor: IrisStyle.secondaryAccent
+    property color dayColor: IrisStyle.frameAccent
     spacing: Math.round(dateMark.pixelSize * 0.3)
     IrisText {
         id: weekdayText

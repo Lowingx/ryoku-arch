@@ -38,12 +38,20 @@ PanelWindow {
 
     readonly property var specifications: IrisOptions.studio
     function shown(spec: var): bool {
+        if (!IrisOptions.availableIn(spec)) return false
         const when = String(spec.visibleWhen ?? "")
         if (when.length === 0) return true
         if (when.includes("=")) return String(Config.getNestedValue(when.split("=")[0], "")) === when.split("=")[1]
         const negated = when.startsWith("!")
         const on = Boolean(Config.getNestedValue(negated ? when.slice(1) : when, false))
         return negated ? !on : on
+    }
+    function hasContent(id: string): bool {
+        if (id === "themes") return true
+        void Config.revision
+        for (const spec of root.specifications)
+            if (spec.target === id && root.shown(spec)) return true
+        return false
     }
     readonly property var groups: {
         Config.revision
@@ -110,10 +118,11 @@ PanelWindow {
         }
     }
     function select(id: string): void {
-        if (id === root.target) return
+        const wanted = root.hasContent(id) ? id : "material"
+        if (wanted === root.target) return
         root.preview(root.target, false)
-        root.target = id
-        root.preview(id, true)
+        root.target = wanted
+        root.preview(wanted, true)
         flick.contentY = 0
     }
     function takeRequest(): void {
@@ -129,6 +138,12 @@ PanelWindow {
         function onIrisStudioOpenChanged(): void {
             if (GlobalStates.irisStudioOpen) root.preview(root.target, true)
             else root.preview(root.target, false)
+        }
+    }
+    Connections {
+        target: IrisStyle
+        function onRyokuFrontendChanged(): void {
+            if (!root.hasContent(root.target)) root.select("material")
         }
     }
     function resetTarget(): void {
@@ -665,9 +680,11 @@ PanelWindow {
     component RailButton: MouseArea {
         id: railButton
         required property var entry
+        readonly property bool present: root.hasContent(railButton.entry.id)
         readonly property bool selected: root.target === railButton.entry.id && root.query.length === 0
         readonly property int changed: root.modifiedIn(railButton.entry.id)
-        implicitHeight: Math.round(50 * root.d)
+        visible: railButton.present
+        implicitHeight: railButton.present ? Math.round(50 * root.d) : 0
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
         Accessible.role: Accessible.PageTab
@@ -683,7 +700,7 @@ PanelWindow {
             width: Math.round(40 * root.d)
             height: Math.round(28 * root.d)
             radius: height / 2
-            color: railButton.selected ? IrisStyle.tintFill(IrisStyle.accent)
+            color: railButton.selected ? (IrisStyle.ryokuFrontend ? IrisStyle.accentContainer : IrisStyle.tintFill(IrisStyle.accent))
                 : railButton.containsMouse ? IrisStyle.fillHover : "transparent"
             Behavior on color { ColorAnimation { duration: IrisStyle.duration(110); easing.type: IrisStyle.feedbackEasing } }
             MaterialSymbol {
@@ -692,7 +709,7 @@ PanelWindow {
                 iconSize: Math.round(19 * root.d)
                 fill: railButton.selected ? 1 : 0
                 animateFill: true
-                color: railButton.selected ? IrisStyle.accent : IrisStyle.textSecondary
+                color: railButton.selected ? (IrisStyle.ryokuFrontend ? IrisStyle.onAccentContainer : IrisStyle.accent) : IrisStyle.textSecondary
             }
             Rectangle {
                 visible: railButton.changed > 0

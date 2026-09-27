@@ -693,10 +693,13 @@ ShellRoot {
     Connections {
         target: Polkit
         function onActiveChanged() {
-            if (Polkit.active)
-                ShellState.requestSurface("polkit", "", undefined);
-            else
+            // The iRiS bar style draws this prompt in its own dialog.
+            if (Polkit.active) {
+                if (Config.barStyle !== "iris")
+                    ShellState.requestSurface("polkit", "", undefined);
+            } else {
                 ShellState.closeSurface("polkit", "");
+            }
         }
     }
 

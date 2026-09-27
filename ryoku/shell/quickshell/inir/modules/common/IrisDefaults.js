@@ -60,6 +60,7 @@ function config() {
    "position": "auto"
   },
   "appearance": {
+   "frontend": "ryoku",
    "fontFamily": "",
    "titleFontFamily": "",
    "highlight": "orange",
@@ -558,7 +559,7 @@ function config() {
      "preset": "default"
     },
     "dim": 70,
-    "enable": true,
+    "enable": false,
     "fontFamily": "Space Grotesk",
     "placementStrategy": "leastBusy",
     "quote": {
@@ -1079,7 +1080,8 @@ function config() {
      "Europe/London",
      "America/New_York"
     ]
-   }
+   },
+   "dynamicOpacity": 0
   },
   "edgeWidgets": {
    "organic": {
@@ -1545,7 +1547,8 @@ function config() {
   "annotation": {
    "useSatty": false,
    "useNativeEditor": true
-  }
+  },
+  "screenshotNameFormat": "ss-%Y%m%d-%H%M%S"
  },
  "lock": {
   "blur": {
@@ -2098,7 +2101,11 @@ function config() {
   "irisPalette",
   "irisNotificationPopup",
   "irisOnScreenDisplay",
-  "irisSessionScreen"
+  "irisSessionScreen",
+  "irisBackground",
+  "irisWallpaperSelector",
+  "irisRegionSelector",
+  "irisPolkit"
  ],
  "bar": {
   "appearanceStyle": "m3",
@@ -2150,7 +2157,9 @@ function config() {
  },
  "mascot": {
   "chaos": {
-   "artStyle": "jrpg"
+   "artStyle": "jrpg",
+   "allowRearrange": false,
+   "enable": false
   },
   "enable": false,
   "surfacePoses": {
@@ -2182,6 +2191,9 @@ function config() {
    "emptyStates": true,
    "session": true,
    "updates": true
+  },
+  "companion": {
+   "respectQuiet": true
   }
  },
  "media": {
@@ -2195,6 +2207,9 @@ function config() {
   "adviseUpdateThreshold": 75,
   "checkInterval": 120,
   "stronglyAdviseUpdateThreshold": 200
+ },
+ "closeConfirm": {
+  "enabled": false
  }
 }
 }

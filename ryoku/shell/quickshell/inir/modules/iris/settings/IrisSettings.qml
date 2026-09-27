@@ -16,6 +16,7 @@ import inir.modules.iris.style
 import inir.modules.iris.pieces
 import inir.modules.iris.sidebar
 import inir.modules.iris.preview
+import Ryoku.Ui.Singletons
 
 PanelWindow {
     id: root
@@ -36,9 +37,13 @@ PanelWindow {
         { id: "sidebars", title: "Side Panels", subtitle: "Focus and Today, arranged around your workflow", icon: "dock_to_right", tint: IrisStyle.identity.green, tip: "Ctrl+E customizes a panel; Keep open makes room beside windows." },
         { id: "surfaces", title: "Spotlight & Panels", subtitle: "Search, Control Center and system feedback", icon: "space_dashboard", tint: IrisStyle.identity.orange, tip: "Spotlight prefixes: ; clipboard, = calculator, / actions." }
     ]
+    // Latin names the section, the kanji seals it — the Ryoku nav language.
+    readonly property var jpName: ({ bar: "島", player: "再生", bubbles: "泡", dock: "台座",
+        appearance: "外観", desktop: "卓上", sidebars: "側面", surfaces: "探索" })
     readonly property var specifications: IrisOptions.settings
     readonly property var currentSection: root.sections.find(s => s.id === root.section) ?? root.sections[0]
     function shown(spec: var): bool {
+        if (!IrisOptions.availableIn(spec)) return false
         const when = String(spec.visibleWhen ?? "")
         if (when.length === 0) return true
         if (when.includes("=")) return String(Config.getNestedValue(when.split("=")[0], "")) === when.split("=")[1]
@@ -141,7 +146,6 @@ PanelWindow {
         }
     }
     function applyRequest(): void {
-        if (GlobalStates.settingsOverlayRequestedPage >= 0) root.group = ""
         const request = String(GlobalStates.settingsOverlayRequestedSection ?? "").split("/")
         root.requestedSection = request[0] ?? ""
         if (request.length > 1) {
@@ -149,10 +153,12 @@ PanelWindow {
             groupRequest.restart()
         }
         GlobalStates.settingsOverlayRequestedSection = ""
-        if (GlobalStates.settingsOverlayRequestedPage >= 0) {
-            if (root.sections.some(s => s.id === root.requestedSection))
-                root.section = root.requestedSection
-            GlobalStates.settingsOverlayRequestedPage = -1
+        GlobalStates.settingsOverlayRequestedPage = -1
+        // The legacy page index is ignored (Ryoku Hub owns non-frame pages), so the
+        // requested section deep-links whenever it names a real section.
+        if (root.requestedSection.length > 0 && root.sections.some(s => s.id === root.requestedSection)) {
+            root.group = ""
+            root.section = root.requestedSection
         }
     }
     function selectSection(id: string): void {
@@ -164,6 +170,12 @@ PanelWindow {
     Connections {
         target: GlobalStates
         function onSettingsOverlayRequestedPageChanged(): void { Qt.callLater(root.applyRequest) }
+        // A section deep-link (`iris settings <section>`, an "Edit in Studio" jump)
+        // arriving while the overlay is already open must still navigate; the page
+        // index no longer changes, so react to the section itself.
+        function onSettingsOverlayRequestedSectionChanged(): void {
+            if (String(GlobalStates.settingsOverlayRequestedSection ?? "").length > 0) Qt.callLater(root.applyRequest)
+        }
         function onSettingsOverlayOpenChanged(): void { if (GlobalStates.settingsOverlayOpen) root.applyRequest() }
     }
     onSectionChanged: pageEnter.restart()
@@ -301,16 +313,24 @@ PanelWindow {
                             Rectangle {
                                 anchors.fill: parent
                                 radius: IrisStyle.radiusRow
-                                color: sectionRow.selected ? IrisStyle.tintFill(IrisStyle.accent)
+                                color: sectionRow.selected ? (IrisStyle.ryokuFrontend ? IrisStyle.accentContainer : IrisStyle.tintFill(IrisStyle.accent))
                                     : sectionRow.containsMouse ? IrisStyle.fillHover : "transparent"
                                 Behavior on color { ColorAnimation { duration: IrisStyle.duration(110) } }
                             }
                             RowLayout {
                                 anchors.fill: parent
                                 anchors.leftMargin: 8 * root.d
-                                anchors.rightMargin: 8 * root.d
+                                anchors.rightMargin: 10 * root.d
                                 spacing: 10 * root.d
+                                IrisText {
+                                    visible: IrisStyle.ryokuFrontend && sectionRow.selected
+                                    text: "//"
+                                    color: IrisStyle.onAccentContainer
+                                    font.family: IrisStyle.fontNumbers
+                                    font.pixelSize: 11 * IrisStyle.typeScale
+                                }
                                 Rectangle {
+                                    visible: !IrisStyle.ryokuFrontend
                                     implicitWidth: Math.round(24 * root.d)
                                     implicitHeight: implicitWidth
                                     radius: IrisStyle.radiusChip
@@ -326,13 +346,21 @@ PanelWindow {
                                 IrisText {
                                     Layout.fillWidth: true
                                     text: Translation.tr(sectionRow.modelData.title)
+                                    color: IrisStyle.ryokuFrontend && sectionRow.selected ? IrisStyle.onAccentContainer : IrisStyle.text
                                     font.pixelSize: 13 * IrisStyle.typeScale
                                     font.weight: sectionRow.selected ? Font.DemiBold : Font.Normal
                                     elide: Text.ElideRight
                                 }
                                 IrisText {
+                                    visible: IrisStyle.ryokuFrontend
+                                    text: root.jpName[sectionRow.modelData.id] ?? ""
+                                    color: sectionRow.selected ? IrisStyle.onAccentContainer : IrisStyle.muted
+                                    font.family: Tokens.jp
+                                    font.pixelSize: 12 * IrisStyle.typeScale
+                                }
+                                IrisText {
                                     readonly property int count: root.specifications.filter(spec => spec.section === sectionRow.modelData.id).length
-                                    visible: count > 0
+                                    visible: !IrisStyle.ryokuFrontend && count > 0
                                     text: count
                                     color: IrisStyle.textTertiary
                                     font.family: IrisStyle.fontNumbers
@@ -352,12 +380,53 @@ PanelWindow {
                         spacing: 8 * root.d
                         IrisMark { implicitSize: Math.round(22 * root.d) }
                         ColumnLayout {
+                            Layout.fillWidth: true
                             spacing: 0
                             IrisText { text: "iRiS"; font.pixelSize: 13 * IrisStyle.typeScale; font.weight: Font.DemiBold }
                             IrisText {
-                                text: Translation.tr("By iNiR shell")
+                                text: IrisStyle.ryokuFrontend ? Translation.tr("Ryoku look") : Translation.tr("By iNiR shell")
                                 color: IrisStyle.muted
                                 font.pixelSize: 11 * IrisStyle.typeScale
+                            }
+                        }
+                        // Flips the whole iRiS family between Ryoku's paper-and-ink
+                        // language and the upstream iNiR look, live. Kept here so a
+                        // user on either look can always find the way back.
+                        MouseArea {
+                            id: frontendSwitch
+                            readonly property bool ryoku: IrisStyle.ryokuFrontend
+                            implicitWidth: Math.round(46 * root.d)
+                            implicitHeight: Math.round(24 * root.d)
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            Accessible.role: Accessible.Switch
+                            Accessible.name: Translation.tr("Ryoku look")
+                            Accessible.checked: frontendSwitch.ryoku
+                            onClicked: Config.setNestedValue("iris.appearance.frontend", frontendSwitch.ryoku ? "inir" : "ryoku")
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: height / 2
+                                color: frontendSwitch.ryoku ? IrisStyle.accent : IrisStyle.fillHover
+                                Behavior on color { ColorAnimation { duration: IrisStyle.duration(140) } }
+                            }
+                            Rectangle {
+                                y: 2 * root.d
+                                x: frontendSwitch.ryoku ? parent.width - width - 2 * root.d : 2 * root.d
+                                width: parent.height - 4 * root.d
+                                height: width
+                                radius: width / 2
+                                color: IrisStyle.onTint
+                                scale: frontendSwitch.pressed ? IrisStyle.pressScale(0.9) : 1
+                                Behavior on x { NumberAnimation { duration: IrisStyle.morphDuration; easing.type: Easing.BezierSpline; easing.bezierCurve: IrisStyle.morphCurve } }
+                                Behavior on scale { NumberAnimation { duration: IrisStyle.feedbackDuration } }
+                                IrisText {
+                                    anchors.centerIn: parent
+                                    text: frontendSwitch.ryoku ? "力" : "i"
+                                    color: frontendSwitch.ryoku ? IrisStyle.accent : IrisStyle.muted
+                                    font.family: frontendSwitch.ryoku ? Tokens.jp : IrisStyle.fontMain
+                                    font.pixelSize: 11 * IrisStyle.typeScale
+                                    font.weight: Font.Bold
+                                }
                             }
                         }
                     }
@@ -480,7 +549,12 @@ PanelWindow {
                                 visible: root.browsing && String(root.currentSection.tip ?? "").length > 0
                                 implicitHeight: guideContent.implicitHeight + 24 * root.d
                                 radius: IrisStyle.radiusCard
-                                gradient: Gradient {
+                                color: IrisStyle.surfaceHigh
+                                border.width: IrisStyle.ryokuFrontend ? 1 : 0
+                                border.color: IrisStyle.hairline
+                                gradient: IrisStyle.ryokuFrontend ? null : guideGrad
+                                Gradient {
+                                    id: guideGrad
                                     orientation: Gradient.Horizontal
                                     GradientStop { position: 0; color: ColorUtils.mix(IrisStyle.surfaceHigh, root.currentSection.tint, 0.84) }
                                     GradientStop { position: 0.6; color: IrisStyle.surfaceHigh }
@@ -501,11 +575,16 @@ PanelWindow {
                                             implicitWidth: Math.round(34 * root.d)
                                             implicitHeight: implicitWidth
                                             radius: IrisStyle.iconRadius(width)
-                                            gradient: Gradient {
+                                            color: "transparent"
+                                            border.width: IrisStyle.ryokuFrontend ? 1 : 0
+                                            border.color: IrisStyle.hairline
+                                            gradient: IrisStyle.ryokuFrontend ? null : guideIconGrad
+                                            Gradient {
+                                                id: guideIconGrad
                                                 GradientStop { position: 0; color: Qt.lighter(root.currentSection.tint, 1.2) }
                                                 GradientStop { position: 1; color: root.currentSection.tint }
                                             }
-                                            MaterialSymbol { anchors.centerIn: parent; text: root.currentSection.icon; fill: 1; iconSize: Math.round(20 * root.d); color: IrisStyle.onTint }
+                                            MaterialSymbol { anchors.centerIn: parent; text: root.currentSection.icon; fill: 1; iconSize: Math.round(20 * root.d); color: IrisStyle.ryokuFrontend ? IrisStyle.text : IrisStyle.onTint }
                                         }
                                         IrisText {
                                             Layout.fillWidth: true
@@ -721,7 +800,12 @@ PanelWindow {
                     implicitWidth: Math.round(30 * root.d)
                     implicitHeight: implicitWidth
                     radius: IrisStyle.iconRadius(width)
-                    gradient: Gradient {
+                    color: "transparent"
+                    border.width: IrisStyle.ryokuFrontend ? 1 : 0
+                    border.color: IrisStyle.hairline
+                    gradient: IrisStyle.ryokuFrontend ? null : cardIconGrad
+                    Gradient {
+                        id: cardIconGrad
                         GradientStop { position: 0; color: Qt.lighter(root.currentSection.tint, 1.2) }
                         GradientStop { position: 1; color: root.currentSection.tint }
                     }
@@ -730,7 +814,7 @@ PanelWindow {
                         text: root.groupGlyphs[card.modelData.key] ?? root.currentSection.icon
                         fill: 1
                         iconSize: Math.round(17 * root.d)
-                        color: IrisStyle.onTint
+                        color: IrisStyle.ryokuFrontend ? IrisStyle.text : IrisStyle.onTint
                     }
                 }
                 Item { Layout.fillWidth: true }

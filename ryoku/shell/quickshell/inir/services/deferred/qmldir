@@ -1,4 +1,5 @@
 module inir.services.deferred
+singleton AnimeService 1.0 AnimeService.qml
 singleton CavaService 1.0 CavaService.qml
 singleton Cliphist 1.0 Cliphist.qml
 singleton Emojis 1.0 Emojis.qml

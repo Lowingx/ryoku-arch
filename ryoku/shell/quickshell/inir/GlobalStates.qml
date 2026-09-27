@@ -88,9 +88,68 @@ Singleton {
 
     property bool screenLocked: false
     property bool sessionOpen: false
+
+    // ── Region selector (screenshot / record / OCR / search) ──────────────
+    property bool regionSelectorOpen: false
+    property var regionSelectorAction: 0
+    property var regionSelectorMode: 0
+    // Explicit screenshot callers must remain deterministic. The dedicated
+    // compositor binds for screenshot, OCR and visual search are separate
+    // contracts; opening one must never inherit state left by another tool.
+    function openRegionScreenshot(): void {
+        regionSelectorAction = 0
+        regionSelectorMode = 0
+        regionSelectorOpen = true
+    }
+
+    // The unified snip menu may restore the last toolbar choice. Raw ordinals
+    // mirror RegionSelection's enums: action 0 Shot, 1 Edit, 2 Search, 3 OCR
+    // (record is never restored); mode 0 rectangle, 1 circle.
+    function openRememberedRegionTool(): void {
+        let action = 0
+        let mode = 0
+        if (Config.options?.regionSelector?.rememberSnipChoice ?? true) {
+            const savedAction = Config.options?.regionSelector?.lastAction ?? 0
+            const savedMode = Config.options?.regionSelector?.lastMode ?? 0
+            if (savedAction >= 0 && savedAction <= 3) action = savedAction
+            if (savedMode === 1) mode = savedMode
+        }
+        regionSelectorAction = action
+        regionSelectorMode = mode
+        regionSelectorOpen = true
+    }
+    // Native screenshot annotation editor (Edit action).
+    property bool annotationEditorOpen: false
+    property string annotationEditorPath: ""
+
+    // ── Wallpaper picker ──────────────────────────────────────────────────
+    property bool wallpaperSelectorOpen: false
+    property string wallpaperSelectorSource: ""
+    property string wallpaperSelectorQuery: ""
+    // Selection targets: "main", "backdrop" (the picker keeps the vocabulary;
+    // the Ryoku wallpaper path only acts on "main").
+    property string wallpaperSelectionTarget: "main"
+    // Target monitor for the picker (set before opening, avoids config timing).
+    property string wallpaperSelectorTargetMonitor: ""
+    onWallpaperSelectorOpenChanged: {
+        if (!wallpaperSelectorOpen) {
+            wallpaperSelectionTarget = "main"
+            wallpaperSelectorTargetMonitor = ""
+            if (Config.options?.wallpaperSelector?.selectionTarget
+                    && Config.options.wallpaperSelector.selectionTarget !== "main")
+                Config.setNestedValue("wallpaperSelector.selectionTarget", "main")
+            if (Config.options?.wallpaperSelector?.targetMonitor)
+                Config.setNestedValue("wallpaperSelector.targetMonitor", "")
+        }
+    }
     property bool widgetEditMode: false
     property string selectedDesktopWidget: ""
     property string desktopWidgetQuickControls: ""
+    // Desktop widget manager toggle routed to the output that should show it.
+    signal desktopWidgetManagerToggleRequested(string outputName)
+    // Shell-layout edit is not a frame surface here; the widget canvas reads
+    // this to stand down during it, so it stays a constant.
+    property bool shellLayoutEditMode: false
 
     function setWidgetEditMode(enabled: bool): void {
         if (!enabled) {

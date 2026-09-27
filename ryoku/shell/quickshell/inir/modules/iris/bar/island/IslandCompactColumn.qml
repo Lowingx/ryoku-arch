@@ -15,7 +15,7 @@ Item {
     property string mode: "idle"
     property real thickness: 42
     property real clockScale: 1
-    property color clockAccent: IrisStyle.secondaryAccent
+    property color clockAccent: IrisStyle.frameAccent
     property string clockStyle: "dateTime"
 
     readonly property real d: IrisStyle.density

@@ -5,6 +5,7 @@ import QtQuick
 import Qt.labs.folderlistmodel
 import Quickshell
 import Quickshell.Io
+import inir.services
 import inir.modules.common
 import inir.modules.common.functions
 import inir.modules.iris.style
@@ -15,7 +16,7 @@ Singleton {
     readonly property string folder: FileUtils.trimFileProtocol(`${Directories.shellConfig}/iris/themes`)
     readonly property var excludedPaths: ["iris.bar.position", "iris.dock.launcher", "iris.appearance.surfaces.cards.header",
         "iris.appearance.surfaces.cards.devices", "iris.appearance.surfaces.cards.mixer", "iris.appearance.studioPreview",
-        "iris.dock.magnifySize"]
+        "iris.dock.magnifySize", "iris.appearance.frontend"]
     readonly property var extraPaths: [
         { path: "iris.appearance.preset", fallback: "iris" },
         { path: "iris.bar.composition", fallback: "cluster" },

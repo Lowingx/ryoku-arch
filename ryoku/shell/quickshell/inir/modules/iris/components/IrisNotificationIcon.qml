@@ -97,11 +97,12 @@ Item {
             id: tile
             radius: IrisStyle.iconRadius(width)
             readonly property bool insignia: root.fromShell && !root.critical
-            readonly property color base: root.critical ? IrisStyle.danger : tile.insignia ? IrisStyle.surfaceHigh : root.semantic.tint
-            border.width: root.hasImage || tile.insignia ? Math.max(1, Math.round(root.width * 0.04)) : 0
-            border.color: tile.insignia ? IrisStyle.hairlineStrong : IrisStyle.surface
+            readonly property color base: IrisStyle.ryokuFrontend ? IrisStyle.surfaceHigh
+                : root.critical ? IrisStyle.danger : tile.insignia ? IrisStyle.surfaceHigh : root.semantic.tint
+            border.width: IrisStyle.ryokuFrontend || root.hasImage || tile.insignia ? Math.max(1, Math.round(root.width * 0.04)) : 0
+            border.color: IrisStyle.ryokuFrontend || tile.insignia ? IrisStyle.hairlineStrong : IrisStyle.surface
             gradient: Gradient {
-                GradientStop { position: 0; color: Qt.lighter(tile.base, 1.18) }
+                GradientStop { position: 0; color: IrisStyle.ryokuFrontend ? tile.base : Qt.lighter(tile.base, 1.18) }
                 GradientStop { position: 1; color: tile.base }
             }
             IrisMark {
@@ -113,9 +114,9 @@ Item {
                 visible: !tile.insignia
                 anchors.centerIn: parent
                 text: root.critical ? "priority_high" : root.semantic.glyph
-                fill: 1
+                fill: IrisStyle.ryokuFrontend ? 0 : 1
                 iconSize: Math.round(parent.width * 0.56)
-                color: IrisStyle.onTint
+                color: IrisStyle.ryokuFrontend ? (root.critical ? IrisStyle.danger : IrisStyle.text) : IrisStyle.onTint
             }
         }
     }

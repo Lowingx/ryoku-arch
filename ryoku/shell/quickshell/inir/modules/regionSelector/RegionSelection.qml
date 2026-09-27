@@ -1,0 +1,521 @@
+pragma ComponentBehavior: Bound
+import inir
+import inir.modules.common
+import inir.modules.common.functions
+import inir.modules.common.widgets
+import inir.modules.iris.regionSelector as IrisRegion
+import inir.modules.iris.style
+import inir.services
+import QtQuick
+import QtQuick.Controls
+import Quickshell
+import Quickshell.Io
+import Quickshell.Wayland
+
+PanelWindow {
+    id: root
+    visible: true
+    color: "transparent"
+    WlrLayershell.namespace: "quickshell:regionSelector"
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+    exclusionMode: ExclusionMode.Ignore
+    anchors {
+        left: true
+        right: true
+        top: true
+        bottom: true
+    }
+
+    enum SnipAction { Copy, Edit, Search, CharRecognition, Record, RecordWithSound } 
+    enum SelectionMode { RectCorners, Circle }
+    property var action: RegionSelection.SnipAction.Copy
+    property var selectionMode: RegionSelection.SelectionMode.RectCorners
+    signal dismiss()
+
+    property string screenshotDir: Directories.screenshotTemp
+    readonly property string screenshotNameFormat: Config.options?.regionSelector?.screenshotNameFormat || "ss-%Y%m%d-%H%M%S"
+    property string imageSearchEngineBaseUrl: Config.options?.search?.imageSearch?.imageSearchEngineBaseUrl ?? "https://www.bing.com/images/search?view=detailv2&iss=sbi&form=SBIVSP&sbisrc=UrlPaste&q=imgurl:"
+    property string fileUploadApiEndpoint: Config.options?.search?.imageSearch?.fileUploadApiFallback ?? "https://litterbox.catbox.moe/resources/internals/api.php"
+    property string fileUploadApiFallback: Config.options?.search?.imageSearch?.fileUploadApiFallback2 ?? "https://catbox.moe/user/api.php"
+    property string fileUploadApiFallback2: Config.options?.search?.imageSearch?.fileUploadApiEndpoint ?? "https://0x0.st"
+    readonly property string effectiveImageSearchEngineBaseUrl: {
+        const configured = imageSearchEngineBaseUrl ?? ""
+        // Google and Yandex endpoints no longer work well, fallback to Bing
+        if (configured === ""
+                || configured === "https://lens.google.com/uploadbyurl?url="
+                || configured === "https://www.google.com/searchbyimage?image_url="
+                || configured === "https://yandex.com/images/search?rpt=imageview&url=") {
+            return "https://www.bing.com/images/search?view=detailv2&iss=sbi&form=SBIVSP&sbisrc=UrlPaste&q=imgurl:"
+        }
+        return configured
+    }
+
+    readonly property bool useIris: Config.options?.panelFamily === "iris"
+    // The toolbar rests against a screen edge the shell may already own.
+    readonly property var shellInsets: ShellLayoutController.desktopInsets(root.screen?.name ?? "")
+
+    // Tri-style color support
+    property color overlayColor: root.useIris ? IrisStyle.veilStrong
+        : Appearance.angelEverywhere ? ColorUtils.applyAlpha(Appearance.colors.colScrim, 0.33)
+        : Appearance.inirEverywhere ? ColorUtils.applyAlpha(Appearance.colors.colScrim, 0.53)
+        : Appearance.auroraEverywhere ? ColorUtils.applyAlpha(Appearance.colors.colScrim, 0.4) : ColorUtils.applyAlpha(Appearance.colors.colScrim, 0.53)
+    property color brightText: root.useIris ? IrisStyle.onMedia
+        : Appearance.inirEverywhere ? Appearance.inir.colText
+        : Appearance.auroraEverywhere ? Appearance.colors.colOnLayer0
+        : (Appearance.m3colors.darkmode ? Appearance.colors.colOnLayer0 : Appearance.colors.colLayer0)
+    property color brightSecondary: root.useIris ? IrisStyle.onMediaSecondary
+        : Appearance.inirEverywhere ? Appearance.inir.colTextSecondary
+        : Appearance.auroraEverywhere ? Appearance.aurora.colTextSecondary
+        : (Appearance.m3colors.darkmode ? Appearance.colors.colSecondary : Appearance.colors.colOnSecondary)
+    property color brightTertiary: root.useIris ? IrisStyle.accent
+        : Appearance.zzzEverywhere ? Appearance.zzz.accent
+        : Appearance.inirEverywhere ? Appearance.inir.colPrimary
+        : Appearance.auroraEverywhere ? Appearance.colors.colPrimary
+        : (Appearance.m3colors.darkmode ? Appearance.colors.colTertiary : Qt.lighter(Appearance.colors.colPrimary))
+    property color selectionBorderColor: root.useIris ? IrisStyle.onMedia
+        : Appearance.zzzEverywhere ? Appearance.zzz.accent
+        : Appearance.inirEverywhere ? Appearance.inir.colBorder
+        : Appearance.auroraEverywhere ? Appearance.aurora.colPopupBorder
+        : ColorUtils.mix(brightText, brightSecondary, 0.5)
+    property color selectionFillColor: root.useIris ? IrisStyle.onMediaFill
+        : Appearance.zzzEverywhere ? ColorUtils.transparentize(Appearance.zzz.accent, 0.86)
+        : Appearance.inirEverywhere ? ColorUtils.transparentize(Appearance.inir.colPrimary, 0.8)
+        : Appearance.auroraEverywhere ? ColorUtils.transparentize(Appearance.colors.colPrimary, 0.8)
+        : ColorUtils.applyAlpha(Appearance.colors.colOnLayer0, 0.2)
+    property color windowBorderColor: brightSecondary
+    property color windowFillColor: ColorUtils.transparentize(windowBorderColor, 0.85)
+    property color imageBorderColor: brightTertiary
+    property color imageFillColor: ColorUtils.transparentize(imageBorderColor, 0.85)
+    property color onBorderColor: root.useIris ? IrisStyle.onMedia
+        : Appearance.inirEverywhere ? Appearance.inir.colText
+        : Appearance.auroraEverywhere ? Appearance.colors.colOnLayer0 : Appearance.colors.colScrim
+    readonly property real falsePositivePreventionRatio: 0.5
+
+    // The seam exposes no per-compositor tile geometry, so the region overlay
+    // works in the screen's own pixel space via its device pixel ratio.
+    readonly property real monitorScale: root.screen?.devicePixelRatio ?? 1
+    property string screenshotPath: `${root.screenshotDir}/image-${screen.name}`
+    property bool screenshotReady: false
+    property real dragStartX: 0
+    property real dragStartY: 0
+    property real draggingX: 0
+    property real draggingY: 0
+    property real dragDiffX: 0
+    property real dragDiffY: 0
+    property bool draggedAway: (dragDiffX !== 0 || dragDiffY !== 0)
+    property bool dragging: false
+    property list<point> points: []
+    property var mouseButton: null
+    property var imageRegions: []
+
+    property bool enableContentRegions: Config.options?.regionSelector?.targetRegions?.content ?? true
+    property real contentRegionOpacity: Config.options?.regionSelector?.targetRegions?.contentRegionOpacity ?? 0.3
+
+    property real targetedRegionX: -1
+    property real targetedRegionY: -1
+    property real targetedRegionWidth: 0
+    property real targetedRegionHeight: 0
+    function targetedRegionValid() {
+        return (root.targetedRegionX >= 0 && root.targetedRegionY >= 0)
+    }
+    function setRegionToTargeted() {
+        const padding = Config.options?.regionSelector?.targetRegions?.selectionPadding ?? 2; // Make borders not cut off n stuff
+        root.regionX = root.targetedRegionX - padding;
+        root.regionY = root.targetedRegionY - padding;
+        root.regionWidth = root.targetedRegionWidth + padding * 2;
+        root.regionHeight = root.targetedRegionHeight + padding * 2;
+    }
+
+    function updateTargetedRegion(x, y) {
+        function regionContainsPoint(region) {
+            if (!region || !region.at || !region.size)
+                return false;
+            if (region.at.length < 2 || region.size.length < 2)
+                return false;
+
+            const rx = region.at[0];
+            const ry = region.at[1];
+            const rw = region.size[0];
+            const rh = region.size[1];
+            return rx <= x && x <= rx + rw && ry <= y && y <= ry + rh;
+        }
+
+        // Image regions
+        const clickedRegion = root.imageRegions.find(region => regionContainsPoint(region));
+        if (clickedRegion) {
+            root.targetedRegionX = clickedRegion.at[0];
+            root.targetedRegionY = clickedRegion.at[1];
+            root.targetedRegionWidth = clickedRegion.size[0];
+            root.targetedRegionHeight = clickedRegion.size[1];
+            return;
+        }
+
+        root.targetedRegionX = -1;
+        root.targetedRegionY = -1;
+        root.targetedRegionWidth = 0;
+        root.targetedRegionHeight = 0;
+    }
+
+    function regionMatchesTarget(region) {
+        if (!region || !region.at || !region.size)
+            return false;
+        if (region.at.length < 2 || region.size.length < 2)
+            return false;
+
+        return root.targetedRegionX === region.at[0]
+            && root.targetedRegionY === region.at[1]
+            && root.targetedRegionWidth === region.size[0]
+            && root.targetedRegionHeight === region.size[1];
+    }
+
+    property real regionWidth: Math.abs(draggingX - dragStartX)
+    property real regionHeight: Math.abs(draggingY - dragStartY)
+    property real regionX: Math.min(dragStartX, draggingX)
+    property real regionY: Math.min(dragStartY, draggingY)
+
+    Component.onCompleted: {
+        root.screenshotReady = false
+        screenshotProc.running = true
+    }
+
+    Process {
+        id: screenshotProc
+        running: false
+        command: ["/usr/bin/bash", "-c", `/usr/bin/mkdir -p '${StringUtils.shellSingleQuoteEscape(root.screenshotDir)}' && /usr/bin/grim -o '${StringUtils.shellSingleQuoteEscape(root.screen.name)}' '${StringUtils.shellSingleQuoteEscape(root.screenshotPath)}'`]
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0) {
+                root.screenshotReady = false
+                Quickshell.execDetached(["/usr/bin/notify-send", "Region search failed", "grim failed to capture the screen" , "-a", "Region Selector", "-t", "4000"])
+            } else {
+                root.screenshotReady = true
+            }
+            if (root.enableContentRegions) imageDetectionProcess.running = true;
+            root.preparationDone = !checkRecordingProc.running;
+        }
+    }
+    property bool isRecording: root.action === RegionSelection.SnipAction.Record || root.action === RegionSelection.SnipAction.RecordWithSound
+    property bool recordingShouldStop: false
+    Process {
+        id: checkRecordingProc
+        running: isRecording
+        command: ["/usr/bin/pidof", "wf-recorder"]
+        onExited: (exitCode, exitStatus) => {
+            root.preparationDone = !screenshotProc.running
+            root.recordingShouldStop = (exitCode === 0);
+        }
+    }
+    property bool preparationDone: false
+    onPreparationDoneChanged: {
+        if (!preparationDone) return;
+        if (root.isRecording && root.recordingShouldStop) {
+            Quickshell.execDetached([Directories.recordScriptPath, "--stop"]);
+            root.dismiss();
+            return;
+        }
+        Qt.callLater(() => { root.visible = true; });
+    }
+
+    Process {
+        id: imageDetectionProcess
+        command: ["/usr/bin/bash", "-c", `${Directories.scriptsPath}/images/find-regions-venv.sh ` 
+            + `--image '${StringUtils.shellSingleQuoteEscape(root.screenshotPath)}' ` 
+            + `--max-width ${Math.round(root.screen.width * root.falsePositivePreventionRatio)} ` 
+            + `--max-height ${Math.round(root.screen.height * root.falsePositivePreventionRatio)} `]
+        stdout: StdioCollector {
+            id: imageDimensionCollector
+            onStreamFinished: {
+                try {
+                    const text = imageDimensionCollector.text.trim()
+                    if (text) {
+                        imageRegions = RegionFunctions.filterImageRegions(
+                            JSON.parse(text),
+                            []
+                        );
+                    }
+                } catch (e) {
+                    imageRegions = []
+                }
+            }
+        }
+    }
+
+    function snip() {
+        if (root.regionWidth <= 0 || root.regionHeight <= 0) {
+            root.dismiss();
+            return;
+        }
+
+        root.regionX = Math.max(0, Math.min(root.regionX, root.screen.width - root.regionWidth));
+        root.regionY = Math.max(0, Math.min(root.regionY, root.screen.height - root.regionHeight));
+        root.regionWidth = Math.max(0, Math.min(root.regionWidth, root.screen.width - root.regionX));
+        root.regionHeight = Math.max(0, Math.min(root.regionHeight, root.screen.height - root.regionY));
+
+        // Honor the toolbar's explicit action. Right-click while in plain
+        // screenshot (Copy) mode stays a shortcut to annotate instead.
+        if (root.action === RegionSelection.SnipAction.Copy && root.mouseButton === Qt.RightButton) {
+            root.action = RegionSelection.SnipAction.Edit;
+        }
+
+        const rx = Math.round(root.regionX * root.monitorScale);
+        const ry = Math.round(root.regionY * root.monitorScale);
+        const rw = Math.round(root.regionWidth * root.monitorScale);
+        const rh = Math.round(root.regionHeight * root.monitorScale);
+        const cropBase = `magick '${StringUtils.shellSingleQuoteEscape(root.screenshotPath)}' `
+            + `-crop ${rw}x${rh}+${rx}+${ry}`
+        const cropToStdout = `${cropBase} -`
+        const cropInPlace = `${cropBase} '${StringUtils.shellSingleQuoteEscape(root.screenshotPath)}'`
+        const cleanup = `/usr/bin/rm '${StringUtils.shellSingleQuoteEscape(root.screenshotPath)}'`
+        const slurpRegion = `${rx},${ry} ${rw}x${rh}`
+        const screenshotSaveDir = StringUtils.shellSingleQuoteEscape(Directories.screenshotsPath)
+        const uploadAndGetUrl = (filePath) => {
+            const escaped = StringUtils.shellSingleQuoteEscape(filePath)
+            const primary = `/usr/bin/curl -s --max-time 15 -F reqtype=fileupload -F time=1h -F fileToUpload=@'${escaped}' '${root.fileUploadApiEndpoint}'`
+            const fallback1 = `/usr/bin/curl -s --max-time 15 -F reqtype=fileupload -F fileToUpload=@'${escaped}' '${root.fileUploadApiFallback}'`
+            const fallback2 = `/usr/bin/curl -sf --max-time 10 -F file=@'${escaped}' '${root.fileUploadApiFallback2}'`
+            // Try primary, then fallback1, then fallback2 if all fail or return empty/non-URL response
+            return `url=$(${primary} 2>/dev/null); if [[ -z "$url" || "$url" != http* ]]; then url=$(${fallback1}); fi; if [[ -z "$url" || "$url" != http* ]]; then url=$(${fallback2}); fi; echo "$url"`
+        }
+        const annotationCommand = `${(Config.options?.regionSelector?.annotation?.useSatty ?? false) ? "satty" : "swappy"} -f -`;
+        switch (root.action) {
+            case RegionSelection.SnipAction.Copy:
+                snipProc.command = ["/usr/bin/bash", "-c", `_dir='${screenshotSaveDir}' && mkdir -p "$_dir" && _ss="$_dir/$(date +'${StringUtils.shellSingleQuoteEscape(root.screenshotNameFormat)}').png" && ${cropToStdout} | tee "$_ss" | wl-copy && printf '%s' "$_ss" | wl-copy --primary && ${cleanup} && /usr/bin/notify-send "Screenshot copied" "${rw}x${rh} saved to $_ss" -a "Screenshot" -i camera-photo -t 3000`]
+                break;
+            case RegionSelection.SnipAction.Edit:
+                if (Config.options?.regionSelector?.annotation?.useNativeEditor ?? true) {
+                    editCropProc.editFile = `${root.screenshotDir}/edit-${root.screen.name}.png`;
+                    editCropProc.command = ["/usr/bin/bash", "-c", `${cropBase} '${StringUtils.shellSingleQuoteEscape(editCropProc.editFile)}' && ${cleanup}`];
+                    editCropProc.running = true;
+                    return; // editCropProc.onExited opens the native editor and dismisses
+                }
+                snipProc.command = ["/usr/bin/bash", "-c", `${cropToStdout} | ${annotationCommand} && ${cleanup}`]
+                break;
+            case RegionSelection.SnipAction.Search:
+                snipProc.command = ["/usr/bin/bash", "-c", `${cropInPlace} && uploaded_url="$(${uploadAndGetUrl(root.screenshotPath)})"; if [[ -n "$uploaded_url" && "$uploaded_url" == http* ]]; then /usr/bin/xdg-open "${root.effectiveImageSearchEngineBaseUrl}$uploaded_url"; else /usr/bin/notify-send "Image search failed" "Could not upload the image for reverse search" -a "Image Search" -i image; fi; ${cleanup}`]
+                break;
+            case RegionSelection.SnipAction.CharRecognition: {
+                const ocrLanguage = String(Config.options?.regionSelector?.ocrLanguage ?? "auto");
+                const ocrRunner = StringUtils.shellSingleQuoteEscape(FileUtils.trimFileProtocol(Directories.payloadPath("scripts/ocr-runner.sh")));
+                snipProc.command = ["/usr/bin/bash", "-c", `${cropInPlace} && { '${ocrRunner}' '${StringUtils.shellSingleQuoteEscape(root.screenshotPath)}' '${StringUtils.shellSingleQuoteEscape(ocrLanguage)}' | tee >(wl-copy --primary) | wl-copy; _ocr_status=\${PIPESTATUS[0]}; ${cleanup}; if (( _ocr_status == 0 )); then /usr/bin/notify-send "Text recognized" "OCR text copied to clipboard" -a "OCR" -i edit-find -t 3000; else /usr/bin/notify-send "OCR failed" "The selected OCR language is unavailable or recognition failed" -a "OCR" -i dialog-error -t 4000; exit \$_ocr_status; fi; }`];
+                break;
+            }
+            case RegionSelection.SnipAction.Record:
+                snipProc.command = ["/usr/bin/bash", "-c", `${Directories.recordScriptPath} --region '${slurpRegion}'`]
+                break;
+            case RegionSelection.SnipAction.RecordWithSound:
+                snipProc.command = ["/usr/bin/bash", "-c", `${Directories.recordScriptPath} --region '${slurpRegion}' --sound`]
+                break;
+            default:
+                root.dismiss();
+                return;
+        }
+
+        // Image post-processing
+        snipProc.startDetached();
+        if (root.action === RegionSelection.SnipAction.Record
+                || root.action === RegionSelection.SnipAction.RecordWithSound)
+            RecorderStatus.scheduleQuickCheck();
+        root.dismiss();
+    }
+
+    // Capture the whole screen with the current action (no region drawing).
+    function snipFullscreen() {
+        root.dragStartX = 0;
+        root.dragStartY = 0;
+        root.draggingX = root.screen.width;
+        root.draggingY = root.screen.height;
+        root.snip();
+    }
+
+    Process {
+        id: snipProc
+    }
+
+    // Crops the selected region to a temp file for the native annotation editor,
+    // then opens it. Lives until exit (we dismiss only after it fires).
+    Process {
+        id: editCropProc
+        property string editFile: ""
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode === 0) {
+                GlobalStates.annotationEditorPath = editCropProc.editFile;
+                GlobalStates.annotationEditorOpen = true;
+            } else {
+                Quickshell.execDetached(["/usr/bin/notify-send", "Edit failed", "Could not prepare the region for editing", "-a", "Screenshot", "-t", "3000"]);
+            }
+            root.dismiss();
+        }
+    }
+
+    Rectangle {
+        anchors.fill: parent
+        color: "transparent"
+
+        Image {
+            anchors.fill: parent
+            source: root.visible && root.screenshotReady ? `file://${root.screenshotPath}` : ""
+            fillMode: Image.PreserveAspectFit
+            cache: false
+        }
+
+        focus: root.visible
+        Keys.onPressed: (event) => { // Esc to close
+            if (event.key === Qt.Key_Escape) {
+                root.dismiss();
+            }
+        }
+
+        MouseArea {
+            id: mouseArea
+            anchors.fill: parent
+            cursorShape: Qt.CrossCursor
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            hoverEnabled: true
+
+            // Controls
+            onPressed: (mouse) => {
+                root.dragStartX = mouse.x;
+                root.dragStartY = mouse.y;
+                root.draggingX = mouse.x;
+                root.draggingY = mouse.y;
+                root.dragging = true;
+                root.mouseButton = mouse.button;
+            }
+            onReleased: (mouse) => {
+                // Detect if it was a click -> Try to select targeted region
+                if (root.draggingX === root.dragStartX && root.draggingY === root.dragStartY) {
+                    if (root.targetedRegionValid()) {
+                        root.setRegionToTargeted();
+                    }
+                }
+                // Circle dragging?
+                else if (root.selectionMode === RegionSelection.SelectionMode.Circle) {
+                    const padding = (Config.options?.regionSelector?.circle?.padding ?? 10) + (Config.options?.regionSelector?.circle?.strokeWidth ?? 2) / 2;
+                    const dragPoints = (root.points.length > 0) ? root.points : [{ x: mouseArea.mouseX, y: mouseArea.mouseY }];
+                    const maxX = Math.max(...dragPoints.map(p => p.x));
+                    const minX = Math.min(...dragPoints.map(p => p.x));
+                    const maxY = Math.max(...dragPoints.map(p => p.y));
+                    const minY = Math.min(...dragPoints.map(p => p.y));
+                    root.regionX = minX - padding;
+                    root.regionY = minY - padding;
+                    root.regionWidth = maxX - minX + padding * 2;
+                    root.regionHeight = maxY - minY + padding * 2;
+                }
+                root.snip();
+            }
+            onPositionChanged: (mouse) => {
+                root.updateTargetedRegion(mouse.x, mouse.y);
+                if (!root.dragging) return;
+                root.draggingX = mouse.x;
+                root.draggingY = mouse.y;
+                root.dragDiffX = mouse.x - root.dragStartX;
+                root.dragDiffY = mouse.y - root.dragStartY;
+                root.points.push({ x: mouse.x, y: mouse.y });
+            }
+            
+            Loader {
+                z: 2
+                anchors.fill: parent
+                active: root.selectionMode === RegionSelection.SelectionMode.RectCorners
+                sourceComponent: RectCornersSelectionDetails {
+                    regionX: root.regionX
+                    regionY: root.regionY
+                    regionWidth: root.regionWidth
+                    regionHeight: root.regionHeight
+                    mouseX: mouseArea.mouseX
+                    mouseY: mouseArea.mouseY
+                    color: root.selectionBorderColor
+                    overlayColor: root.overlayColor
+                }
+            }
+
+            Loader {
+                z: 2
+                anchors.fill: parent
+                active: root.selectionMode === RegionSelection.SelectionMode.Circle
+                sourceComponent: CircleSelectionDetails {
+                    color: root.selectionBorderColor
+                    overlayColor: root.overlayColor
+                    points: root.points
+                }
+            }
+
+            // Content regions
+            Repeater {
+                model: ScriptModel {
+                    values: root.enableContentRegions ? root.imageRegions : []
+                }
+                delegate: TargetRegion {
+                    z: 4
+                    required property var modelData
+                    clientDimensions: modelData
+                    targeted: !root.draggedAway && root.regionMatchesTarget(modelData)
+
+                    opacity: root.draggedAway ? 0 : root.contentRegionOpacity
+                    borderColor: root.imageBorderColor
+                    fillColor: targeted ? root.imageFillColor : "transparent"
+                    text: Translation.tr("Content region")
+                }
+            }
+
+            // Controls
+            Item {
+                id: regionSelectionControls
+                z: 9999
+                implicitWidth: controlsLoader.implicitWidth
+                implicitHeight: controlsLoader.implicitHeight
+                opacity: 0
+
+                readonly property real restBottomMargin: 8 + (root.shellInsets.bottom ?? 0)
+
+                anchors {
+                    horizontalCenter: parent.horizontalCenter
+                    bottom: parent.bottom
+                    bottomMargin: -height
+                }
+
+                Connections {
+                    target: root
+                    function onVisibleChanged() {
+                        if (!root.visible) return;
+                        regionSelectionControls.anchors.bottomMargin = regionSelectionControls.restBottomMargin;
+                        regionSelectionControls.opacity = 1;
+                    }
+                }
+                onRestBottomMarginChanged: {
+                    if (root.visible)
+                        regionSelectionControls.anchors.bottomMargin = regionSelectionControls.restBottomMargin;
+                }
+                Behavior on opacity {
+                    animation: NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Appearance.animation.elementMoveFast.type; easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve }
+                }
+                Behavior on anchors.bottomMargin {
+                    animation: NumberAnimation { duration: Appearance.animation.elementMove.duration; easing.type: Appearance.animation.elementMove.type; easing.bezierCurve: Appearance.animation.elementMove.bezierCurve }
+                }
+
+                Loader {
+                    id: controlsLoader
+                    sourceComponent: irisControls
+                }
+
+                Component {
+                    id: irisControls
+                    IrisRegion.IrisOptionsToolbar {
+                        action: root.action
+                        selectionMode: root.selectionMode
+                        onActionChanged: root.action = action
+                        onSelectionModeChanged: root.selectionMode = selectionMode
+                        onDismiss: root.dismiss()
+                        onFullscreenRequested: root.snipFullscreen()
+                        onColorPickerRequested: {
+                            // Dismiss first so hyprpicker grabs the live desktop, not this overlay.
+                            root.dismiss();
+                            ShellExec.execDetachedArgs(["/usr/bin/bash", "-c", "sleep 0.3; /usr/bin/hyprpicker -a"], "Pick color");
+                        }
+                    }
+                }
+            }
+            
+        }
+    }
+}

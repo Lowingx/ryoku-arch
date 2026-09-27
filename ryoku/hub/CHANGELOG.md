@@ -2,6 +2,8 @@
 
 
 ### Added
+- **Bar Studio switches iRiS between its Ryoku and iNiR looks.** The iRiS
+  card has a Look control that flips the live frame (`pages/BarStudioPage.qml`).
 - **The Visualizer tab edits the new edge field.** The Desktop page's
   Visualizer tab grew an EDGE FIELD section - lit edges, reach, material,
   movement, effect, colour mode, corners and flow up front, the deep drives

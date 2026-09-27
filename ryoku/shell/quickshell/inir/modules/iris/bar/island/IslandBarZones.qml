@@ -23,7 +23,7 @@ Item {
     property string screenName: ""
     property string clockStyle: "dateTime"
     property real clockScale: 1
-    property color clockAccent: IrisStyle.secondaryAccent
+    property color clockAccent: IrisStyle.frameAccent
 
     readonly property real d: IrisStyle.density
     readonly property real pieceSize: Math.round(zones.thickness - 10 * zones.d)

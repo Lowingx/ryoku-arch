@@ -327,7 +327,7 @@ GridLayout {
                 label: Translation.tr("Capture")
                 onClicked: {
                     GlobalStates.controlPanelOpen = false
-                    Quickshell.execDetached(["sh", "-c", "flock -n -o /tmp/ryoshot.lock qs -c ryoshot"])
+                    GlobalStates.openRegionScreenshot()
                 }
             }
             ShortcutTile {

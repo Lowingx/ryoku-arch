@@ -206,6 +206,10 @@ Item {
     // only a read-only summary of the order, watched off shell.json so it tracks a
     // move made from the panel or the CLI without a Hub reload.
     property var qsbarLayout: ({})
+    // The iRiS family's frontend (paper-and-ink "ryoku" or the upstream "inir"
+    // look) lives at inir.iris.appearance.frontend in shell.json; watched here so
+    // the toggle below tracks a flip made from the iRiS settings overlay too.
+    property string irisFrontend: "ryoku"
     readonly property string qsbarLayoutSummary: {
         const layout = page.qsbarLayout || ({});
         const lane = a => Array.isArray(a) ? a.join(" \u00b7 ") : "";
@@ -222,6 +226,8 @@ Item {
             try {
                 const cfg = JSON.parse(shellJsonFile.text() || "{}");
                 page.qsbarLayout = (cfg.qsbar && cfg.qsbar.layout) ? cfg.qsbar.layout : ({});
+                page.irisFrontend = (cfg.inir && cfg.inir.iris && cfg.inir.iris.appearance
+                    && cfg.inir.iris.appearance.frontend) || "ryoku";
             } catch (e) {
                 page.qsbarLayout = ({});
             }
@@ -234,6 +240,13 @@ Item {
     // The frame family opens its own settings overlay through the shell IPC.
     function openIrisSettings() {
         Quickshell.execDetached(["qs", "-c", "shell", "ipc", "call", "iris", "settings", ""]);
+    }
+
+    // Writes through the shell's own config writer (iris set IPC), never the Hub
+    // draft, so it does not fight the frame's live Config and applies at once.
+    function setIrisFrontend(v) {
+        Quickshell.execDetached(["qs", "-c", "shell", "ipc", "call", "iris", "set",
+            "iris.appearance.frontend", JSON.stringify(v)]);
     }
 
     CatalogLabels { id: labels }
@@ -542,6 +555,25 @@ Item {
                             font.family: Tokens.ui
                             font.pixelSize: Tokens.fBody
                             wrapMode: Text.WordWrap
+                        }
+                        Item {
+                            width: parent.width
+                            height: Tokens.ctlH
+                            Text {
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: I18n.tr("Look")
+                                color: Tokens.ink
+                                font.family: Tokens.ui
+                                font.pixelSize: Tokens.fRow
+                            }
+                            Seg {
+                                anchors.right: parent.right
+                                anchors.verticalCenter: parent.verticalCenter
+                                options: ["RYOKU", "INIR"]
+                                current: page.irisFrontend === "inir" ? "INIR" : "RYOKU"
+                                onChose: key => page.setIrisFrontend(key === "INIR" ? "inir" : "ryoku")
+                            }
                         }
                         Btn {
                             text: I18n.tr("OPEN IRIS SETTINGS")

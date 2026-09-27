@@ -37,7 +37,7 @@ Item {
     readonly property real breathing: Math.max(0.5, Math.min(2.5, Number(root.options?.padding ?? 100) / 100))
     readonly property string clockAccentName: String(root.options?.clockAccent ?? "highlight")
     readonly property color clockAccent: root.clockAccentName === "accent" ? IrisStyle.accent
-        : root.clockAccentName === "plain" ? IrisStyle.text : IrisStyle.secondaryAccent
+        : root.clockAccentName === "plain" ? IrisStyle.text : IrisStyle.frameAccent
     readonly property real satelliteScale: Math.max(0.7, Math.min(1, Number(root.options?.satelliteScale ?? 100) / 100))
 
     readonly property var desktopBlockKinds: ["profile", "context", "forecast", "agenda", "vitals", "modules"]

@@ -12,7 +12,7 @@ Row {
     property real pixelSize: 15 * IrisStyle.typeScale
     property int weight: IrisStyle.figureWeight
     property color color: IrisStyle.text
-    property color separatorColor: IrisStyle.secondaryAccent
+    property color separatorColor: IrisStyle.frameAccent
     property string family: IrisStyle.fontNumbers
     property real minorScale: 0.58
 

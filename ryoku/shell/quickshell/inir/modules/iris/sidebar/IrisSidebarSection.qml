@@ -93,10 +93,10 @@ Loader {
                     implicitHeight: implicitWidth
                     radius: IrisStyle.iconRadius(width)
                     gradient: Gradient {
-                        GradientStop { position: 0; color: Qt.lighter(section.tint, 1.2) }
-                        GradientStop { position: 1; color: section.tint }
+                        GradientStop { position: 0; color: IrisStyle.ryokuFrontend ? "transparent" : Qt.lighter(section.tint, 1.2) }
+                        GradientStop { position: 1; color: IrisStyle.ryokuFrontend ? "transparent" : section.tint }
                     }
-                    MaterialSymbol { anchors.centerIn: parent; text: section.glyph; fill: 1; iconSize: Math.round(15 * root.d); color: IrisStyle.onTint }
+                    MaterialSymbol { anchors.centerIn: parent; text: section.glyph; fill: IrisStyle.ryokuFrontend ? 0 : 1; iconSize: Math.round((IrisStyle.ryokuFrontend ? 17 : 15) * root.d); color: IrisStyle.ryokuFrontend ? section.ink : IrisStyle.onTint }
                 }
                 IrisText {
                     Layout.fillWidth: true

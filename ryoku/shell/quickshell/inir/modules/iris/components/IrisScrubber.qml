@@ -72,7 +72,7 @@ Item {
         radius: width / 2
         x: Math.max(0, Math.min(root.width - width, root.width * root.shownValue - width / 2))
         anchors.verticalCenter: parent.verticalCenter
-        color: IrisStyle.onTint
+        color: IrisStyle.ryokuFrontend ? IrisStyle.text : IrisStyle.onTint
         border.width: 1
         border.color: IrisStyle.veilLight
         Behavior on width { NumberAnimation { duration: IrisStyle.duration(120); easing.type: IrisStyle.feedbackEasing } }

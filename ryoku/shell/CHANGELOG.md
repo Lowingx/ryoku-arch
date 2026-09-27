@@ -2,6 +2,20 @@
 
 ## Unreleased
 
+### New
+- **iRiS has a Ryoku look.** A toggle at the foot of the iRiS Settings rail
+  (also in Studio and in Ryoku Hub's Bar Studio) switches the whole frame
+  between the Ryoku look, paper and ink with kanji-sealed navigation,
+  hairlines and inverted selection, and the iNiR look, kept exactly as
+  upstream draws it. The Ryoku look is the default; controls that would only
+  recolour the frame hide while it is on.
+- **The rest of iRiS came over.** Its desktop widgets (drawn above Ryoku's
+  wallpaper), the wallpaper gallery (library, Wallhaven and live scenery,
+  applied through ryogami), the region toolbar for screenshots, OCR, search
+  and recording, a PolicyKit prompt that presents Ryoku's own agent, and an
+  optional ask-before-closing sheet. Super+Shift+S opens the region toolbar
+  while iRiS is the bar style.
+
 ### Changed
 - **iRiS cards and the Control Center grow out of the frame.** The default
   iRiS theme now melts an opened body into the bubble or edge it came from, so

@@ -2082,13 +2082,13 @@ AbstractWidget {
         return Math.max(0, Math.min(100, Number.isFinite(value) ? value : 100)) / 100
     }
     readonly property bool irisWallpaperTint: String(root.irisWidgetOptions.tint ?? "wallpaper") === "wallpaper"
-    readonly property color irisAccent: root.irisWallpaperTint
-        ? IrisStyle.legibleAccent(Appearance.colors.colPrimary, IrisStyle.accent) : IrisStyle.accent
-    readonly property color irisAccent2: root.irisWallpaperTint
-        ? IrisStyle.legibleAccent(Appearance.colors.colSecondary, IrisStyle.success) : IrisStyle.success
-    readonly property color irisAccent3: root.irisWallpaperTint
-        ? IrisStyle.legibleAccent(Appearance.colors.colTertiary, IrisStyle.secondaryAccent) : IrisStyle.secondaryAccent
-    readonly property color irisTintedPlate: ColorUtils.mix(IrisStyle.surface, root.irisAccent, 0.82)
+    readonly property color irisAccent: IrisStyle.ryokuFrontend ? IrisStyle.text
+        : root.irisWallpaperTint ? IrisStyle.legibleAccent(Appearance.colors.colPrimary, IrisStyle.accent) : IrisStyle.accent
+    readonly property color irisAccent2: IrisStyle.ryokuFrontend ? IrisStyle.text
+        : root.irisWallpaperTint ? IrisStyle.legibleAccent(Appearance.colors.colSecondary, IrisStyle.success) : IrisStyle.success
+    readonly property color irisAccent3: IrisStyle.ryokuFrontend ? IrisStyle.text
+        : root.irisWallpaperTint ? IrisStyle.legibleAccent(Appearance.colors.colTertiary, IrisStyle.secondaryAccent) : IrisStyle.secondaryAccent
+    readonly property color irisTintedPlate: IrisStyle.ryokuFrontend ? IrisStyle.surfaceHighOpaque : ColorUtils.mix(IrisStyle.surface, root.irisAccent, 0.82)
     readonly property color irisPlate: root.irisMaterial === "tinted" ? root.irisTintedPlate : IrisStyle.surface
 
     property Component irisFace: null

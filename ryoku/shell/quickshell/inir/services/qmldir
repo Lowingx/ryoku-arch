@@ -24,6 +24,7 @@ singleton Idle 1.0 Idle.qml
 singleton KeyboardIndicators 1.0 KeyboardIndicators.qml
 singleton LiveActivities 1.0 LiveActivities.qml
 singleton LyricsService 1.0 LyricsService.qml
+singleton MascotChaos 1.0 MascotChaos.qml
 singleton MaterialThemeLoader 1.0 MaterialThemeLoader.qml
 singleton MinimizedWindows 1.0 MinimizedWindows.qml
 singleton MprisController 1.0 MprisController.qml
@@ -44,6 +45,7 @@ singleton Todo 1.0 Todo.qml
 singleton Translation 1.0 Translation.qml
 singleton TrayService 1.0 TrayService.qml
 singleton Updates 1.0 Updates.qml
+singleton Wallhaven 1.0 Wallhaven.qml
 singleton WallpaperListener 1.0 WallpaperListener.qml
 singleton Wallpapers 1.0 Wallpapers.qml
 singleton Weather 1.0 Weather.qml

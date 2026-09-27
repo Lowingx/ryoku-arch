@@ -122,7 +122,8 @@ Rectangle {
         root.colorMode === "auto" ? root.surfaceFill : root._plate, root._plateAlpha)
     // iRiS plates are the Island material (optionally carrying the wallpaper's
     // hue); a widget's own semantic fill would bring Material tones back in.
-    readonly property color _irisMaterial: root._irisMaterialName === "tinted"
+    readonly property color _irisMaterial: IrisStyle.ryokuFrontend ? IrisStyle.surface
+        : root._irisMaterialName === "tinted"
         ? ColorUtils.mix(IrisStyle.surface, Appearance.colors.colPrimary, 0.82) : IrisStyle.surface
     readonly property color _irisFill: root._irisClear || root._irisGlass
         ? ColorUtils.applyAlpha(IrisStyle.surface, IrisStyle.legibleVeil(root._irisMaterialName, root.regionBrightness, 0, root._irisStrength))

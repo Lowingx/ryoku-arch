@@ -3,12 +3,20 @@ pragma Singleton
 import QtQuick
 import inir.modules.common
 import inir.modules.common.functions
+import Ryoku.Ui.Singletons
 
 QtObject {
     id: root
 
     readonly property var options: Config.options?.iris ?? ({})
     readonly property var appearance: root.options?.appearance ?? ({})
+
+    // Two frontends for the whole iRiS family: "inir" keeps the upstream look
+    // byte-for-byte (ready to cherry-pick upstream into), "ryoku" resolves every
+    // token to Ryoku's paper-and-ink language. Slices bind to this flag; the
+    // structural differences (a monochrome glyph instead of a coloured squircle
+    // tile) switch on it inside their component.
+    readonly property bool ryokuFrontend: (Config.options?.iris?.appearance?.frontend ?? "ryoku") === "ryoku"
 
     readonly property bool island: true
 
@@ -118,19 +126,19 @@ QtObject {
 
     readonly property string fontMain: {
         const configured = String(root.appearance?.fontFamily ?? "")
-        return configured.length > 0 ? configured : "Noto Sans"
+        return configured.length > 0 ? configured : (root.ryokuFrontend ? Tokens.ui : "Noto Sans")
     }
     readonly property string fontTitle: {
         const configured = String(root.appearance?.titleFontFamily ?? "")
-        return configured.length > 0 ? configured : "Readex Pro"
+        return configured.length > 0 ? configured : (root.ryokuFrontend ? Tokens.display : "Readex Pro")
     }
     readonly property int figureWeight: ({ light: Font.Light, regular: Font.Normal })[root.appearance?.figureWeight ?? "bold"] ?? Font.Bold
     readonly property string fontNumbers: {
         const configured = String(root.appearance?.numbersFontFamily ?? "")
-        return configured.length > 0 ? configured : "Rubik"
+        return configured.length > 0 ? configured : (root.ryokuFrontend ? Tokens.mono : "Rubik")
     }
 
-    readonly property color canvas: Appearance.colors.colLayer0Base
+    readonly property color canvas: root.ryokuFrontend ? Tokens.paper : Appearance.colors.colLayer0Base
     readonly property var materials: ({ black: "#000000", graphite: "#141416", midnight: "#0a0d17" })
     function materialOf(seed, fallback): color {
         const c = Qt.color(seed)
@@ -148,15 +156,15 @@ QtObject {
         if (name === "theme") return root.themeMaterial
         return name === "wallpaper" ? root.wallpaperMaterial : (root.materials[name] ?? root.materials.black)
     }
-    readonly property color surfaceOpaque: root.materialSwatch(root.theme?.surface ?? "black")
+    readonly property color surfaceOpaque: root.ryokuFrontend ? Tokens.paper : root.materialSwatch(root.theme?.surface ?? "black")
     readonly property bool plainBlack: (root.theme?.surface ?? "black") === "black"
     function raise(base: color, amount: real): color {
         if (base.hslHue < 0 || base.hslSaturation < 0.05) return ColorUtils.mix(root.text, base, amount)
         return Qt.hsla(base.hslHue, Math.min(1, base.hslSaturation * 0.9), Math.min(1, base.hslLightness + amount * 0.62), 1)
     }
-    readonly property color surfaceHighOpaque: root.plainBlack ? "#1c1c1e" : root.raise(root.surfaceOpaque, 0.1)
-    readonly property color surfaceHighestOpaque: root.plainBlack ? "#2c2c2e" : root.raise(root.surfaceOpaque, 0.17)
-    readonly property real tintAmount: Math.max(0, Math.min(1, Number(root.appearance?.tint ?? 0) / 100))
+    readonly property color surfaceHighOpaque: root.ryokuFrontend ? Tokens.paperLift : (root.plainBlack ? "#1c1c1e" : root.raise(root.surfaceOpaque, 0.1))
+    readonly property color surfaceHighestOpaque: root.ryokuFrontend ? ColorUtils.mix(Tokens.paper, Tokens.ink, 0.08) : (root.plainBlack ? "#2c2c2e" : root.raise(root.surfaceOpaque, 0.17))
+    readonly property real tintAmount: root.ryokuFrontend ? 0 : Math.max(0, Math.min(1, Number(root.appearance?.tint ?? 0) / 100))
     readonly property color tintSeed: root.legibleAccent(Appearance.wallpaperDominantColor, root.accent)
     function tinted(base: color, strength: real): color {
         return root.tintAmount <= 0 ? base : ColorUtils.mix(base, root.tintSeed, 1 - strength * root.tintAmount)
@@ -190,31 +198,32 @@ QtObject {
     readonly property color surfaceHighest: root.glassy ? ColorUtils.applyAlpha(root.fillInk, root.fillAlpha(0.12))
         : root.tinted(root.surfaceHighestOpaque, 0.2)
     readonly property color field: root.surfaceHighestOpaque
-    readonly property color text: "#f5f5f7"
+    readonly property color text: root.ryokuFrontend ? Tokens.ink : "#f5f5f7"
     // Secondary ink carries a whisper of the accent, so quiet text belongs to the theme instead of a stock grey.
-    readonly property color quietInk: ColorUtils.mix(root.accent, root.text, 0.14)
-    readonly property color subtext: ColorUtils.applyAlpha(root.quietInk, root.inkLevel(Math.max(0.78, root.preset.textStrong - 0.02), 0.9))
-    readonly property color muted: ColorUtils.applyAlpha(root.quietInk, root.inkLevel(Math.max(0.64, root.preset.textSecondary + 0.04), 0.8))
-    readonly property color label: ColorUtils.mix(root.accent, root.text, 0.62)
+    readonly property color quietInk: root.ryokuFrontend ? Tokens.ink : ColorUtils.mix(root.accent, root.text, 0.14)
+    readonly property color subtext: root.ryokuFrontend ? Tokens.inkDim : ColorUtils.applyAlpha(root.quietInk, root.inkLevel(Math.max(0.78, root.preset.textStrong - 0.02), 0.9))
+    readonly property color muted: root.ryokuFrontend ? Tokens.inkMuted : ColorUtils.applyAlpha(root.quietInk, root.inkLevel(Math.max(0.64, root.preset.textSecondary + 0.04), 0.8))
+    readonly property color label: root.ryokuFrontend ? Tokens.inkDim : ColorUtils.mix(root.accent, root.text, 0.62)
     function legibleAccent(seed, fallback): color {
         const c = Qt.color(seed)
         if (!c.valid || c.hslHue < 0 || c.hslSaturation < 0.12) return fallback
         return Qt.hsla(c.hslHue, Math.max(0.42, Math.min(0.8, c.hslSaturation)),
             Math.max(0.72, Math.min(0.82, c.hslLightness)), 1)
     }
-    readonly property color themeAccent: root.legibleAccent(Appearance.colors.colPrimary, "#a8c7fa")
+    readonly property color themeAccent: root.ryokuFrontend ? Tokens.ink : root.legibleAccent(Appearance.colors.colPrimary, "#a8c7fa")
     readonly property var accents: ({ blue: "#a8c7fa", mint: "#8de0bd", rose: "#ffb2c4", lilac: "#d2baff" })
     readonly property var highlights: ({ orange: "#ff9f0a", yellow: "#ffd60a", red: "#ff6961", pink: "#ff6482", green: "#30d158" })
     readonly property color accent: {
+        if (root.ryokuFrontend) return Tokens.ink
         const choice = root.appearance?.accent ?? "blue"
         if (choice === "theme") return root.themeAccent
         if (choice === "wallpaper") return root.legibleAccent(Appearance.wallpaperDominantColor, root.themeAccent)
         if (choice === "custom") return Qt.hsla(root.hueOf("accentHue", 212), 0.7, 0.78, 1)
         return root.accents[choice] ?? root.accents.blue
     }
-    readonly property color onAccent: Qt.color("#101318")
-    readonly property color accentContainer: ColorUtils.mix(root.surface, root.accent, 0.78)
-    readonly property color onAccentContainer: ColorUtils.mix(root.accent, root.text, 0.65)
+    readonly property color onAccent: root.ryokuFrontend ? Tokens.inkOnBone : Qt.color("#101318")
+    readonly property color accentContainer: root.ryokuFrontend ? Tokens.bone : ColorUtils.mix(root.surface, root.accent, 0.78)
+    readonly property color onAccentContainer: root.ryokuFrontend ? Tokens.inkOnBone : ColorUtils.mix(root.accent, root.text, 0.65)
     function vividHighlight(seed, fallback): color {
         const c = Qt.color(seed)
         if (!c.valid || c.hslHue < 0 || c.hslSaturation < 0.1) return fallback
@@ -222,6 +231,7 @@ QtObject {
             Math.max(0.54, Math.min(0.66, c.hslLightness)), 1)
     }
     readonly property color secondaryAccent: {
+        if (root.ryokuFrontend) return Tokens.ink
         const choice = root.appearance?.highlight ?? "orange"
         if (choice === "accent") return root.accent
         if (choice === "theme") return root.vividHighlight(Appearance.colors.colTertiary, root.highlights.orange)
@@ -230,10 +240,15 @@ QtObject {
             root.vividHighlight(Appearance.wallpaperDominantColor, root.highlights.orange))
         return root.highlights[choice] ?? root.highlights.orange
     }
+    // The one accent spark on the always-present frame (the resting Island's
+    // clock separator and day number). Content stays monochrome; this is the
+    // single place the sun is allowed to land inside the family (DESIGN: accent
+    // lives on the frame, not the content).
+    readonly property color frameAccent: root.ryokuFrontend ? Tokens.sun : root.secondaryAccent
     readonly property string auraName: ["off", "subtle", "vivid"].includes(root.appearance?.aura ?? "")
         ? root.appearance.aura : "subtle"
     readonly property real auraStrength: ({ off: 0, subtle: 0.2, vivid: 0.36 })[root.auraName]
-    readonly property color wallpaperLight: root.vividHighlight(Appearance.wallpaperDominantColor,
+    readonly property color wallpaperLight: root.ryokuFrontend ? Tokens.ink : root.vividHighlight(Appearance.wallpaperDominantColor,
         root.vividHighlight(Appearance.colors.colPrimary, root.accent))
     function surfaceWidth(id: string, fallback: int): int {
         const width = Number(root.appearance?.surfaces?.[id]?.width ?? 0)
@@ -257,18 +272,21 @@ QtObject {
         }
     }
     readonly property string badgeStyle: String(root.theme?.badge ?? "alert")
-    readonly property color badge: root.badgeStyle === "accent" ? root.accent
+    readonly property color badge: root.ryokuFrontend ? (root.badgeStyle === "neutral" ? root.surfaceHighestOpaque : Tokens.alert)
+        : root.badgeStyle === "accent" ? root.accent
         : root.badgeStyle === "highlight" ? root.secondaryAccent
         : root.badgeStyle === "neutral" ? root.surfaceHighestOpaque
         : root.identity.red
-    readonly property color onBadge: root.badgeStyle === "alert" ? root.onTint
+    readonly property color onBadge: root.ryokuFrontend ? (root.badgeStyle === "neutral" ? root.text : Qt.color("#ffffff"))
+        : root.badgeStyle === "alert" ? root.onTint
         : root.badgeStyle === "neutral" ? root.text
         : root.badgeStyle === "highlight" ? root.onTintFor(root.secondaryAccent) : root.onAccent
-    readonly property color badgeInk: root.badgeStyle === "alert" ? root.danger
+    readonly property color badgeInk: root.ryokuFrontend ? (root.badgeStyle === "neutral" ? root.text : Tokens.alert)
+        : root.badgeStyle === "alert" ? root.danger
         : root.badgeStyle === "neutral" ? root.text : root.badge
-    readonly property color success: "#8de0a3"
-    readonly property color danger: "#ff6961"
-    readonly property color onDanger: Qt.color("#160000")
+    readonly property color success: root.ryokuFrontend ? Tokens.ink : "#8de0a3"
+    readonly property color danger: root.ryokuFrontend ? Tokens.alert : "#ff6961"
+    readonly property color onDanger: root.ryokuFrontend ? Qt.color("#ffffff") : Qt.color("#160000")
     function line(base: color): color {
         const t = root.tweak("lines", 0, 2)
         return t <= 1 ? ColorUtils.mix(base, root.surfaceOpaque, t) : ColorUtils.mix(root.text, base, (t - 1) * 0.35)
@@ -277,17 +295,19 @@ QtObject {
         const k = Math.max(0, Math.min(1, (reference.r + reference.g + reference.b) / 3 / 0.96))
         return ColorUtils.mix(root.text, root.surfaceOpaque, k)
     }
-    readonly property color hairline: root.glassy ? ColorUtils.applyAlpha(root.text, Math.min(0.3, 0.07 * root.tweak("lines", 0, 2)))
+    readonly property color hairline: root.ryokuFrontend ? Tokens.line
+        : root.glassy ? ColorUtils.applyAlpha(root.text, Math.min(0.3, 0.07 * root.tweak("lines", 0, 2)))
         : root.line(root.ruleOf(Qt.color(root.preset.hairline)))
-    readonly property color hairlineStrong: root.glassy ? ColorUtils.applyAlpha(root.text, Math.min(0.45, 0.14 * root.tweak("lines", 0, 2)))
+    readonly property color hairlineStrong: root.ryokuFrontend ? Tokens.lineStrong
+        : root.glassy ? ColorUtils.applyAlpha(root.text, Math.min(0.45, 0.14 * root.tweak("lines", 0, 2)))
         : root.line(root.ruleOf(Qt.color(root.preset.hairlineStrong)))
-    readonly property color selection: "#303034"
-    readonly property color selectionHover: "#404044"
-    readonly property color selectionText: "#ffffff"
+    readonly property color selection: root.ryokuFrontend ? Tokens.tint16 : "#303034"
+    readonly property color selectionHover: root.ryokuFrontend ? ColorUtils.applyAlpha(Tokens.ink, 0.22) : "#404044"
+    readonly property color selectionText: root.ryokuFrontend ? Tokens.ink : "#ffffff"
     readonly property color scrim: Appearance.colors.colScrim
 
     function fillAlpha(level: real): real { return Math.min(0.5, level * root.preset.fill * root.tweak("fill", 0.3, 2)) }
-    readonly property color fillInk: root.tinted(root.text, 0.22)
+    readonly property color fillInk: root.ryokuFrontend ? Tokens.ink : root.tinted(root.text, 0.22)
     readonly property color fillQuiet: ColorUtils.applyAlpha(root.fillInk, root.fillAlpha(0.08))
     readonly property color fill: ColorUtils.applyAlpha(root.fillInk, root.fillAlpha(0.12))
     readonly property color fillHover: ColorUtils.applyAlpha(root.fillInk, root.fillAlpha(0.18))
@@ -305,16 +325,17 @@ QtObject {
     function strongOf(ink: color): color { return ColorUtils.applyAlpha(ink, root.textLevel(root.preset.textStrong)) }
     function secondaryOf(ink: color): color { return ColorUtils.applyAlpha(ink, root.inkLevel(Math.max(0.66, root.preset.textSecondary), 0.8)) }
     function tertiaryOf(ink: color): color { return ColorUtils.applyAlpha(ink, root.inkLevel(Math.max(0.5, root.preset.textTertiary), 0.6)) }
-    readonly property color border: ColorUtils.applyAlpha(root.text, Math.min(0.5, 0.12 * root.preset.fill * root.tweak("lines", 0, 2)))
-    readonly property color borderStrong: ColorUtils.applyAlpha(root.text, Math.min(0.6, 0.28 * root.preset.fill * root.tweak("lines", 0, 2)))
+    readonly property color border: root.ryokuFrontend ? Tokens.line : ColorUtils.applyAlpha(root.text, Math.min(0.5, 0.12 * root.preset.fill * root.tweak("lines", 0, 2)))
+    readonly property color borderStrong: root.ryokuFrontend ? Tokens.lineStrong : ColorUtils.applyAlpha(root.text, Math.min(0.6, 0.28 * root.preset.fill * root.tweak("lines", 0, 2)))
     readonly property string rimTint: String(root.theme?.rimTint ?? "neutral")
     readonly property color rim: !(root.theme?.rim ?? true) ? Qt.color("transparent")
+        : root.ryokuFrontend ? Tokens.line
         : root.rimTint === "accent" ? ColorUtils.applyAlpha(root.accent, Math.min(0.9, 0.3 + 0.3 * root.tweak("lines", 0, 2)))
         : root.rimTint === "highlight" ? ColorUtils.applyAlpha(root.secondaryAccent, Math.min(0.9, 0.3 + 0.3 * root.tweak("lines", 0, 2)))
         : root.border
     readonly property int rimWidth: Math.max(1, Math.round(Math.max(1, Math.min(3, Number(root.theme?.rimWidth ?? 1))) * root.density))
     readonly property real glow: Math.max(0, Math.min(1, Number(root.theme?.glow ?? 0) / 100))
-    readonly property color onTint: "#ffffff"
+    readonly property color onTint: root.ryokuFrontend ? Tokens.inkOnBone : "#ffffff"
     function onTintFor(tint: color): color { return tint.hslLightness > 0.6 ? root.onAccent : root.onTint }
 
     readonly property color veilLight: ColorUtils.applyAlpha(root.surface, 0.22)
@@ -358,18 +379,18 @@ QtObject {
     }
 
     readonly property QtObject identity: QtObject {
-        readonly property color blue: "#0a84ff"
-        readonly property color sky: "#64d2ff"
-        readonly property color teal: "#30b0c7"
-        readonly property color green: "#34c759"
-        readonly property color yellow: "#e0a800"
-        readonly property color orange: "#ff9f0a"
-        readonly property color red: "#ff453a"
-        readonly property color pink: "#ff375f"
-        readonly property color indigo: "#5e5ce6"
-        readonly property color purple: "#bf5af2"
-        readonly property color lavender: "#b4a0ff"
-        readonly property color gray: "#8e8e93"
+        readonly property color blue: root.ryokuFrontend ? root.text : "#0a84ff"
+        readonly property color sky: root.ryokuFrontend ? root.text : "#64d2ff"
+        readonly property color teal: root.ryokuFrontend ? root.text : "#30b0c7"
+        readonly property color green: root.ryokuFrontend ? root.text : "#34c759"
+        readonly property color yellow: root.ryokuFrontend ? root.text : "#e0a800"
+        readonly property color orange: root.ryokuFrontend ? root.text : "#ff9f0a"
+        readonly property color red: root.ryokuFrontend ? root.text : "#ff453a"
+        readonly property color pink: root.ryokuFrontend ? root.text : "#ff375f"
+        readonly property color indigo: root.ryokuFrontend ? root.text : "#5e5ce6"
+        readonly property color purple: root.ryokuFrontend ? root.text : "#bf5af2"
+        readonly property color lavender: root.ryokuFrontend ? root.text : "#b4a0ff"
+        readonly property color gray: root.ryokuFrontend ? root.text : "#8e8e93"
     }
 
     function identityColor(name: string): color { return root.identity[name] ?? root.identity.lavender }

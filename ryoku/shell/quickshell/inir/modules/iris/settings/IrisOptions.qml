@@ -20,7 +20,30 @@ QtObject {
         return JSON.stringify(root.plain(a)) === JSON.stringify(root.plain(b))
     }
 
+    // In the Ryoku frontend the family is paper-and-ink: colour, material and
+    // glass are inversion or fixed tokens, so these knobs cannot change anything
+    // and are withheld rather than shown dead (a control that cannot work is not
+    // offered). Everything else — geometry, motion, layout, size, type scale —
+    // drives both frontends.
+    readonly property var ryokuGatedPaths: new Set([
+        "iris.appearance.accent", "iris.appearance.theme.accentHue",
+        "iris.appearance.highlight", "iris.appearance.theme.highlightHue",
+        "iris.appearance.theme.badge", "iris.appearance.theme.surface", "iris.appearance.tint",
+        "iris.appearance.glass.mode", "iris.appearance.glass.tint", "iris.appearance.glass.blur",
+        "iris.appearance.aura", "iris.appearance.theme.lightReach", "iris.appearance.theme.glow",
+        "iris.appearance.theme.rimTint", "iris.appearance.theme.lines", "iris.appearance.theme.contrast",
+        "iris.appearance.surfaces.cards.light", "iris.appearance.surfaces.controlCenter.light",
+        "iris.appearance.surfaces.panels.light", "iris.appearance.surfaces.spotlight.light",
+        "iris.appearance.surfaces.gallery.light", "iris.appearance.surfaces.settings.light",
+        "iris.appearance.surfaces.menus.light"
+    ])
+    function availableIn(spec: var): bool {
+        if (!IrisStyle.ryokuFrontend) return true
+        return !root.ryokuGatedPaths.has(String(spec.path ?? ""))
+    }
+
     readonly property var studio: [
+        { target: "material", group: "Look", label: "Look", description: "Ryoku's paper-and-ink language, or the upstream iNiR look. Colour, material and glass live on the iNiR look only.", path: "iris.appearance.frontend", kind: "choice", fallback: "ryoku", choices: [{label:"Ryoku",value:"ryoku"},{label:"iNiR",value:"inir"}] },
         { target: "material", group: "Material", label: "Material", description: "What every surface is made of. Raised steps, fills and the frame follow it.", path: "iris.appearance.theme.surface", kind: "choice", fallback: "black", choices: [{label:"Black",value:"black",swatch:IrisStyle.materialSwatch("black")},{label:"Graphite",value:"graphite",swatch:IrisStyle.materialSwatch("graphite")},{label:"Midnight",value:"midnight",swatch:IrisStyle.materialSwatch("midnight")},{label:"Wallpaper",value:"wallpaper",swatch:IrisStyle.materialSwatch("wallpaper")},{label:"Theme",value:"theme",swatch:IrisStyle.materialSwatch("theme")}] },
         { target: "material", group: "Adaptive", label: "Adapt to the wallpaper", description: "Reads the wallpaper's brightness, contrast and colour and shapes iRiS from it: calmer images round corners and soften shadows, busy or bright ones sharpen and firm up lines, colourful ones carry more light. 0 keeps your values exactly.", path: "iris.appearance.adaptive", kind: "range", fallback: 0, min: 0, max: 100, step: 5, unit: " %" },
         { target: "material", group: "Material", label: "Fills", description: "Groups, tracks, hovered and pressed controls.", path: "iris.appearance.theme.fill", kind: "range", fallback: 100, min: 30, max: 200, step: 5, unit: " %" },
@@ -143,6 +166,7 @@ QtObject {
         { target: "dock", group: "Icons", label: "Magnify on hover", path: "iris.dock.magnification", kind: "switch", fallback:false },
         { target: "dock", group: "Icons", label: "Magnification", visibleWhen: "iris.dock.magnification", description: "How large the icon under the pointer grows; its neighbours follow.", path: "iris.dock.magnifySize", kind: "range", fallback: 150, min: 110, max: 200, step: 5, unit: " %" },
         { target: "dock", group: "Icons", label: "Applications button", description: "Opens Spotlight from the start of the Dock.", path: "iris.dock.launcher", kind: "switch", fallback:true },
+        { target: "desktop", group: "Widgets", label: "On the desktop", description: "Tap a widget to add it to this screen or take it away. Size, look and position are set on the widget itself: select it while arranging.", path: "background.widgets", kind: "widgets" },
         { target: "desktop", group: "Widgets", label: "Design", description: "iRiS draws each widget as one of its own faces at a fixed size class. Material keeps the shared Material family designs, with their own sizes and options. A widget can choose its own in its quick controls.", path: "iris.widgets.design", kind: "choice", fallback: "iris", choices: [{label:"iRiS",value:"iris",glyph:"auto_awesome"},{label:"Material",value:"material",glyph:"widgets"}] },
         { target: "desktop", group: "Widgets", label: "Widget corners", description: "Individual widget overrides take priority.", path: "iris.widgets.radius", kind: "range", fallback:22,min:0,max:40,unit:" px" },
         { target: "desktop", group: "Widgets", label: "Colour", description: "Wallpaper lifts its hues so they read on black; iRiS follows your system accent.", path: "iris.widgets.tint", kind: "choice", fallback: "wallpaper", choices: [{label:"Wallpaper",value:"wallpaper"},{label:"iRiS",value:"system"}] },
@@ -213,6 +237,7 @@ QtObject {
         { section: "surfaces", group: "Tray", label: "App names", path: "iris.tray.labels", kind: "switch", fallback:true },
         { section: "surfaces", group: "Tray", label: "Hide passive apps", path: "iris.tray.hidePassive", kind: "switch", fallback:false },
         { section: "surfaces", group: "Tray", label: "Columns", path: "iris.tray.columns", kind: "range", fallback:4,min:2,max:6 },
+        { section: "desktop", group: "Widgets", label: "Desktop widgets", description: "Turning this off also unloads their data providers.", path: "iris.modules.desktopWidgets", kind: "switch", fallback:true },
         { section: "desktop", group: "Wallpaper gallery", label: "Preview on the desktop", description: "The highlighted wallpaper shows behind the gallery; closing without applying restores yours.", path: "iris.wallpaper.livePreview", kind: "switch", fallback: true },
         { section: "surfaces", group: "Feedback", label: "Notifications", path: "iris.modules.notificationPopup", kind: "switch", fallback:true },
         { section: "surfaces", group: "Feedback", label: "Banner duration", description: "How long a notification stays when the app does not choose. Hovering keeps it.", path: "iris.notifications.duration", kind: "range", fallback:4000,min:2000,max:12000,step:500,unit:" ms" },

@@ -1,4 +1,5 @@
 import QtQuick
+import inir.services
 import inir.modules.common
 import inir.modules.common.widgets
 

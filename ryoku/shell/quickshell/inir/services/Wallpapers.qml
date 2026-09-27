@@ -8,6 +8,7 @@ import QtCore
 import Qt.labs.folderlistmodel
 import inir.modules.common
 import inir.modules.common.functions
+import inir.modules.common.models
 import inir.services
 import shell.services as Ryoku
 
@@ -131,34 +132,101 @@ Singleton {
         return Quickshell.fileExists(FileUtils.trimFileProtocol(path))
     }
 
-    // ── Gallery scan ───────────────────────────────────────────────────────
-    // The wallpaper directory ryogami browses; the frame's preview gallery
-    // cycles through it read-only.
+    // ── Gallery scan + folder browsing ──────────────────────────────────────
+    // One navigable folder model backs both the frame's read-only preview
+    // gallery and the picker's browser; there is no second wallpaper engine.
     readonly property string galleryDirectory: (Quickshell.env("XDG_PICTURES_DIR")
         || (Quickshell.env("HOME") + "/Pictures")) + "/Wallpapers"
+    readonly property url defaultFolder: Qt.resolvedUrl("file://" + root.galleryDirectory)
+    readonly property string effectiveDirectory: FileUtils.trimFileProtocol(folderModelImpl.folder.toString())
+    readonly property bool folderModelReady: folderModelImpl.status === FolderListModel.Ready
+    property string searchQuery: ""
+    readonly property list<string> extensions: ["jpg", "jpeg", "png", "webp", "avif", "bmp", "svg", "gif", "mp4", "webm", "mkv", "avi", "mov"]
     property list<string> wallpapers: []
 
-    FolderListModel {
-        id: folderModel
-        folder: Qt.resolvedUrl("file://" + root.galleryDirectory)
-        nameFilters: ["*.jpg", "*.jpeg", "*.png", "*.webp", "*.avif", "*.bmp", "*.gif", "*.mp4", "*.webm", "*.mkv", "*.mov"]
-        showDirs: false
+    signal directoryChanged()
+    onEffectiveDirectoryChanged: root.directoryChanged()
+
+    readonly property alias folderModel: folderModelImpl
+    FolderListModelWithHistory {
+        id: folderModelImpl
+        folder: root.defaultFolder
+        caseSensitive: false
+        nameFilters: {
+            const query = root.searchQuery.trim().toLowerCase()
+            if (query.startsWith(".")) {
+                const ext = query.slice(1)
+                if (root.extensions.includes(ext)) return [`*.${ext}`]
+            }
+            const searchParts = query.split(" ").filter(s => s.length > 0).map(s => `*${s}*`).join("")
+            return root.extensions.map(ext => `*${searchParts}*.${ext}`)
+        }
+        showDirs: true
+        showDotAndDotDot: false
+        showOnlyReadable: true
+        sortField: FolderListModel.Time
+        sortReversed: false
         onCountChanged: root._rescan()
         onStatusChanged: if (status === FolderListModel.Ready) root._rescan()
     }
 
     function _rescan(): void {
-        if (folderModel.status !== FolderListModel.Ready)
+        if (folderModelImpl.status !== FolderListModel.Ready)
             return
         const out = []
-        for (let i = 0; i < folderModel.count; i++) {
-            const p = folderModel.get(i, "filePath")
-                || FileUtils.trimFileProtocol(folderModel.get(i, "fileURL"))
+        for (let i = 0; i < folderModelImpl.count; i++) {
+            if (folderModelImpl.get(i, "fileIsDir"))
+                continue
+            const p = folderModelImpl.get(i, "filePath")
+                || FileUtils.trimFileProtocol(folderModelImpl.get(i, "fileURL"))
             if (p)
                 out.push(p)
         }
         root.wallpapers = out
     }
+
+    // Directory changes are validated off the UI thread: a typed path that is a
+    // file opens its parent, matching the reference's browser affordance.
+    Process {
+        id: _dirValidateProc
+        property string _nicePath: ""
+        property bool _fileFallback: false
+        function check(path: string): void {
+            _dirValidateProc._nicePath = FileUtils.trimFileProtocol(String(path ?? "")).replace(/\/+$/, "") || "/"
+            _dirValidateProc._fileFallback = false
+            _dirValidateProc.command = ["test", "-d", _dirValidateProc._nicePath]
+            _dirValidateProc.running = true
+        }
+        onExited: exitCode => {
+            if (!_dirValidateProc._fileFallback) {
+                if (exitCode === 0) {
+                    folderModelImpl.folder = Qt.resolvedUrl("file://" + _dirValidateProc._nicePath)
+                    return
+                }
+                _dirValidateProc._fileFallback = true
+                _dirValidateProc.command = ["test", "-f", _dirValidateProc._nicePath]
+                _dirValidateProc.running = true
+                return
+            }
+            if (exitCode === 0)
+                folderModelImpl.folder = Qt.resolvedUrl("file://" + FileUtils.parentDirectory(_dirValidateProc._nicePath))
+        }
+    }
+
+    function setDirectory(path: string): void {
+        _dirValidateProc.check(path)
+    }
+    function navigateUp(): void {
+        folderModelImpl.navigateUp()
+    }
+    function navigateBack(): void {
+        folderModelImpl.navigateBack()
+    }
+    function navigateForward(): void {
+        folderModelImpl.navigateForward()
+    }
+    // Batch prewarm is unnecessary: ThumbnailImage resolves each still lazily.
+    function generateThumbnail(size: string): void {}
 
     Component.onCompleted: root._rescan()
 
@@ -199,4 +267,36 @@ Singleton {
     function ensureThumbnailForPath(filePath: string, size = "large"): void {
         // Thumbnails are a nicety; the frame reads full-size images otherwise.
     }
+
+    // ── Selection + apply (ryogami) ─────────────────────────────────────────
+    // The Ryoku wallpaper path only acts on the main wallpaper; the picker's
+    // richer target vocabulary collapses to that single daemon call.
+    function currentSelectionTarget(): string {
+        return "main"
+    }
+    function currentWallpaperPathForTarget(target: string, monitorName: string): string {
+        return root.effectiveWallpaperPath
+    }
+    function isCurrentWallpaperPath(path: string, target: string, monitorName: string): bool {
+        const clean = FileUtils.trimFileProtocol(String(path ?? ""))
+        return clean.length > 0 && clean === root.effectiveWallpaperPath
+    }
+    function applySelectionTarget(path: string, target: string, monitorName: string): void {
+        const clean = FileUtils.trimFileProtocol(String(path ?? ""))
+        if (!clean)
+            return
+        // The daemon resolves a clip's poster before it swaps, so a video path
+        // needs no still handling here.
+        const command = ["ryogami", "wallpaper", "set", clean]
+        const monitor = String(monitorName ?? "")
+        if (monitor.length > 0)
+            command.push("--screen", monitor)
+        Quickshell.execDetached(command)
+    }
+
+    // Ryoku has no in-shell preview backend; the picker keeps its live-preview
+    // affordance but nothing paints until Apply reaches the daemon.
+    function previewWallpaper(path: string, monitorName: string): void {}
+    function cancelWallpaperPreview(): void {}
+    function clearWallpaperPreview(): void {}
 }
