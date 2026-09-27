@@ -14,6 +14,7 @@ import inir.modules.iris.frame
 import inir.modules.iris.style
 import inir.modules.iris.components
 import inir.modules.iris.pieces
+import shell.services as Ryoku
 
 Item {
     id: root
@@ -479,7 +480,9 @@ Item {
                                     GlobalStates.irisEditTarget = "dock"
                                     return
                                 }
-                                GlobalStates.searchOpen = !GlobalStates.searchOpen
+                                const st = Ryoku.ShellState.forScreen(root.screen) ?? Ryoku.ShellState.forActive()
+                                if (st) st.launcherOpen = !st.launcherOpen
+                                else GlobalStates.searchOpen = !GlobalStates.searchOpen
                             }
                             onContainsMouseChanged: nameLabel.present(containsMouse ? launcherSlot : null, Translation.tr("Applications"))
                             Item {
