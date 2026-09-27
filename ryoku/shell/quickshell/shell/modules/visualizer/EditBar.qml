@@ -346,7 +346,6 @@ Item {
                     label: I18n.tr("MATERIAL")
                     visible: Config.isAura
                     Btn {
-                        anchors.verticalCenter: parent.verticalCenter
                         text: Config.instance.auraMaterial
                         compact: true
                         armed: true
