@@ -1,40 +1,41 @@
-/* Memory: stat tiles, the 2D graph frame, legend, heatmap, sessions. */
+/* Memory: readout tiles, the graph frame, activity grid, sessions. */
 
-.mem-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 14px; }
-.mem-tile { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
-.mem-tile-label { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--faint); }
+.mem-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1px; background: var(--rule-soft); border: 1px solid var(--rule-soft); margin-bottom: 16px; }
+.mem-tile { background: var(--sheet); padding: 10px 12px; }
+.mem-tile-label { display: block; font-size: 10px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-faint); }
 .mem-tile-num { display: block; font-family: var(--font-mono); font-size: 20px; font-weight: 600; margin: 2px 0; }
 .mem-tile-num .chip { font-size: 12px; }
-.mem-tile-sub { display: block; font-size: 11.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mem-tile-sub { display: block; font-size: 11.5px; color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .mem-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 16px; align-items: start; }
-.mem-graph-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.mem-graph-wrap { background: var(--sheet); border: 1px solid var(--rule); padding: 12px 14px; }
 .wrap-head { display: flex; align-items: baseline; gap: 10px; }
 .wrap-head .field-label { margin: 0; }
-.wrap-meta { margin-left: auto; font-size: 11.5px; color: var(--faint); }
+.wrap-meta { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); }
 canvas.mem-graph { display: block; width: 100%; height: 420px; }
 
-.mem-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; font-size: 11px; color: var(--muted); }
+.mem-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; font-size: 11px; color: var(--ink-dim); }
 .mem-legend span { display: inline-flex; align-items: center; gap: 5px; }
-.mem-legend i { width: 8px; height: 8px; border-radius: 50%; }
+.mem-legend i { width: 8px; height: 8px; transform: rotate(45deg); }
 
 .mem-side { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .mem-side .field-label { margin: 12px 0 4px; }
 
-.mem-hm-months { display: grid; grid-template-columns: repeat(26, 11px); font-size: 9.5px; color: var(--faint); }
+.mem-hm-months { display: grid; grid-template-columns: repeat(26, 11px); font-family: var(--font-mono); font-size: 9.5px; color: var(--ink-faint); }
 .mem-hm-grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 11px); }
-.mem-cell { width: 10px; height: 10px; margin: 0.5px; border-radius: 2px; background: var(--line); }
-.mem-cell[data-level="1"] { background: rgba(224, 83, 61, 0.18); }
-.mem-cell[data-level="2"] { background: rgba(224, 83, 61, 0.36); }
-.mem-cell[data-level="3"] { background: rgba(224, 83, 61, 0.6); }
-.mem-cell[data-level="4"] { background: rgba(224, 83, 61, 0.9); }
+.mem-cell { width: 10px; height: 10px; margin: 0.5px; border: 1px solid var(--rule-soft); background: transparent; }
+.mem-cell[data-level="1"] { background: rgba(255, 107, 94, 0.18); border-color: transparent; }
+.mem-cell[data-level="2"] { background: rgba(255, 107, 94, 0.36); border-color: transparent; }
+.mem-cell[data-level="3"] { background: rgba(255, 107, 94, 0.6); border-color: transparent; }
+.mem-cell[data-level="4"] { background: rgba(255, 107, 94, 0.9); border-color: transparent; }
 .mem-cell[data-level="e"] { opacity: 0.25; }
 
 .mem-sessions { overflow-y: auto; max-height: 340px; }
-.mem-sess { display: flex; align-items: baseline; gap: 8px; padding: 5px 0; border-top: 1px solid var(--line-soft); font-size: 12px; }
+.mem-sess { display: flex; align-items: baseline; gap: 8px; padding: 5px 0; border-top: 1px solid var(--rule-soft); font-size: 12px; }
 .mem-sess-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.mem-sess-msgs { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.mem-sess-msgs { font-family: var(--font-mono); font-size: 11px; color: var(--ink-dim); }
 .mem-sess-date { font-size: 11px; }
+.mem-chip { font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); }
 
 @media (max-width: 1100px) {
   .mem-grid { grid-template-columns: 1fr; }

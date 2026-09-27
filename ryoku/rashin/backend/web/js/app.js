@@ -63,6 +63,12 @@ function boot() {
   initCode(document.querySelector('[data-panel="overview"]'));
   api.system().then(paintOverviewStrip).catch(() => {});
   const host = document.querySelector("[data-hostname]");
+  const clock = document.querySelector("[data-clock]");
+  if (clock) {
+    const tick = () => { clock.textContent = new Date().toTimeString().slice(0, 8); };
+    tick();
+    setInterval(tick, 1000);
+  }
   if (host) host.textContent = location.hostname;
   paintStatus();
   setInterval(paintStatus, 5000);

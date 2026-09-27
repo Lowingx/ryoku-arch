@@ -158,11 +158,12 @@ import fails in dev and works on an installed box, that is why.
 
 **Rashin** (`hub/pages/RashinPage.qml`) fronts the Rashin/Hermes dashboard
 (`127.0.0.1:3600`), so it deliberately wears that product's identity instead of
-the Hub's: the warm poster palette and Archivo Black type mirrored from
-`ryoku/rashin/backend/web/css/base.css`, kept in one local palette object at the
-top of the page plus a bundled `fonts/archivo-black.ttf`. It is a page-scoped
-brand takeover, not drift; keep it in step with that `base.css`, and do not copy
-the pattern into another page.
+the Hub's: the cyanotype blueprint palette and IBM Plex Condensed + Plex Mono
+type mirrored from `ryoku/rashin/backend/web/css/base.css`, kept in one local
+palette object at the top of the page plus bundled
+`fonts/ibm-plex-sans-condensed-bold.ttf` and `fonts/ibm-plex-mono-regular.ttf`.
+It is a page-scoped brand takeover, not drift; keep it in step with that
+`base.css`, and do not copy the pattern into another page.
 
 ### What follows the wallpaper, and what does not
 

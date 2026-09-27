@@ -1,10 +1,10 @@
-/* Vault: grouped tree on the left, rendered markdown on the right. */
+/* Vault: the file index at left, the drawn sheet at right. */
 
 .vault-grid {
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
   gap: 18px;
-  height: calc(100vh - 150px);
+  height: calc(100vh - 240px);
   min-height: 420px;
 }
 
@@ -13,15 +13,16 @@
 .vault-side-head .field-label { margin: 0; }
 .vault-side-head .btn { margin-left: auto; }
 
-.vgroup { margin-bottom: 6px; }
+.vgroup { margin-bottom: 4px; }
 .vgroup-head {
   display: flex; align-items: center; gap: 8px;
   width: 100%;
   padding: 6px 8px;
   background: none; border: 0;
-  color: var(--muted);
+  border-bottom: 1px solid var(--rule-soft);
+  color: var(--ink-dim);
   font-size: 11px; font-weight: 600;
-  letter-spacing: 0.07em; text-transform: uppercase;
+  letter-spacing: 0.1em; text-transform: uppercase;
   cursor: pointer;
 }
 .vgroup-head::before {
@@ -33,54 +34,54 @@
   transition: transform 120ms var(--ease);
 }
 .vgroup.open > .vgroup-head::before { transform: rotate(90deg); }
-.vgroup-head .dim { margin-left: auto; font-weight: 500; text-transform: none; letter-spacing: 0; }
+.vgroup-head .dim { margin-left: auto; font-weight: 500; text-transform: none; letter-spacing: 0; font-family: var(--font-mono); }
 .vgroup-items { padding-left: 6px; }
 
 .vfile {
   display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
   width: 100%;
-  padding: 5px 8px 5px 18px;
-  background: none; border: 0; border-radius: 6px;
-  color: var(--text);
+  padding: 5px 8px 5px 16px;
+  background: none; border: 0;
+  border-left: 2px solid transparent;
+  color: var(--ink);
   font-size: 12px;
   text-align: left;
   cursor: pointer;
 }
-.vfile:hover { background: var(--raised); }
-.vfile.active { background: var(--raised); box-shadow: inset 2px 0 0 var(--accent); }
+.vfile:hover { background: var(--sheet-raised); }
+.vfile.active { background: var(--sheet-raised); border-left-color: var(--anno); }
 .vfile-name { font-family: var(--font-mono); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.vfile-size { font-family: var(--font-mono); font-size: 11px; color: var(--faint); flex: none; }
-.vmore { margin: 4px 0 4px 18px; font-size: 11px; padding: 3px 8px; }
-.vmore-note { margin: 2px 0 4px 20px; font-size: 11px; }
+.vfile-size { font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); flex: none; }
+.vmore { margin: 4px 0 4px 16px; font-size: 11px; padding: 3px 8px; }
+.vmore-note { margin: 2px 0 4px 18px; font-size: 11px; }
 
 .vault-pane {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 20px 24px;
+  background: var(--sheet);
+  border: 1px solid var(--rule);
+  padding: 22px 26px;
   overflow-y: auto;
   scrollbar-width: thin;
 }
 
 /* Markdown rendering (the pane's only content source). */
 .md { max-width: 78ch; line-height: 1.65; font-size: 13.5px; }
-.md h1, .md h2, .md h3, .md h4 { font-weight: 650; margin: 1.2em 0 0.4em; line-height: 1.3; }
-.md h1 { font-size: 22px; margin-top: 0; }
-.md h2 { font-size: 17px; }
-.md h3 { font-size: 14.5px; }
+.md h1, .md h2, .md h3, .md h4 { font-weight: 700; margin: 1.2em 0 0.4em; line-height: 1.3; letter-spacing: 0.02em; }
+.md h1 { font-size: 21px; margin-top: 0; border-bottom: 1px solid var(--rule); padding-bottom: 8px; }
+.md h2 { font-size: 16px; text-transform: uppercase; letter-spacing: 0.08em; }
+.md h3 { font-size: 14px; }
 .md h4 { font-size: 13px; }
 .md p { margin: 0.55em 0; }
-.md a { color: var(--accent); text-decoration: underline; }
-.md code { font-family: var(--font-mono); font-size: 12px; background: var(--raised); padding: 1px 5px; border-radius: 4px; }
-.md pre { background: var(--raised); border: 1px solid var(--line-soft); border-radius: 6px; padding: 12px; overflow-x: auto; }
-.md pre code { background: none; padding: 0; }
+.md a { color: var(--anno); text-decoration: underline; text-underline-offset: 2px; }
+.md code { font-family: var(--font-mono); font-size: 12px; background: var(--sheet-deep); border: 1px solid var(--rule-soft); padding: 1px 5px; }
+.md pre { background: var(--sheet-deep); border: 1px solid var(--rule-soft); padding: 12px; overflow-x: auto; }
+.md pre code { background: none; border: 0; padding: 0; }
 .md ul, .md ol { padding-left: 20px; margin: 0.5em 0; }
 .md li { margin: 2px 0; }
-.md blockquote { border-left: 2px solid var(--line); margin: 0.6em 0; padding-left: 12px; color: var(--muted); }
+.md blockquote { border-left: 2px solid var(--anno); margin: 0.6em 0; padding-left: 12px; color: var(--ink-dim); font-style: italic; }
 .md table { width: 100%; border-collapse: collapse; margin: 0.8em 0; font-size: 12.5px; }
-.md th { text-align: left; font-size: 10px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--faint); padding: 5px 10px 5px 0; border-bottom: 1px solid var(--line); }
-.md td { padding: 5px 10px 5px 0; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
-.md hr { border: 0; border-top: 1px solid var(--line-soft); margin: 1.2em 0; }
+.md th { text-align: left; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); padding: 5px 10px 5px 0; border-bottom: 1px solid var(--rule); }
+.md td { padding: 5px 10px 5px 0; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+.md hr { border: 0; border-top: 1px dashed var(--rule); margin: 1.2em 0; }
 .md img { max-width: 100%; }
 
 @media (max-width: 980px) {

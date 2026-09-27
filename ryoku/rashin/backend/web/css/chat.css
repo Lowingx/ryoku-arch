@@ -1,9 +1,9 @@
-/* Chat panel: poster-brutalist composer, message stream, and the v2 surfaces
+/* Chat panel: instrument composer, message stream, and the v2 surfaces
    (slash legend, model menu, history drawer, usage meter, toast). Colour and
    rhythm come only from base.css custom properties; all motion is gated behind
    the reduced-motion media query at the foot of this file. */
 
-.panel-chat { display: flex; flex-direction: column; height: calc(100vh - 82px); }
+.panel-chat { display: flex; flex-direction: column; height: calc(100vh - 240px); min-height: 420px; overflow: hidden; }
 
 .chat-top { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
 

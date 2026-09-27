@@ -1,31 +1,32 @@
-/* Skills: harness tabs, origin chips, collapsible groups, toolbelt. */
+/* Skills: harness tabs, origin chips, ruled groups, the toolbelt. */
 
 [data-skills-tabs] { margin-top: 4px; }
-.skills-toolbar { display: flex; align-items: center; gap: 12px; margin: 12px 0; flex-wrap: wrap; }
+.skills-toolbar { display: flex; align-items: center; gap: 12px; margin: 14px 0; flex-wrap: wrap; }
 .skills-search { flex: 1; max-width: 280px; }
 .skills-counts { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
 
-.skgroup { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); margin-bottom: 8px; }
+.skgroup { border: 1px solid var(--rule-soft); background: var(--sheet); margin-bottom: 8px; }
 .skgroup-head {
   display: flex; align-items: center; gap: 8px;
   width: 100%;
   padding: 9px 12px;
   background: none; border: 0;
-  color: var(--text);
+  color: var(--ink);
   font-size: 12.5px; font-weight: 600;
+  letter-spacing: 0.04em;
   text-align: left;
   cursor: pointer;
 }
 .skgroup-head::before {
   content: "";
   width: 0; height: 0;
-  border-left: 4px solid var(--faint);
+  border-left: 4px solid var(--ink-faint);
   border-top: 3px solid transparent;
   border-bottom: 3px solid transparent;
   transition: transform 120ms var(--ease);
 }
 .skgroup.open > .skgroup-head::before { transform: rotate(90deg); }
-.skgroup-head .count { margin-left: auto; font-weight: 500; }
+.skgroup-head .count { margin-left: auto; font-weight: 500; font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); }
 .skgroup-items { display: none; }
 .skgroup.open .skgroup-items { display: block; }
 
@@ -35,12 +36,12 @@
   gap: 10px;
   align-items: center;
   padding: 6px 12px 7px 14px;
-  border-top: 1px solid var(--line-soft);
+  border-top: 1px solid var(--rule-soft);
 }
 .skrow-name { font-family: var(--font-mono); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.skrow-desc { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.skrow-desc { font-size: 12px; color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.belt-family { margin: 10px 0 4px; font-size: 12px; font-weight: 600; }
+.belt-family { margin: 10px 0 4px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; }
 .belt-tools { display: flex; flex-wrap: wrap; gap: 5px; }
 .belt-more { cursor: pointer; }
 .toolbelt-wrap.gone { display: none; }

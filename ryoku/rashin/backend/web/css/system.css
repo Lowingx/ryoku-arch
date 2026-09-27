@@ -1,35 +1,34 @@
-/* System console: toolbar, dense tables, tips cards. */
+/* System: dense ledger tables under a ruled toolbar. */
 
 .sys-toolbar {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 12px 0 14px;
+  margin: 14px 0;
 }
 .sys-toolbar .sys-search { flex: 1; max-width: 300px; }
-.sys-stamp { margin-left: auto; font-size: 11.5px; color: var(--faint); }
+.sys-stamp { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--ink-faint); }
 .sys-stamp.stale { color: var(--warn); }
 .sys-body { min-height: 320px; }
-.sys-body .seg { margin-bottom: 10px; }
-.sys-body table.data { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 2px 14px; }
-.sys-body table.data th { position: sticky; top: 0; background: var(--panel); }
+.sys-body table.data { background: var(--sheet); border: 1px solid var(--rule-soft); padding: 2px 14px; }
+.sys-body table.data th { position: sticky; top: 0; background: var(--sheet); }
 .sys-body .muted, .sys-body .dim { font-size: 12px; }
 
 .seg-tip { margin-left: auto; }
-[data-badge=tips],
-.side-nav [data-badge=system] {
-  display: inline-block; min-width: 16px; padding: 0 5px;
-  border-radius: 999px; background: var(--accent); color: #fff;
-  font-size: 10px; font-weight: 650; line-height: 16px; text-align: center;
-  font-style: normal;
-}
-[data-badge=tips].zero,
-.side-nav [data-badge=system].zero { display: none; }
 
 .tips-line { margin: 0 0 10px; }
-.tip { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; padding: 12px 14px; }
+.tip {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-bottom: 8px; padding: 12px 14px;
+  background: var(--sheet);
+  border: 1px solid var(--rule-soft);
+  border-left: 2px solid var(--idle);
+}
+.tip-act { border-left-color: var(--anno); }
+.tip-watch { border-left-color: var(--warn); }
+.tip-info { border-left-color: var(--info); }
 .tip b { font-size: 13px; font-weight: 600; }
-.tip p { margin: 0; font-size: 12.5px; color: var(--muted); max-width: 78ch; }
+.tip p { margin: 0; font-size: 12.5px; color: var(--ink-dim); max-width: 78ch; }
 .tip .state { align-self: flex-start; }
 
 .cmd-btn {
@@ -37,13 +36,12 @@
   width: 100%;
   margin-top: 2px;
   padding: 6px 10px;
-  background: var(--raised);
-  border: 1px solid var(--line-soft);
-  border-radius: 6px;
-  color: var(--text);
+  background: var(--sheet-raised);
+  border: 1px solid var(--rule-soft);
+  color: var(--ink);
   text-align: left;
   cursor: pointer;
 }
-.cmd-btn:hover { border-color: var(--faint); }
+.cmd-btn:hover { border-color: var(--anno); }
 .cmd-btn code { font-family: var(--font-mono); font-size: 12px; word-break: break-all; }
-.cmd-copy { margin-left: auto; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); white-space: nowrap; }
+.cmd-copy { margin-left: auto; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-faint); white-space: nowrap; }

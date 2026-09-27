@@ -9,8 +9,8 @@ import Ryoku.Ui.Singletons
 
 // Rashin (DESIGN.md section 11, ADVANCED). The optional, fully local agent OS
 // (羅針, the system needle). This page is the Hub's welcome to Rashin, wearing
-// the Rashin/Hermes dashboard's own identity rather than the Hub's: the warm
-// bone-on-black poster palette and Archivo Black + JetBrains Mono type of the
+// the Rashin/Hermes dashboard's own identity rather than the Hub's: the
+// cyanotype blueprint palette and IBM Plex Condensed + Plex Mono type of the
 // web dashboard at 127.0.0.1:3600 (mirrored from ryoku/rashin/backend/web). It
 // leads with the samurai hero banner and the live model Hermes runs on, lays
 // out what Rashin does (the vault, memory, skills, agents, chat, code), shows
@@ -26,30 +26,30 @@ Item {
 
     // ── the Rashin/Hermes palette, mirrored from the dashboard's base.css
     // (:root). Deliberately not the Hub's Tokens: this section wears the
-    // product's own warm poster identity so it reads as Rashin, not Settings.
+    // product's own blueprint identity so it reads as Rashin, not Settings.
     QtObject {
         id: hx
-        readonly property color paper: "#0e0d0b"
-        readonly property color paper2: "#14120f"
-        readonly property color ink: "#e8d8c9"
-        readonly property color inkDim: "#8f8378"
-        readonly property color red: "#c94e44"
-        readonly property color redDeep: "#9f4125"
-        readonly property color teal: "#3e6868"
-        readonly property color orange: "#f3701e"
-        readonly property color slate: "#4b607f"
+        readonly property color paper: "#0d2a47"
+        readonly property color paper2: "#113253"
+        readonly property color ink: "#d8e8f4"
+        readonly property color inkDim: "#8fb0c9"
+        readonly property color red: "#ff6b5e"
+        readonly property color redDeep: "#b3443a"
+        readonly property color teal: "#7fd8a8"
+        readonly property color orange: "#ffc46b"
+        readonly property color slate: "#7fb8ff"
         readonly property color tan: "#cda47b"
-        readonly property color line: Qt.rgba(232 / 255, 216 / 255, 201 / 255, 0.18)
-        readonly property color lineSoft: Qt.rgba(232 / 255, 216 / 255, 201 / 255, 0.09)
+        readonly property color line: Qt.rgba(216 / 255, 232 / 255, 244 / 255, 0.34)
+        readonly property color lineSoft: Qt.rgba(216 / 255, 232 / 255, 244 / 255, 0.15)
     }
 
-    // Archivo Black rides display, bundled beside the Hub (converted from the
-    // dashboard's woff2) so it ships with the config tree, no font package. The
-    // rest is JetBrains Mono, the dashboard's body face, hard-depended by the
-    // desktop package; kanji is Noto CJK.
-    FontLoader { id: archivo; source: Qt.resolvedUrl("../fonts/archivo-black.ttf") }
-    readonly property string fDisplay: archivo.name || "sans-serif"
-    readonly property string fMono: "JetBrainsMono Nerd Font"
+    // IBM Plex rides display and mono, bundled beside the Hub (converted from
+    // the dashboard's woff2) so it ships with the config tree, no font
+    // package; kanji is Noto CJK.
+    FontLoader { id: plexCond; source: Qt.resolvedUrl("../fonts/ibm-plex-sans-condensed-bold.ttf") }
+    FontLoader { id: plexMono; source: Qt.resolvedUrl("../fonts/ibm-plex-mono-regular.ttf") }
+    readonly property string fDisplay: plexCond.name || "sans-serif"
+    readonly property string fMono: plexMono.name || "monospace"
     readonly property string fJp: "Noto Sans CJK JP"
 
     // centered body column; the hero and every section share this measure.

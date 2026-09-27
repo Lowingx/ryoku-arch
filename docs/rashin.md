@@ -256,16 +256,18 @@ recipes (`rr-<name>` fish abbreviations). Full design and UX in
 ## The dashboard
 
 Hand-authored HTML, CSS, and JS embedded in the binary. No node, no build
-step, no CDN; fonts and art ship in the repo. The look is a neutral dark
-system console: a left nav rail, a header with live daemon/hermes/prowl
-status dots, sans for chrome and mono for paths, ids, and numbers. It is
+step, no CDN; fonts and art ship in the repo. The look is a cyanotype
+engineering drawing: a Prussian-blue sheet on a faint grid, chalk line-work,
+annotation red for emphasis, IBM Plex Condensed for chrome and Plex Mono for
+every number. A masthead of numbered sheets replaces a side rail; a title
+block of machine facts (host, kernel, uptime) runs along the foot. It is
 deliberately not the desktop's Tokyo Night palette and carries no poster art.
 Motion is functional only (bar widths, panel swaps) and yields to the OS
 reduced-motion setting.
 
 | Panel | Content |
 |---|---|
-| Overview | KPI strip (CPU, memory, disk, GPU with load bars), the code intelligence card led by measured token savings from the Prowl index, the system summary strip, and the host line |
+| Overview | Instrument band (CPU, memory, disk, GPU as segmented gauges with a redline mark), the code intelligence card led by measured token savings from the Prowl index, and the system summary block |
 | System | The machine as a home server, read-only: services (running/stopped/user), timers (firing and dormant), cron/anacron/at, docker containers, listening sockets with reach, top processes, filesystems, and deterministic tips whose commands copy to your clipboard; rashin never runs any of them |
 | Vault | Grouped tree (maps, memory, journal; the agent-facing source mirror collapsed), rendered markdown, reindex button, generated-file badges |
 | Memory | Provider tiles (builtin or external, with Obsidian vault detection), the 2D force graph of the vault's notes and their references with a data-driven legend, a 26-week activity heatmap, and the Hermes session history read from `~/.hermes/state.db` |

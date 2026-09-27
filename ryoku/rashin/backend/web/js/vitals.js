@@ -30,7 +30,7 @@ function setBar(sel, pct) {
   const bar = document.querySelector(sel);
   if (!bar) return;
   bar.style.width = Math.max(0, Math.min(100, pct)) + "%";
-  const track = bar.closest(".bar, .kpi-bar");
+  const track = bar.closest(".bar, .gauge");
   if (track) {
     track.classList.toggle("warn", pct >= 75 && pct < 90);
     track.classList.toggle("bad", pct >= 90);
