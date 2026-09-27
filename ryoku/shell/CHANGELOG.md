@@ -3,6 +3,15 @@
 ## Unreleased
 
 ### Fixed
+- **The launcher no longer takes the shell down on niri.** The blurred frost
+  behind the hero and palette cards is a still of the desktop, so it needs a
+  capture surface that lives as long as the launcher does. niri recreates its
+  outputs under a surface like that, and the Qt client segfaulted resolving a
+  screen that had already gone, killing quickshell the moment the launcher
+  opened. The frost is now gated on a new `persistentScreenCapture` capability
+  that only Hyprland claims, so on niri the card opens over a solid drawer
+  through the path a failed capture already used, and the launcher is safe on
+  both compositors.
 - **The picker's Matugen App Templates toggles respond again.** The row wrote
   through `ryoku-hub hypr matugen set`, a command path that no longer exists:
   the hub printed its usage and exited 0, and because the write was
