@@ -2003,6 +2003,79 @@ function config() {
   "pinnedItems": [],
   "filterPassive": true
  },
+ "keyboardIndicators": {
+  "showPopup": true,
+  "showPanel": true,
+  "popup": {
+   "layout": true,
+   "caps": true,
+   "num": false
+  },
+  "panel": {
+   "layout": true,
+   "caps": true,
+   "num": false
+  }
+ },
+ "resources": {
+  "updateInterval": 3000,
+  "monitorGpu": true
+ },
+ "sounds": {
+  "battery": false,
+  "notifications": true,
+  "pomodoro": false,
+  "theme": "freedesktop",
+  "timer": false,
+  "volume": 0.5,
+  "events": {
+   "notification": "",
+   "notificationCritical": "",
+   "batteryLow": "",
+   "batteryCritical": "",
+   "batteryFull": "",
+   "powerPlug": "",
+   "powerUnplug": "",
+   "pomodoroDone": "",
+   "timerDone": ""
+  }
+ },
+ "gameMode": {
+  "autoDetect": true,
+  "disableAnimations": false,
+  "disableEffects": false,
+  "disableVisualizers": true,
+  "disableReloadToasts": true,
+  "disableDiscoverOverlay": true,
+  "suppressNotifications": true,
+  "minimalMode": false
+ },
+ "idle": {
+  "lockBeforeSleep": true
+ },
+ "networking": {
+  "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+ },
+ "audio": {
+  "protection": {
+   "enable": true,
+   "maxAllowed": 100,
+   "maxAllowedIncrease": 10
+  }
+ },
+ "musicRecognition": {
+  "interval": 4,
+  "timeout": 16
+ },
+ "waffles": {
+  "bar": {
+   "bottom": true,
+   "screenList": []
+  },
+  "widgetsPanel": {
+   "weatherHideLocation": false
+  }
+ },
  "panelFamily": "iris",
  "enabledPanels": [
   "irisBar",
