@@ -355,7 +355,7 @@ PanelWindow {
                             spacing: 0
                             IrisText { text: "iRiS"; font.pixelSize: 13 * IrisStyle.typeScale; font.weight: Font.DemiBold }
                             IrisText {
-                                text: Translation.tr("Island family")
+                                text: Translation.tr("By iNiR shell")
                                 color: IrisStyle.muted
                                 font.pixelSize: 11 * IrisStyle.typeScale
                             }

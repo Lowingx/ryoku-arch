@@ -90,7 +90,7 @@ func (p barProvider) Load(ctx context.Context, refresh bool) ([]Item, SourceStat
 	})
 	items = append(items, Item{
 		ID: "iris", Category: "barstyles", Name: "iRiS",
-		Summary:     "The frame family",
+		Summary:     "By iNiR shell",
 		Description: "An island on any screen edge that grows into whatever you clicked: morphing glass, bubbles, a dock, a studio and its own settings.",
 		Tags:        []string{"island", "frame", "built-in"},
 		Installed:   true,
