@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Fixed
+- **Ryoku Settings opens inside the work area.** Its full-page float was sized
+  from the whole monitor, so it slid under whatever the shell reserves (the
+  iRiS frame's edges, a bar). It now fits the work area with the same gaps and
+  border a tiled window gets (`modules/window_rules.lua`).
+
 ### Changed
 - **`binds.lua` carries the shared catalogue's new shortcuts.** Page Up/Down
   workspace navigation and sending, screen focus and send with Super+Alt and

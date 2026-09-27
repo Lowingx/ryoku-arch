@@ -14,6 +14,31 @@ local function page()
     return { "monitor_w * 0.99", "monitor_h * 0.96" }
 end
 
+-- Rule expressions only see the whole monitor, so a page window would slide
+-- under whatever the shell reserves (a frame edge, a bar). Once it opens, fit
+-- it to the work area with the same gaps and border a tiled window gets.
+local PAGE_TITLES = { ["Ryoku Settings"] = true }
+
+local function fit_page_to_work_area(win)
+    if not win or not PAGE_TITLES[win.title] then return end
+    local mon = win.monitor
+    if not mon then return end
+    local scale = mon.scale or 1
+    local mw, mh = mon.width / scale, mon.height / scale
+    if (mon.transform or 0) % 2 == 1 then mw, mh = mh, mw end
+    local r = mon.reserved
+    local gap = hl.get_config("general.gaps_out")
+    local border = hl.get_config("general.border_size") or 0
+    local left = r.left + gap.left + border
+    local top = r.top + gap.top + border
+    local right = r.right + gap.right + border
+    local bottom = r.bottom + gap.bottom + border
+    local target = "address:" .. win.address
+    hl.dispatch(hl.dsp.window.resize({ x = math.floor(mw - left - right + 0.5), y = math.floor(mh - top - bottom + 0.5), exact = true, window = target }))
+    hl.dispatch(hl.dsp.window.move({ x = math.floor(mon.x + left), y = math.floor(mon.y + top), window = target }))
+end
+hl.on("window.open", fit_page_to_work_area)
+
 hl.window_rule({
     name           = "suppress-maximize",
     match          = { class = ".*" },
