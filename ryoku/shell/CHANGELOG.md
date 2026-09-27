@@ -3,6 +3,24 @@
 ## Unreleased
 
 ### Fixed
+- **The iRiS frame's spotlight searches again.** The port pruned the reference's
+  global-actions daemon but left the search pipeline calling it, so every typed
+  query died on a TypeError and the palette showed nothing. A trimmed action
+  registry now ships in its place, wired to the services the frame actually has
+  (network, bluetooth, night light, theme, audio, brightness, recorder, studio,
+  overview), and the emoji catalogue behind the `:` search mode was restored
+  from the reference too.
+- **Pinning a dock app from its menu sticks.** The pin wrote through
+  `setNestedValue(["dock", "pinnedApps"], ...)`, and the array path stringified
+  into one dead key, so the pin never reached the config; the dock's taskbar
+  model also listened for per-key change signals a plain JSON mirror never
+  emits. Array paths now join correctly and the model rebuilds on the mirror's
+  own change signal.
+- **The iRiS frame renders with its real fonts.** The frame hardcodes Rubik for
+  every numeral and Readex Pro for its titles, and neither shipped, so boxes
+  fell back to Noto Sans with different metrics and tight card rows clipped
+  their unit glyphs (the Vitals card's `%` ran off the edge). Both faces now
+  ship from [ryoku] (see the release changelog) and pacstrap on install.
 - **The edge field's top and bottom edges light up again.** The EDGES chips in
   the visualizer's editing bar passed their lit state to `armed`, which `Btn`
   treats as enabled, so an unlit edge could never be tapped: with the default
@@ -33,6 +51,12 @@
   the click moved (issue #276).
 
 ### Added
+- **The iRiS frame's Spotlight is now a launcher style.** Settings -> App
+  Launcher -> Spotlight makes `Super + Space` open the frame's morphing-glass
+  search (apps, actions, commands, math and web in one row), and the dock's
+  nine-dot opens whichever launcher style is active, so the frame and the
+  shell's launcher agree on one palette. Under another bar style the variant
+  hosts the frame's palette surface itself (`launcher/variants/spotlight/`).
 - **The visualizer grew an `aura` look: a living current of light along the
   screen's edges.** Twelve eased spectrum sectors flow over whichever edges you
   light - left and right rails, a bottom horizon, or all four as one joined

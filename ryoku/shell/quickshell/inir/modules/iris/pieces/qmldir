@@ -1,4 +1,2 @@
 module inir.modules.iris.pieces
 singleton IrisPieces 1.0 IrisPieces.qml
-singleton IrisPieces 1.0 IrisPieces.qml
-singleton IrisPieces 1.0 IrisPieces.qml

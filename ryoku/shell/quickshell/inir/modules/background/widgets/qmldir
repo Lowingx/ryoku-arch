@@ -16,5 +16,3 @@ WidgetQuickControlsLayout 1.0 WidgetQuickControlsLayout.qml
 WidgetShapePicker 1.0 WidgetShapePicker.qml
 WidgetSurface 1.0 WidgetSurface.qml
 singleton DesktopWidgetShapes 1.0 DesktopWidgetShapes.qml
-singleton DesktopWidgetShapes 1.0 DesktopWidgetShapes.qml
-singleton DesktopWidgetShapes 1.0 DesktopWidgetShapes.qml

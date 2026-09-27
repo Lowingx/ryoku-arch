@@ -77,11 +77,5 @@ ZzzPlate 1.0 ZzzPlate.qml
 ZzzSurfaceAccent 1.0 ZzzSurfaceAccent.qml
 ZzzTechFrame 1.0 ZzzTechFrame.qml
 singleton MediaArtwork 1.0 MediaArtwork.qml
-singleton MediaArtwork 1.0 MediaArtwork.qml
-singleton SettingsMaterialPreset 1.0 SettingsMaterialPreset.qml
-singleton SettingsMaterialPreset 1.0 SettingsMaterialPreset.qml
-singleton SettingsSearchRegistry 1.0 SettingsSearchRegistry.qml
-singleton SettingsSearchRegistry 1.0 SettingsSearchRegistry.qml
-singleton MediaArtwork 1.0 MediaArtwork.qml
 singleton SettingsMaterialPreset 1.0 SettingsMaterialPreset.qml
 singleton SettingsSearchRegistry 1.0 SettingsSearchRegistry.qml

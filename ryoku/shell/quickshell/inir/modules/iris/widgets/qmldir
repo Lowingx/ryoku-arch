@@ -29,5 +29,3 @@ IrisWidgetFace 1.0 IrisWidgetFace.qml
 IrisWidgetGallery 1.0 IrisWidgetGallery.qml
 IrisWorldClockFace 1.0 IrisWorldClockFace.qml
 singleton IrisFaceData 1.0 IrisFaceData.qml
-singleton IrisFaceData 1.0 IrisFaceData.qml
-singleton IrisFaceData 1.0 IrisFaceData.qml
