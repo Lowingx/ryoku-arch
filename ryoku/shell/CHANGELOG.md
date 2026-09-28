@@ -3,6 +3,14 @@
 ## Unreleased
 
 ### New
+- **Per-widget Depth: in front or behind.** Right-clicking a desktop widget or
+  a store tile, and the visualiser's own editor, now offer a Depth control
+  that lifts just that widget above the subject cut-out or drops it behind
+  every cut-out. The control shows only while the wallpaper has a subject,
+  the choice persists in `stage.json`, and it lands live beside the Stage
+  tab's own layer rows
+  (`modules/desktop/WidgetMenu.qml`, `modules/desktop/PluginWidgetMenu.qml`,
+  `modules/visualizer/EditBar.qml`, `modules/stage/Singletons/Config.qml`).
 - **iRiS has a Ryoku look.** A toggle at the foot of the iRiS Settings rail
   (also in Studio and in Ryoku Hub's Bar Studio) switches the whole frame
   between the Ryoku look, paper and ink with kanji-sealed navigation,

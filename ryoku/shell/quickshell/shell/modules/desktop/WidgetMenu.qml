@@ -4,6 +4,7 @@ import Quickshell
 import "Singletons"
 import Ryoku.Ui.Singletons
 import "iris/IrisRoster.js" as IrisRoster
+import "../stage/Singletons" as StageCfg
 
 // A desktop widget's right-click menu, built on the shared DesktopMenu chrome in
 // the quick-settings sidebar idiom: a short card that names the widget, offers
@@ -25,6 +26,10 @@ Item {
     signal customizeRequested(string widget)
 
     property string scope: "desktop"   // desktop | clock | ...
+    // The wallpaper of the monitor whose right-click opened this menu; the
+    // Depth row gates on it, so the lift is offered only where the scene has
+    // cut-outs. Set by the owning desktop with openFor.
+    property string wall: ""
 
     readonly property bool isWidget: menu.scope !== "desktop"
     readonly property bool isStats: menu.scope === "stats"
@@ -35,6 +40,11 @@ Item {
     readonly property bool isDayprogress: menu.scope === "dayprogress"
     readonly property bool isShape: menu.scope === "shape"
     readonly property bool locked: menu.isWidget ? Config[menu.scope + "Locked"] : false
+    // The stage lift (docs/stage.md): Depth offers this widget a place above
+    // every in-front cut-out; the row only shows while the wall cuts a subject.
+    readonly property bool stageActive: menu.wall !== ""
+        && StageCfg.StageBackend.isActiveFor(menu.wall)
+    readonly property bool lifted: StageCfg.Config.isFront(menu.scope)
 
     // clock faces persist as <scope>Design; the calendar and the music sheet
     // persist their look as <scope>Style; shape as <scope>Kind.
@@ -82,7 +92,7 @@ Item {
     // (and the iRiS size preset) lives on the inspector's Look tab.
     readonly property real curScale: menu.isWidget ? (Config[menu.scope + "Scale"] || 1) : 1
 
-    function openFor(widget, x, y) { menu.scope = widget; shell.px = x; shell.py = y; shell.open = true; }
+    function openFor(widget, x, y, wall) { menu.scope = widget; menu.wall = wall; shell.px = x; shell.py = y; shell.open = true; }
     function close() { shell.open = false; }
     function cap(s) { return s.length > 0 ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
@@ -145,6 +155,14 @@ Item {
             on: menu.locked
             closeOnTrigger: false
             onTriggered: Config.toggle(menu.scope + "Locked")
+        }
+        MenuRow {
+            visible: menu.isWidget && menu.stageActive
+            label: I18n.tr("Depth")
+            value: menu.lifted ? I18n.tr("In front") : I18n.tr("Behind")
+            on: menu.lifted
+            closeOnTrigger: false
+            onTriggered: StageCfg.Config.setFront(menu.scope, !menu.lifted)
         }
 
         // ── customize ──────────────────────────────────────────────────

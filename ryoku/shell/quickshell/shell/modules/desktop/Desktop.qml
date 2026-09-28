@@ -229,7 +229,7 @@ Scope {
             return;
         }
         if (widgetMenuLoader.item) {
-            widgetMenuLoader.item.openFor(widget, x, y);
+            widgetMenuLoader.item.openFor(widget, x, y, root.wallpaperPath);
             return;
         }
         root.pendingWidgetMenu = [widget, x, y];
@@ -259,7 +259,7 @@ Scope {
     }
     function openPluginMenu(id, locked, x, y, manifest, placement) {
         if (pluginMenuLoader.item) {
-            pluginMenuLoader.item.openFor(id, locked, x, y, manifest, placement);
+            pluginMenuLoader.item.openFor(id, locked, x, y, manifest, placement, root.wallpaperPath);
             return;
         }
         root.pendingPluginMenu = [id, locked, x, y, manifest, placement];
@@ -581,13 +581,15 @@ Scope {
             visible: root.stageParallax
         }
 
-        // While the stage is on, the visualizer lives inside this surface so it
-        // sits behind every cut-out: above the backdrop, below every layer and
-        // widget. Its own surface (a sibling window that can never interleave
-        // with the subject) is suppressed meanwhile; Above windows and the
-        // Placer keep that surface (docs/stage.md).
+        // While the stage is on, the visualizer lives inside this surface. By
+        // default it sits behind every cut-out (above the backdrop, below every
+        // layer and widget); the Depth row in the edit bar lifts it above the
+        // in-front layers, the way a lifted built-in widget rises to z 5. Its
+        // own surface (a sibling window that can never interleave with the
+        // subject) is suppressed meanwhile; Above windows and the Placer keep
+        // that surface (docs/stage.md).
         Item {
-            z: 1.5
+            z: StageCfg.Config.isFront("visualizer") ? 5 : 1.5
             anchors.fill: parent
             visible: root.hostsVisualizer
             Viz.InlineVisualizer { anchors.fill: parent }
@@ -1074,6 +1076,9 @@ Scope {
                 id: slot
                 required property string modelData
                 readonly property string pid: modelData
+                // Depth lift: a lifted tile rises above the in-front cut-outs
+                // the way a lifted built-in does (docs/stage.md).
+                z: root.widgetZ(slot.pid)
                 // live registry entry for this id, re-resolved whenever
                 // Registry reloads. placement (x/y/scale/bg) updates here
                 // without rebuilding the delegate, because the model is the

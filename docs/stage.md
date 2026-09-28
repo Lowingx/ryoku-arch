@@ -41,6 +41,10 @@ Two places, each with one job:
   widgets in front of or behind the subject), `Customize visualizer`, and
   `Depth settings...`, which opens the Stage tab. Edit widgets is reached
   from the desktop only; the tab is settings, the desktop is arrangement.
+  A widget's own menu (built-in, plugin tile) and the visualiser's edit bar
+  each carry a `Depth` row that lifts just that widget above the in-front
+  cut-outs or drops it behind them; the row shows only while the wallpaper
+  has a subject cut.
 
 There is no shell editor. The bar, dock and menus keep their Hub pages.
 
@@ -269,7 +273,7 @@ Global only; anything per-wallpaper is in the registry.
 | `motion.sensitivity` | `1.0` | the pointer's pull (0..2) |
 | `motion.range` | `1.0` | how far a layer may travel (0..2) |
 | `motion.backdrop` | `0` | the inpainted backdrop's own drift (0..1); above 0 a sliver of the base wallpaper shows at the trailing edge |
-| `front` | `[]` | widget ids drawn above the layers marked "in front" when the user lifts specific widgets from the desktop editor |
+| `front` | `[]` | widget ids (built-in, plugin tile, or `visualizer`) drawn above the layers marked "in front"; written by the `Depth` row in a widget's right-click menu or the visualiser's edit bar |
 
 The daemon reads `quality`; the shell reads the rest. On the first start after
 v2 a v1 `stage.json` (one still carrying `feather`, `lift`, `preset` or the

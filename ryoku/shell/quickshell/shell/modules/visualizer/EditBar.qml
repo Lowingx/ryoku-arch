@@ -3,6 +3,7 @@ import QtQuick
 import Ryoku.Ui
 import Ryoku.Ui.Singletons
 import "Singletons"
+import "../stage/Singletons" as StageCfg
 
 // The spectrum's editing bar, shown while a look is being placed, so a look is tuned
 // where you can see it rather than in the Hub with the desktop behind a window.
@@ -27,7 +28,11 @@ Item {
     // wallpaper/theme accent the rest of the shell follows.
     readonly property color wallpaperColor: Scheme.accent
     readonly property color effectiveColor: Config.hasCustomColor ? Config.customColor : bar.wallpaperColor
-
+    // The stage lift (docs/stage.md): only while the wall cuts a subject does
+    // the scene have a front for the spectrum to join, so the group dims the
+    // rest of the time rather than dead-clicking.
+    readonly property bool stageActive: StageCfg.StageBackend.isActiveFor(StageCfg.StageBackend.current)
+    readonly property bool lifted: StageCfg.Config.isFront("visualizer")
     function closeTray() { tray.open = false; }
     function toggleTray() { tray.open = !tray.open; if (tray.open) colorPop.open = false; }
     function closeColor() { colorPop.open = false; }
@@ -496,6 +501,20 @@ Item {
                 }
 
                 Rule {}
+
+                // Depth: behind every cut-out, or lifted above the in-front
+                // ones. Only meaningful while the scene has cut-outs, so the
+                // group dims rather than dead-clicks on a plain wallpaper.
+                Group {
+                    label: I18n.tr("DEPTH")
+                    dim: !bar.stageActive
+                    Seg {
+                        options: ["Behind", "In front"]
+                        current: bar.lifted ? "In front" : "Behind"
+                        onChose: key => StageCfg.Config.setFront("visualizer",
+                            key === "In front")
+                    }
+                }
 
                 Group {
                     label: ""

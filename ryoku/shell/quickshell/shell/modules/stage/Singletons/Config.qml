@@ -9,9 +9,10 @@ import Quickshell.Io
 // (amount, idle, music) live here; anything per-wallpaper (effect, per-layer
 // front/depth, cut artifacts) is daemon-owned in the registry and reaches the
 // shell through StageBackend's `stage` topic. `front` is the widget ids the user
-// lifted above the in-front layers from the desktop editor. Watched and
-// self-seeded; drag-y setters coalesce writes through one settle timer, while
-// deliberate segmented picks write eagerly.
+// lifted above the in-front cut-outs -- from the Depth row in a widget's
+// right-click menu, a plugin tile's menu, or the visualiser's edit bar. Watched
+// and self-seeded; drag-y setters coalesce writes through one settle timer,
+// while deliberate segmented picks write eagerly.
 Singleton {
     id: root
 
@@ -51,12 +52,23 @@ Singleton {
     readonly property real range: (root.motion && typeof root.motion.range === "number") ? root.motion.range : 1.0
     readonly property real backdrop: (root.motion && typeof root.motion.backdrop === "number") ? root.motion.backdrop : 0.0
 
-    // `front` is read-only now: the layer owns whether it sits behind or in
-    // front of the widgets, so the desktop editor never writes a per-widget
-    // lift. Kept only so an existing stage.json that pinned widgets still
-    // renders them above the in-front layers (docs/stage.md).
+    // Lift list: the widget ids (built-in, plugin tile or "visualizer") the
+    // user pulled above every in-front cut-out from their Depth row in the
+    // widget's right-click menu or the visualiser's edit bar (docs/stage.md).
     function isFront(id) {
         return (adapter.front || []).indexOf(id) >= 0;
+    }
+    function setFront(id, on) {
+        const cur = (adapter.front || []).slice();
+        const i = cur.indexOf(id);
+        if (on === true && i < 0)
+            cur.push(id);
+        else if (on !== true && i >= 0)
+            cur.splice(i, 1);
+        else
+            return;
+        adapter.front = cur;
+        settle.restart();
     }
 
     // Quality is a plain tier the daemon maps to model + matting when it cuts;
