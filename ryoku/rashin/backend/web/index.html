@@ -12,7 +12,6 @@
   <link rel="stylesheet" href="css/skills.css">
   <link rel="stylesheet" href="css/memory.css">
   <link rel="stylesheet" href="css/agents.css">
-  <link rel="stylesheet" href="css/chat.css">
 </head>
 <body>
   <header class="islands">
@@ -29,7 +28,6 @@
       <a data-nav="skills" href="#/skills"><span>Skills</span><i class="jp">技</i></a>
       <a data-nav="agents" href="#/agents"><span>Agents</span><i class="jp">五人衆</i></a>
       <a data-nav="models" href="#/models"><span>Models</span><i class="jp">モデル</i></a>
-      <a data-nav="chat" href="#/chat"><span>Chat</span><i class="jp">対話</i></a>
       <a data-nav="about" href="#/about"><span>About</span><i class="jp">案内</i></a>
     </nav>
     <div class="island isl-status">
@@ -218,50 +216,6 @@
         <input class="models-search" data-models-search type="search" placeholder="Filter providers" spellcheck="false" autocomplete="off">
       </div>
       <div class="models-list" data-models-list><p class="muted">Reading providers…</p></div>
-    </section>
-
-    <section class="panel page panel-chat" data-panel="chat" hidden>
-      <header class="page-head page-head-compact">
-        <p class="eyebrow"><span class="jp">力</span>Agents</p>
-        <h1 class="page-title">Chat<span class="jp">対話</span></h1>
-      </header>
-      <div class="chat-top">
-        <div class="chat-banner" data-chat-banner data-state="starting">STARTING</div>
-        <div class="chat-usage" data-chat-usage hidden>
-          <span class="chat-usage-bar"><i data-usage-fill></i></span>
-          <span class="chat-usage-label" data-usage-label>CTX 0%</span>
-        </div>
-        <div class="chat-working" data-chat-working hidden>
-          <i class="chat-working-dot" aria-hidden="true"></i>
-          <span class="chat-working-label" data-working-label>working</span>
-        </div>
-      </div>
-      <div class="chat-stream" data-chat-stream></div>
-      <div class="chat-perms" data-chat-perms></div>
-      <div class="chat-attach-row" data-attach-row hidden></div>
-      <div class="chat-legend" data-chat-legend hidden></div>
-      <form class="chat-bar" data-chat-form>
-        <button type="button" class="chat-iconbtn" data-chat-attach title="Attach image" aria-label="Attach image">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 12.5l-8.5 8.5a6 6 0 0 1-8.5-8.5L12.5 4a4 4 0 0 1 5.7 5.7L9.7 18.2a2 2 0 0 1-2.9-2.9L15 7"/></svg>
-        </button>
-        <input type="file" data-chat-file accept="image/*" multiple hidden>
-        <textarea class="chat-input" data-chat-input rows="1" placeholder="Ask about this machine. Enter sends, / lists commands."></textarea>
-        <button type="button" class="chat-chip" data-chat-model title="Switch model" hidden></button>
-        <button type="button" class="chat-iconbtn" data-chat-history title="Session history" aria-label="Session history">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
-        </button>
-        <button type="button" class="btn btn-ghost" data-chat-cancel hidden>Cancel</button>
-        <button type="submit" class="btn btn-primary" data-chat-send>Send</button>
-      </form>
-      <div class="chat-model-menu" data-model-menu hidden></div>
-      <aside class="chat-drawer" data-chat-drawer hidden>
-        <div class="chat-drawer-head">
-          <span class="field-label">Sessions</span>
-          <button type="button" class="btn btn-primary" data-chat-new>New session</button>
-        </div>
-        <div class="chat-drawer-list" data-drawer-list><p class="muted">Reading sessions…</p></div>
-      </aside>
-      <div class="chat-toast" data-chat-toast hidden></div>
     </section>
 
     <section class="panel page" data-panel="about" hidden>

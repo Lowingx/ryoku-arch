@@ -189,7 +189,7 @@ Subcommands:
 | `serve [--if-enabled]` | HTTP and WebSocket on `127.0.0.1:3600`, embedded dashboard. `--if-enabled` exits 0 immediately when the gate is off (the autostart path) |
 | `index` | Regenerate all vault maps: `system.md`, `desktop.md`, `packages.md`, `ryoku-repo.md`, `user.md`, `habits.md`, `ownership.md`, `logs.md` |
 | `logs <target> [--since <dur>] [--lines <n>]` | Gather everything relevant to `<target>` (a component alias or a program name) when it broke: units, journal, coredumps, OOM kills, the app's own logs, and its package history, in one bounded bundle. Read-only, no root; always exits 0. Also `rashin logs <target>` |
-| `fix doctor [finding]` / `fix tip <id>` / `fix app <name> [what happened]` | Fix with AI from anywhere: asks the running daemon to open a fresh chat briefed on the problem, then opens it in the dashboard (`--no-open` skips the browser). Also `rashin fix doctor`; `rashin fix the wifi` stays a plain ask |
+| `fix doctor [finding]` / `fix tip <id>` / `fix app <name> [what happened]` | Fix with AI from anywhere: opens your agent harness with the problem as its first message, in this terminal when run from one, in a new terminal window otherwise (see "Fix with AI" below). Also `rashin fix doctor`; `rashin fix the wifi` stays a plain ask |
 | `repo-index <root> [out]` | Build the Ryoku source map from a checkout; used by the PKGBUILD and `deploy.sh` |
 | `ask <question>` | One-shot quick ask, built for the launcher's `\` prefix: POSTs to `/api/ask` and pipes streamed `@working`/`@perm`/`@answer` markers to stdout. `ask --recent` prints the resume history as JSON; `ask --cancel` stops the running turn. See "Quick asks: two lanes" below |
 | `setup` | One-click actuator: install Hermes, run its onboarding, wire, enable |
@@ -219,9 +219,10 @@ credential sources, names only), `GET /api/hermes/skills`,
 (the consolidated free/paid/subscription directory), `GET /api/about`,
 `GET /api/doctor` (Ryoku's health check, `ryoku doctor --json` run read-only and
 cached for two minutes; `?refresh=1` reruns it), `POST /api/fix` (Fix with AI,
-below; JSON only, and refused unless the request comes from this dashboard or a
-local process), and `WS /ws/chat` for the Hermes bridge. Vitals come from
-`/proc` and `statfs`, with GPU via `nvidia-smi` when present.
+below: opens the agent in a terminal; JSON only, and refused unless the request
+comes from this dashboard or a local process), and `WS /ws/chat`, the shared
+agent session behind the Super+S chat. Vitals come from `/proc` and `statfs`,
+with GPU via `nvidia-smi` when present.
 
 ## Quick asks: two lanes
 
@@ -249,7 +250,7 @@ full hermes toolset: that is the trade that keeps it fast. Heavy or
 system-changing work is exactly what escalates to the session lane.
 
 Both lanes write the conversation into the shared transcript, so "continue in
-dashboard" always opens the full exchange. The fast lane's connection can be
+chat" always opens the full exchange. The fast lane's connection can be
 overridden in `~/.config/ryoku/rashin.json` for a cheaper or local model:
 
 ```json
@@ -274,14 +275,14 @@ dead end:
 | `cmd` | a backtick span whose first word is on `PATH` | copies the command |
 | `color` | a hex color, shown with a live swatch | copies the hex |
 
-Plus a COPY chip for the whole answer and CONTINUE IN DASHBOARD. The answer
+Plus a COPY chip for the whole answer and CONTINUE IN CHAT. The answer
 text itself is selectable for mouse-copying a fragment. Nonexistent paths and
 non-runnable backtick spans are dropped, so a chip never lies.
 
 ### Continue while it works, and cancel
 
 While the agent is still working, two options sit under the pulsing strip:
-**CONTINUE IN DASHBOARD** opens the dashboard chat, where the same turn is
+**CONTINUE IN CHAT** opens the Super+S chat, where the same turn is
 streaming live (the daemon runs each turn on a background context, so it keeps
 going even after the launcher closes), and **CANCEL** stops it. Escape cancels
 a working ask; the daemon interrupts both the fast lane and any session-lane
@@ -303,8 +304,8 @@ for pngs and move them to Pictures` returns the one-liner (it knows the
 directory is `Pictures`, from `habits.md`). It never runs anything itself, the
 buffer is the confirmation, and every command carries a danger tier
 (read/write/system/danger). It shares the daemon, the vault, and the ask
-history with the launcher and dashboard, so `\resume`, `rashin --resume`, and
-"continue in dashboard" all see one conversation. Repeated asks become saved
+history with the launcher and the Super+S chat, so `\resume`, `rashin --resume`,
+and "continue in chat" all see one conversation. Repeated asks become saved
 recipes (`rr-<name>` fish abbreviations). Full design and UX in
 `docs/rashin-terminal.md`.
 
@@ -340,38 +341,16 @@ bars sweep) and yields to the OS reduced-motion setting and to
 | Skills | One tab per installed harness: Hermes skills grouped by category with origin counts (bundled, hub, agent-grown) and the enabled toolbelt grouped into families; every other harness lists the skills it carries, grouped by origin when long |
 | Agents | Detected CLIs, wiring state per agent, wire and unwire actions, and the harness ledger: each agent's own skills, memory files, session counts, model choice, and credential names |
 | Models | The consolidated provider directory (free, credits, paid) from Prowl's shipped catalogue, with signup friction, model counts, and a key-on-box mark joined from the harness scan |
-| Chat | The full Hermes conversation surface (below) |
 | About | What Rashin is, the pieces with live facts, quick start, a command crib (`hermes -h`, `hermes gateway`, `hermes model`, `hermes tools`, `prowl overview`), and the privacy note |
 
-### Chat
+### The Super+S chat
 
-The chat panel talks to Hermes over the daemon's ACP bridge (Agent Client
-Protocol over stdio, the interface Zed uses). Beyond streamed text, thoughts,
-tool cards, and permission prompts, it carries:
-
-- **Images**: attach (paperclip), paste, or drag-drop up to three; the client
-  downscales to 1568px JPEG and sends them as ACP image blocks.
-- **Links**: markdown links and bare URLs render clickable (new tab).
-- **Command legend**: typing `/` opens a fuzzy-filtered popup of Hermes's slash
-  commands (`/help`, `/model`, `/tools`, `/compact`, ...) with keyboard nav.
-- **Model picker**: a chip shows the current model; clicking lists every model
-  hermes advertises, with a recent-five section, and switches live.
-- **Session history**: a drawer lists stored sessions; loading one replays its
-  transcript; NEW SESSION starts fresh.
-- **Context meter**: a thin bar tracks the session's token usage.
-- **Working strip**: while the agent acts, a pulsing dot names what it is
-  doing right now, fed live from the hermes stream: the running tool's title
-  (`read: system.md`), `thinking` during reasoning, `writing` while the answer
-  streams, `waiting for your approval` when a permission is pending. Clears at
-  turn end.
-- **Approvals**: when hermes wants to run something that needs consent, it
-  sends `session/request_permission` over ACP with the tool title and the
-  options it will accept. The dashboard renders them as allow/deny stamps;
-  the reply goes back over the same request, and cancelling a turn answers
-  any pending request as cancelled. Nothing runs while a request is open.
-
-Terminal `hermes` and web chat share the same memory, because both run in the
-vault workspace.
+The one GUI chat is the Super+S sidebar, a live view of the shared agent
+session over `/ws/chat`. Thinking streams in the open while the agent works and
+then folds to a line the reader can reopen; each tool call is one row with a
+peek at its output; approvals sit inline on the row that asked, governed by the
+read-only auto-approve switch (`approvals` in `rashin.json`, `read-only` by
+default or `ask`); and a searchable model picker switches the model live.
 
 ### Fix with AI
 
@@ -382,18 +361,29 @@ update whose health check found issues, and `ryoku doctor` itself, which offers
 `ryoku-rashin fix doctor` when Rashin is on. From a terminal,
 `rashin fix app firefox it crashes when I open a PDF` does the same for any app.
 
-The daemon (`POST /api/fix`) resolves the request against what the machine
-reports right now (the tip by id from the live scan, the findings from the
-doctor scan), clears the chat, starts a fresh agent session, and sends one turn:
-the Needle identity, a `[fix: ...]` brief only the agent sees, and a one-line
-display text (`Fix with AI: <problem>`) that the chat shows as a task card. The
-brief names the problem, the commands most relevant to it, and how to work:
+A fix opens in the user's own agent harness, in a real terminal, not in a chat
+panel: the harness's own interface already streams its thinking, shows each
+command and its output, asks its own approvals, and switches models. The harness
+is the chat agent picked in Rashin when it can open a repair (Oh My Pi, Hermes,
+or Claude Code), otherwise the first of those installed. It starts in the vault,
+so the machine map is its working directory, with the Needle persona as extra
+system prompt (Hermes, which takes none, gets it at the top of the message) and
+the problem as its first message: a one-line `Fix with AI: <problem>` and a brief
+that names the problem, the commands most relevant to it, and how to work:
 gather the evidence with `ryoku-rashin logs`, check `ryoku owner` before editing
 any file, explain the cause, ask before anything destructive or anything that
 needs sudo, verify, say how to undo it, and write the findings to the vault
-journal. Replays and the history drawer strip the brief, so a loaded session
-shows the task line, not the prompt. Nothing runs without the chat's approval
-stamps; the dashboard only opened the conversation.
+journal. Hermes cannot start interactively with a first message, so its fix runs
+the brief as one query and then resumes that session in the same terminal.
+
+`ryoku-rashin fix` resolves the problem against what the machine reports right
+now (the tip by id from the live scan, the findings from the doctor scan). Run
+from a terminal, the harness takes over that terminal; spawned from the Hub or
+the shell, it opens the terminal chosen in Default Apps (`ryoku-app terminal`).
+The dashboard's buttons go through `POST /api/fix`, which opens that terminal
+the same way. The window runs as its own transient user unit
+(`ryoku-fix-*.service`), so restarting the daemon never closes a repair, and a
+harness that exits with an error leaves its message on screen until Enter.
 
 ## Prowl ships with Rashin
 
@@ -550,4 +540,4 @@ echo '- tried the vault, it works' >> journal/$(date +%F).md
 ```
 
 Reopen the dashboard's Vault panel and the new journal entry is there, because the
-terminal and the web chat share one workspace.
+terminal and the Super+S chat share one workspace.

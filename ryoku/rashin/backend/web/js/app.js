@@ -15,7 +15,6 @@ import { initHealthBand } from "./health.js";
 import { initModels } from "./models.js";
 import { initTheme, heroVisible } from "./theme.js";
 import { api } from "./api.js";
-import "./chat.js";
 
 function lamp(sel, ok) {
   const el = document.querySelector(sel);
@@ -81,10 +80,6 @@ function boot() {
     else if (name === "about") initAbout(document.querySelector('[data-panel="about"]'));
     else if (name === "agents") initAgents(document.querySelector('[data-panel="agents"]'));
     else if (name === "models") initModels(document.querySelector('[data-panel="models"]'));
-    else if (name === "chat") {
-      const el = document.querySelector('[data-panel="chat"]');
-      if (typeof window.initChat === "function") window.initChat(el);
-    }
   });
   initVitals(document.querySelector('[data-panel="overview"]'));
   initCode(document.querySelector('[data-panel="overview"]'));

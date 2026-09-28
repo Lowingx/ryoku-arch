@@ -108,7 +108,7 @@ func Serve(cfg Config) error {
 	mux.HandleFunc("GET /api/doctor", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, DoctorNow(r.URL.Query().Get("refresh") == "1"))
 	})
-	mux.HandleFunc("POST /api/fix", hub.handleFix)
+	mux.HandleFunc("POST /api/fix", handleFix)
 	mux.HandleFunc("GET /api/theme", func(w http.ResponseWriter, r *http.Request) {
 		th := ThemeNow()
 		wall := map[string]any{"available": false}

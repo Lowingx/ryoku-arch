@@ -9,7 +9,6 @@ const PANELS = {
   skills: "Skills",
   agents: "Agents",
   models: "Models",
-  chat: "Chat",
   about: "About",
 };
 

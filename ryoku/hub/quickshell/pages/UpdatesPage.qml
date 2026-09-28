@@ -162,8 +162,8 @@ Item {
         reportProbe.running = true;
     }
 
-    // hand the fixing to Rashin: `ryoku-rashin fix doctor` opens a fresh chat in
-    // the dashboard that investigates and repairs. detached, like every launch.
+    // hand the fixing to Rashin: with no TTY here `ryoku-rashin fix doctor` opens
+    // the agent in a terminal that investigates and repairs. detached, as always.
     function fixWithAI() {
         Spawn.run(["ryoku-rashin", "fix", "doctor"]);
     }

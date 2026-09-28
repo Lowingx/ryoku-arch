@@ -1,7 +1,8 @@
 // Fix with AI, the dashboard half: a button anywhere a problem is shown hands
-// that problem to the agent. The daemon opens a fresh chat and briefs it; the
-// page then moves to the chat, where the agent investigates and asks before it
-// changes anything. Buttons carry their request as JSON in data-fix.
+// that problem to the agent. The daemon briefs the agent and opens it in a
+// terminal window, where it investigates and asks before it changes anything;
+// the page just confirms inline. Buttons carry their request as JSON in
+// data-fix.
 
 import { api } from "./api.js";
 import { escapeHtml, escapeAttr } from "./markdown.js";
@@ -25,13 +26,20 @@ async function run(btn) {
   const before = label ? label.textContent : "";
   const scope = btn.closest("[data-fix-scope]") || btn.parentElement;
   const errEl = scope && scope.querySelector(".fix-err");
-  if (errEl) errEl.hidden = true;
+  if (errEl) {
+    errEl.hidden = true;
+    errEl.classList.remove("ok");
+  }
   btn.disabled = true;
   btn.classList.add("busy");
-  if (label) label.textContent = "Briefing the agent";
+  if (label) label.textContent = "Opening the agent";
   try {
-    await api.fix(req);
-    location.hash = "#/chat";
+    const res = await api.fix(req);
+    if (errEl) {
+      errEl.textContent = res && res.harness ? "Opened in a terminal with " + res.harness : "Opened in a terminal";
+      errEl.classList.add("ok");
+      errEl.hidden = false;
+    }
   } catch (err) {
     if (errEl) {
       errEl.textContent = err.message;

@@ -28,7 +28,7 @@ const usage = `ryoku-rashin: the Ryoku agent OS daemon
   logs <target> [--since <dur>] [--lines <n>]
                          gather every log relevant to <target> when it broke
   fix doctor|tip <id>|app <name> [what happened]
-                         hand a problem to the agent in a fresh chat (Fix with AI)
+                         open your agent in a terminal on the problem (Fix with AI)
 
 Invoked as 'rashin', a bare argument is a terminal ask; status/enable/disable/
 setup/index/logs/fix still work as subcommands.

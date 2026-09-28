@@ -1,93 +1,82 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-	"os/exec"
+	"os"
 	"strings"
-	"time"
 )
 
 const fixUsage = `usage: ryoku-rashin fix doctor [finding name]
        ryoku-rashin fix tip <id>
        ryoku-rashin fix app <name> [what happened...]
 
-Hands the problem to Rashin's agent in a fresh chat and opens it in the
-dashboard. The agent reads the logs itself, explains the cause, and asks
-before it changes anything. Add --no-open to skip opening the browser.`
+Opens your agent (the chat agent picked in Rashin, Hermes by default) with the
+problem as its first message: right here when run from a terminal, in a new
+terminal window otherwise. The agent reads the logs itself, explains the
+cause, and asks before it changes anything.`
 
 // fixKinds are the problems Fix with AI knows how to brief.
 var fixKinds = map[string]bool{"doctor": true, "tip": true, "app": true}
 
 // parseFixArgs maps the command line onto a fix request.
-func parseFixArgs(args []string) (req fixRequest, open bool, err error) {
-	open = true
-	var rest []string
-	for _, a := range args {
-		if a == "--no-open" {
-			open = false
-			continue
-		}
-		rest = append(rest, a)
+func parseFixArgs(args []string) (fixRequest, error) {
+	var req fixRequest
+	if len(args) == 0 {
+		return req, errors.New(fixUsage)
 	}
-	if len(rest) == 0 {
-		return req, open, errors.New(fixUsage)
-	}
-	req.Kind = rest[0]
+	req.Kind = args[0]
 	switch req.Kind {
 	case "doctor":
-		req.Name = strings.Join(rest[1:], " ")
+		req.Name = strings.Join(args[1:], " ")
 	case "tip":
-		if len(rest) < 2 {
-			return req, open, errors.New(fixUsage)
+		if len(args) < 2 {
+			return req, errors.New(fixUsage)
 		}
-		req.ID = rest[1]
+		req.ID = args[1]
 	case "app":
-		if len(rest) < 2 {
-			return req, open, errors.New(fixUsage)
+		if len(args) < 2 {
+			return req, errors.New(fixUsage)
 		}
-		req.App = rest[1]
-		req.Note = strings.Join(rest[2:], " ")
+		req.App = args[1]
+		req.Note = strings.Join(args[2:], " ")
 	default:
-		return req, open, errors.New(fixUsage)
+		return req, errors.New(fixUsage)
 	}
-	return req, open, nil
+	return req, nil
 }
 
 func cmdFix(args []string) error {
-	req, open, err := parseFixArgs(args)
+	req, err := parseFixArgs(args)
 	if err != nil {
 		return err
 	}
-	cfg := LoadConfig()
-	body, _ := json.Marshal(req)
-	// A doctor fix may run the health check first, which takes a few seconds.
-	client := &http.Client{Timeout: 2 * time.Minute}
-	resp, err := client.Post(fmt.Sprintf("http://127.0.0.1:%d/api/fix", cfg.Port), "application/json", bytes.NewReader(body))
+	display, brief, err := buildFix(req)
 	if err != nil {
-		return errors.New("the Rashin daemon is not running; start it with `ryoku-rashin enable`")
+		return err
 	}
-	defer resp.Body.Close()
-	var out struct {
-		Display string `json:"display"`
-		Error   string `json:"error"`
+	launch, err := planFix(display, brief)
+	if err != nil {
+		return err
 	}
-	_ = json.NewDecoder(resp.Body).Decode(&out)
-	if resp.StatusCode != http.StatusOK {
-		if out.Error == "" {
-			out.Error = resp.Status
-		}
-		return errors.New(out.Error)
+	if onTerminal() {
+		fmt.Printf("%s\nOpening %s...\n", display, launch.Harness)
+		return runFixHere(launch)
 	}
-	chat := fmt.Sprintf("http://127.0.0.1:%d/#/chat", cfg.Port)
-	fmt.Printf("%s\nFollow it in the chat: %s\n", out.Display, chat)
-	if open {
-		if bin, err := exec.LookPath("xdg-open"); err == nil {
-			_ = exec.Command(bin, chat).Start()
-		}
+	if err := openFixTerminal(launch); err != nil {
+		return err
 	}
+	fmt.Printf("%s\nOpened %s in a terminal.\n", display, launch.Harness)
 	return nil
+}
+
+// onTerminal: both ends are a terminal, so the harness can take it over.
+func onTerminal() bool {
+	for _, f := range []*os.File{os.Stdin, os.Stdout} {
+		st, err := f.Stat()
+		if err != nil || st.Mode()&os.ModeCharDevice == 0 {
+			return false
+		}
+	}
+	return true
 }

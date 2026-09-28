@@ -3,25 +3,91 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
-func TestFixPromptReplaysAsItsDisplayLine(t *testing.T) {
-	tip := Tip{ID: "x", Severity: "act", Title: "unit [a] failed", Detail: "log says ] then [b] ", Command: "journalctl -u a] "}
-	display, brief := fixTipBrief(tip)
-	prompt := needleIdentity + "[fix: " + brief + "] " + display
-	if got := stripIdentityPreamble(prompt); got != display {
-		t.Fatalf("replay shows %q, want the display line %q", got, display)
-	}
-	if got := cleanTitle(prompt); got != display {
-		t.Fatalf("session title %q, want %q", got, display)
-	}
+func fakeHarness(id, bin string) fixHarness {
+	return fixHarness{ID: id, Name: id, bin: func() (string, bool) { return bin, bin != "" }}
+}
 
-	issues := []DoctorFinding{{Name: "pacnew", Status: "warn", Detail: "2 files]", Remedy: "sudo pacdiff] "}}
-	display, brief = fixDoctorBrief(issues, "/tmp/r]eport.txt")
-	if got := stripIdentityPreamble(needleIdentity + "[fix: " + brief + "] " + display); got != display {
-		t.Fatalf("doctor replay shows %q, want %q", got, display)
+func TestFixOpensTheChatAgentFirstThenAnyInstalled(t *testing.T) {
+	hs := []fixHarness{fakeHarness("hermes", "/usr/bin/hermes"), fakeHarness("omp", "/usr/bin/omp"), fakeHarness("claude", "")}
+	if h, _, _ := pickFixHarness("omp", hs); h.ID != "omp" {
+		t.Fatalf("the chosen chat agent must open the fix, got %s", h.ID)
+	}
+	if h, _, _ := pickFixHarness("claude", hs); h.ID != "hermes" {
+		t.Fatalf("a chosen agent that is not installed falls back to the first installed, got %s", h.ID)
+	}
+	if _, _, ok := pickFixHarness("", []fixHarness{fakeHarness("omp", "")}); ok {
+		t.Fatal("no installed harness must not pick one")
+	}
+}
+
+// Hermes cannot start interactively with a first message, so its recipe runs
+// the brief as one query and then resumes that session. A failed first query
+// must not resume whatever session happened to be last.
+func TestHermesFixResumesOnlyItsOwnFirstTurn(t *testing.T) {
+	dir := t.TempDir()
+	log := filepath.Join(dir, "calls")
+	bin := filepath.Join(dir, "hermes")
+	script := "#!/bin/sh\nprintf '%s|' \"$@\" >> " + log + "\necho >> " + log + "\n[ \"$2\" = -q ] && exit ${FIRST_EXIT:-0}\nexit 0\n"
+	if err := os.WriteFile(bin, []byte(script), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	var hermes fixHarness
+	for _, h := range fixHarnesses() {
+		if h.ID == "hermes" {
+			hermes = h
+		}
+	}
+	argv := hermes.argv(bin, "persona", "Fix with AI: x\n\nbrief with 'quotes' and $(no expansion)")
+	for _, c := range []struct {
+		exit string
+		want []string
+	}{
+		{"0", []string{"chat|-q|persona\n\nFix with AI: x\n\nbrief with 'quotes' and $(no expansion)|", "chat|--continue|"}},
+		{"1", []string{"chat|-q|persona\n\nFix with AI: x\n\nbrief with 'quotes' and $(no expansion)|"}},
+	} {
+		_ = os.Remove(log)
+		cmd := exec.Command(argv[0], argv[1:]...)
+		cmd.Env = append(os.Environ(), "FIRST_EXIT="+c.exit)
+		_ = cmd.Run()
+		got, _ := os.ReadFile(log)
+		calls := strings.Split(strings.TrimSuffix(string(got), "\n"), "|\n")
+		for i := range calls {
+			calls[i] = strings.TrimSuffix(calls[i], "|") + "|"
+		}
+		if strings.Join(calls, "\n") != strings.Join(c.want, "\n") {
+			t.Errorf("first query exit %s: calls %q, want %q", c.exit, calls, c.want)
+		}
+	}
+}
+
+// A harness that dies at once (no key, no network) must leave its message on
+// screen instead of closing the window it opened.
+func TestFixTerminalHoldsOnlyAFailure(t *testing.T) {
+	for _, c := range []struct {
+		argv     []string
+		code     int
+		holdText bool
+	}{
+		{[]string{"true"}, 0, false},
+		{[]string{"sh", "-c", "exit 3"}, 3, true},
+	} {
+		argv := holdOnFailure("Oh My Pi", c.argv)
+		cmd := exec.Command(argv[0], argv[1:]...)
+		cmd.Stdin = strings.NewReader("\n")
+		out, _ := cmd.CombinedOutput()
+		if cmd.ProcessState.ExitCode() != c.code {
+			t.Errorf("%v: exit %d, want %d", c.argv, cmd.ProcessState.ExitCode(), c.code)
+		}
+		if strings.Contains(string(out), "Oh My Pi stopped (exit 3)") != c.holdText {
+			t.Errorf("%v: output %q", c.argv, out)
+		}
 	}
 }
 
@@ -29,7 +95,7 @@ func TestCleanTitleDropsATitleCutInsideANote(t *testing.T) {
 	cases := map[string]string{
 		"plain question":                     "plain question",
 		"[system: you are the Needle and so": "",
-		"[system: x] [fix: half a brief":     "",
+		"[system: x":                         "",
 		"[system: x] why is my disk full":    "why is my disk full",
 	}
 	for in, want := range cases {
@@ -41,31 +107,27 @@ func TestCleanTitleDropsATitleCutInsideANote(t *testing.T) {
 
 func TestParseFixArgs(t *testing.T) {
 	cases := []struct {
-		args     []string
-		want     fixRequest
-		wantOpen bool
-		wantErr  bool
+		args    []string
+		want    fixRequest
+		wantErr bool
 	}{
-		{[]string{"doctor"}, fixRequest{Kind: "doctor"}, true, false},
-		{[]string{"doctor", "failed", "services", "--no-open"}, fixRequest{Kind: "doctor", Name: "failed services"}, false, false},
-		{[]string{"tip", "disk-/"}, fixRequest{Kind: "tip", ID: "disk-/"}, true, false},
-		{[]string{"app", "firefox", "crashes", "on", "start"}, fixRequest{Kind: "app", App: "firefox", Note: "crashes on start"}, true, false},
-		{[]string{"tip"}, fixRequest{}, true, true},
-		{[]string{"app"}, fixRequest{}, true, true},
-		{[]string{"reboot"}, fixRequest{}, true, true},
-		{nil, fixRequest{}, true, true},
+		{[]string{"doctor"}, fixRequest{Kind: "doctor"}, false},
+		{[]string{"doctor", "failed", "services"}, fixRequest{Kind: "doctor", Name: "failed services"}, false},
+		{[]string{"tip", "disk-/"}, fixRequest{Kind: "tip", ID: "disk-/"}, false},
+		{[]string{"app", "firefox", "crashes", "on", "start"}, fixRequest{Kind: "app", App: "firefox", Note: "crashes on start"}, false},
+		{[]string{"tip"}, fixRequest{}, true},
+		{[]string{"app"}, fixRequest{}, true},
+		{[]string{"reboot"}, fixRequest{}, true},
+		{nil, fixRequest{}, true},
 	}
 	for _, c := range cases {
-		got, open, err := parseFixArgs(c.args)
+		got, err := parseFixArgs(c.args)
 		if (err != nil) != c.wantErr {
 			t.Errorf("%v: err = %v, want error %v", c.args, err, c.wantErr)
 			continue
 		}
-		if c.wantErr {
-			continue
-		}
-		if got != c.want || open != c.wantOpen {
-			t.Errorf("%v: got %+v open=%v, want %+v open=%v", c.args, got, open, c.want, c.wantOpen)
+		if !c.wantErr && got != c.want {
+			t.Errorf("%v: got %+v, want %+v", c.args, got, c.want)
 		}
 	}
 }
@@ -98,7 +160,6 @@ func TestDoctorIssuesAreWhatDoctorCouldNotSettle(t *testing.T) {
 }
 
 func TestFixEndpointRefusesOtherSites(t *testing.T) {
-	h := newChatHub()
 	cases := []struct {
 		name, origin, ctype string
 		want                int
@@ -115,7 +176,7 @@ func TestFixEndpointRefusesOtherSites(t *testing.T) {
 		}
 		req.Header.Set("Content-Type", c.ctype)
 		rec := httptest.NewRecorder()
-		h.handleFix(rec, req)
+		handleFix(rec, req)
 		if rec.Code != c.want {
 			t.Errorf("%s: status %d, want %d", c.name, rec.Code, c.want)
 		}

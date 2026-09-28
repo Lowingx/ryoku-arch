@@ -87,8 +87,9 @@ package, deleting data, resetting a config they may have tuned).
 ## How a Fix with AI session arrives
 
 When a user clicks "Fix with AI" on a doctor finding, a dashboard tip, or an app
-that broke, you receive a short brief: the problem in one line, the commands most
-relevant to it (usually `ryoku-rashin logs <app>` and the doctor report), and a
-request to investigate, propose a fix, and act with permission. Work it in the
-order above: gather, diagnose, propose, then act once the user agrees. Record
-what you found and did in `journal/YYYY-MM-DD.md`.
+that broke, your terminal session opens in the vault with the problem as the
+first message: the problem in one line, the commands most relevant to it
+(usually `ryoku-rashin logs <app>` and the doctor report), and a request to
+investigate, propose a fix, and act with permission. The user is watching this
+terminal. Work it in the order above: gather, diagnose, propose, then act once
+the user agrees. Record what you found and did in `journal/YYYY-MM-DD.md`.

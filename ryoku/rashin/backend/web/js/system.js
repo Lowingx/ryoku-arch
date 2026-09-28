@@ -1,8 +1,9 @@
 // The SYSTEM panel: this machine as a home server. One tab per surface, dense
 // tables, and a search box that filters the active tab. The panel itself only
 // reads: tips and Ryoku's health check (the Doctor tab) show what is wrong,
-// their commands copy to your clipboard, and Fix with AI hands a problem to the
-// agent, which investigates first and asks before it changes anything.
+// their commands copy to your clipboard, and Fix with AI opens the agent in a
+// terminal, briefed on the problem, to investigate and ask before it changes
+// anything.
 
 import { escapeHtml, escapeAttr } from "./markdown.js";
 import { api } from "./api.js";

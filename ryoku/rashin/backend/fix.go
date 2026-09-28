@@ -9,10 +9,9 @@ import (
 )
 
 // fix.go turns something the machine already knows is wrong (a dashboard tip,
-// a doctor finding, or "app X broke") into a Fix with AI session: a fresh chat
-// whose first turn briefs the agent on the problem and on how to work on this
-// machine. The brief rides in a `[fix: ...]` block only the agent sees; the
-// chat shows the one-line display text.
+// a doctor finding, or "app X broke") into a Fix with AI repair: a one-line
+// display of the problem plus a brief on the problem and on how to work on
+// this machine, which together open the user's agent harness (fixterm.go).
 
 // fixRequest is the body of POST /api/fix and the CLI's parsed arguments.
 type fixRequest struct {
@@ -33,20 +32,14 @@ const fixMethod = "How to work: investigate before you change anything, and gath
 	"Explain the cause in plain words, say what you will do, do it, then check that it worked and say how to undo it. " +
 	"If nothing needs fixing, say so and stop. Write what you found and did to the vault journal (journal/YYYY-MM-DD.md)."
 
-// briefSafe keeps dynamic text from closing the `[fix: ...]` block early: the
-// replay stripper cuts at the first "] ".
-func briefSafe(s string) string {
-	return strings.ReplaceAll(strings.TrimSpace(s), "]", ")")
-}
-
 func fixTipBrief(t Tip) (display, brief string) {
 	display = "Fix with AI: " + t.Title
 	var b strings.Builder
 	b.WriteString("The user pressed Fix with AI on a tip from Rashin's system scan. ")
-	fmt.Fprintf(&b, "Tip (%s): %s. ", briefSafe(t.Severity), briefSafe(t.Title))
-	fmt.Fprintf(&b, "What the scan saw: %s ", briefSafe(t.Detail))
+	fmt.Fprintf(&b, "Tip (%s): %s. ", t.Severity, t.Title)
+	fmt.Fprintf(&b, "What the scan saw: %s ", strings.TrimSpace(t.Detail))
 	if t.Command != "" {
-		fmt.Fprintf(&b, "The scan's suggested first look: `%s`. ", briefSafe(t.Command))
+		fmt.Fprintf(&b, "The scan's suggested first look: `%s`. ", t.Command)
 	}
 	b.WriteString(fixMethod)
 	return display, b.String()
@@ -61,16 +54,16 @@ func fixDoctorBrief(issues []DoctorFinding, report string) (display, brief strin
 	var b strings.Builder
 	b.WriteString("The user pressed Fix with AI on Ryoku's health check (`ryoku doctor`). Findings that need attention:\n")
 	for _, f := range issues {
-		fmt.Fprintf(&b, "- %s, %s: %s", briefSafe(f.Status), briefSafe(f.Name), briefSafe(f.Detail))
+		fmt.Fprintf(&b, "- %s, %s: %s", f.Status, f.Name, strings.TrimSpace(f.Detail))
 		if f.Remedy != "" {
-			fmt.Fprintf(&b, " (doctor suggests: %s)", briefSafe(f.Remedy))
+			fmt.Fprintf(&b, " (doctor suggests: %s)", f.Remedy)
 		}
 		b.WriteString("\n")
 	}
 	b.WriteString("A todo is something `ryoku doctor` applies on its own when run without flags; a warn or fail needs a person. " +
 		"`ryoku doctor --check` reruns the checks without changing anything. ")
 	if report != "" {
-		fmt.Fprintf(&b, "Doctor's last full report (system state and recent error logs) is at %s. ", briefSafe(report))
+		fmt.Fprintf(&b, "Doctor's last full report (system state and recent error logs) is at %s. ", report)
 	}
 	b.WriteString("Work through the findings one at a time, most serious first. ")
 	b.WriteString(fixMethod)
@@ -83,9 +76,9 @@ func fixAppBrief(app, note string) (display, brief string) {
 		display += ": " + clipRunes(note, 140)
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "The user says %s is broken", briefSafe(app))
+	fmt.Fprintf(&b, "The user says %s is broken", app)
 	if note != "" {
-		fmt.Fprintf(&b, ", in their words: %q", briefSafe(note))
+		fmt.Fprintf(&b, ", in their words: %q", note)
 	}
 	fmt.Fprintf(&b, ". Start with `ryoku-rashin logs %s` and read what it finds before asking the user anything they have not already told you. ", app)
 	b.WriteString(fixMethod)
