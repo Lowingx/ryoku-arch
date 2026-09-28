@@ -3,6 +3,11 @@
 ## Unreleased
 
 ### Added
+- **A Ryostore fastfetch preset can bring its own renderer.** A preset that
+  needs to draw something fastfetch cannot (icat PNGs, for one) names an
+  executable in its own product folder with a `// ryoku:renderer` comment and
+  `ryoku-fastfetch` hands off to it; anything invalid falls through to
+  fastfetch (`fastfetch/ryoku-fastfetch`).
 - `ryostore/`: **Kairos joins the built-in bar styles in the catalogue.** The
   bar-style provider now lists the shell's island-clock style beside Sumi and QS
   Bar, so Ryoku Settings' Bar Studio shows it as an installed, selectable card

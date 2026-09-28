@@ -1,11 +1,21 @@
 #!/usr/bin/env bash
-# Ryoku-branded Fastfetch launcher.
+# Ryoku-branded fastfetch. The emblem is rendered natively by fastfetch's
+# kitty-direct logo (image left, dossier right). fastfetch auto-enables "pipe
+# mode" when it thinks stdout isn't a real TTY, which SILENTLY disables image
+# logos and falls back to ASCII -- so in kitty we force `--pipe false` to keep
+# the image. Outside kitty: chafa if present, else no logo.
 #
-# Store presets may opt into a product-local renderer with:
+# A Ryostore preset may hand drawing to its own renderer (for image formats
+# fastfetch cannot show, such as icat PNGs) with a comment in its config:
 #   // ryoku:renderer <product-id>/<relative-executable>
+# The renderer must stay inside ~/.local/share/ryoku/fastfetch/<product-id>/
+# and be executable; anything else falls through to fastfetch.
 #
-# The renderer remains inside ~/.local/share/ryoku/fastfetch/<product-id>/ and
-# must be executable. Invalid or missing hooks fall through to normal Fastfetch.
+# Every branch execs instead of bounding the run with `timeout`: the shell
+# module walks the parent chain and skips known wrappers (`time`, `sudo`, ...)
+# but not `timeout`, so `timeout 8 fastfetch` reported the shell as "timeout"
+# in every greeting. A failed exec makes bash exit 127, which no longer masks
+# a missing fastfetch behind a false success.
 set -uo pipefail
 
 config="${XDG_CONFIG_HOME:-$HOME/.config}/fastfetch/config.jsonc"
