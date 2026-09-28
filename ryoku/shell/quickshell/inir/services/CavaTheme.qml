@@ -123,7 +123,6 @@ Singleton {
         album: root.coverAlbum
         cacheDirectory: Directories.coverArt
 
-        onReadyChanged: if (coverArt.ready) root._scheduleCoverRefresh()
     }
 
     ColorQuantizer {
@@ -163,40 +162,4 @@ Singleton {
     readonly property color primaryColor: root.visualizerColors.length > 0
         ? root.visualizerColors[Math.floor(root.visualizerColors.length / 2)]
         : Appearance.colors.colPrimary
-
-    Timer {
-        id: coverRefreshDebounce
-        interval: 450
-        repeat: false
-        onTriggered: root._applyCoverTheme()
-    }
-
-    function _scheduleCoverRefresh(): void {
-        if (!root.enabled || !root.useCoverSource) return
-        coverRefreshDebounce.restart()
-    }
-
-    function _applyCoverTheme(): void {
-        if (!root.enabled || !root.useCoverSource) return
-        if (!coverArt.ready) return
-
-        const path = FileUtils.trimFileProtocol(coverArt.displaySource)
-        if (!path || path.length === 0) return
-
-        Quickshell.execDetached([
-            "/usr/bin/bash",
-            Directories.scriptsPath + "/cava/apply_cover_theme.sh",
-            path,
-        ])
-    }
-
-    onEnabledChanged: root._scheduleCoverRefresh()
-    onUseCoverSourceChanged: root._scheduleCoverRefresh()
-
-    Connections {
-        target: MprisController
-        function onTrackChanged(): void {
-            root._scheduleCoverRefresh()
-        }
-    }
 }

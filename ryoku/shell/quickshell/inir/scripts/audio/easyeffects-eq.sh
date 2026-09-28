@@ -280,7 +280,7 @@ read_state() {
 }
 
 bootstrap_equalizer() {
-    local response attempt
+    local response
     if find_equalizer_instance; then
         read_state
         return 0
@@ -305,7 +305,7 @@ bootstrap_equalizer() {
         return 0
     fi
 
-    for attempt in $(seq 1 20); do
+    for _ in $(seq 1 20); do
         equalizer_instance=""
         if find_equalizer_instance; then
             read_state

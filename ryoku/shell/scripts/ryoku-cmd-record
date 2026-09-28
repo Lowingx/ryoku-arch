@@ -326,7 +326,7 @@ cleanup_stale_audio_mix() {
 # combine-stream module records as silence on current PipeWire, so a null sink is
 # the shape that actually carries both signals.
 create_audio_mix() {
-  local system mic mixed attempt
+  local system mic mixed
   system="$(default_sink_monitor)"
   mic="$(default_source_name)"
   audio_source_exists "$system" && audio_source_exists "$mic" || return 1
@@ -344,7 +344,7 @@ create_audio_mix() {
     "source=$mic" "sink=$sink" "latency_msec=20" "remix=yes" 2>/dev/null || true)"
   [[ -n $MIX_MIC_MODULE ]] || { cleanup_audio_mix; return 1; }
   mixed="${sink}.monitor"
-  for attempt in {1..20}; do
+  for _ in {1..20}; do
     if audio_source_exists "$mixed"; then AUDIO_DEVICE="$mixed"; return 0; fi
     sleep 0.05
   done

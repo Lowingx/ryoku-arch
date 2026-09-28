@@ -139,6 +139,10 @@
   grazes the frame.
 
 ### Fixed
+- **iRiS no longer rewrites the terminal cava theme.** Its cover-art hook ran
+  iNiR's colour pipeline, which is not shipped here and fought Ryoku's
+  matugen theming; the in-shell visualizers still take their colours from
+  the cover art directly.
 - **Clicking an app in the iRiS dock takes you to it.** The frame's toplevel
   list was the compositor's plain window records, which carry no `activate`,
   so every click died on a TypeError; it now hands the dock real toplevels
