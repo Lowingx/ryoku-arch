@@ -182,11 +182,44 @@ Scope {
         }
         return null;
     }
+    // The live WidgetSlot for a built-in or iRiS scope. Every slot rides a
+    // full-screen host, so its x/y/width/height are already monitor pixels the
+    // inspector can dock beside.
+    function _outerFor(w) {
+        switch (w) {
+        case "clock": return clockLoader.item;
+        case "calendar": return calendarLoader.item;
+        case "music": return musicLoader.item;
+        case "aio": return aioLoader.item;
+        case "stats": return statsLoader.item;
+        case "weather": return weatherLoader.item;
+        case "notes": return notesLoader.item;
+        case "dayprogress": return dayprogressLoader.item;
+        case "shape": return shapeLoader.item;
+        }
+        for (var i = 0; i < irisRepeater.count; i++) {
+            const ld = irisRepeater.itemAt(i);
+            if (ld && ld.item && ld.modelData && ld.modelData.prefix === w)
+                return ld.item;
+        }
+        return null;
+    }
+    function slotFor(w) {
+        const outer = root._outerFor(w);
+        if (!outer)
+            return null;
+        const kids = outer.children;
+        for (var i = 0; i < kids.length; i++)
+            if (kids[i] && kids[i].widget === w)
+                return kids[i];
+        return null;
+    }
     // Arm-and-open for the right-click menus: the first open builds the menu
     // synchronously, and the pending request lands the moment it is ready.
     property var pendingWidgetMenu: null
     property var pendingDesktopMenu: null
     property var pendingPluginMenu: null
+    property var pendingInspector: null
     // The bare-wallpaper right-click opens the system desktop menu; a widget's
     // right-click opens its own menu. Two loaders keep the desktop menu the
     // shared iRiS-structured surface (DesktopContextMenu), never the widget one.
@@ -201,6 +234,20 @@ Scope {
         }
         root.pendingWidgetMenu = [widget, x, y];
         widgetMenuLoader.active = true;
+    }
+    // Open the widget inspector (the Customize sheet) docked beside `widget`.
+    // Built like the menus: the first call builds the surface and the pending
+    // request lands once it is ready. The slot is handed over live so the sheet
+    // re-docks as the widget resizes under the edits.
+    function openInspector(widget) {
+        if (widget === "desktop")
+            return;
+        if (inspectorLoader.item) {
+            inspectorLoader.item.openFor(widget, root.slotFor(widget));
+            return;
+        }
+        root.pendingInspector = widget;
+        inspectorLoader.active = true;
     }
     function openDesktopMenu(x, y) {
         if (desktopMenuLoader.item) {
@@ -227,6 +274,11 @@ Scope {
         || (desktopMenuLoader.item && desktopMenuLoader.item.showing === true)
         || (pluginMenuLoader.item && pluginMenuLoader.item.showing === true)
 
+    // The inspector sheet currently on screen; drives its own Overlay surface so
+    // it is mapped and takes keyboard only while it shows.
+    readonly property bool inspectorShowing:
+        inspectorLoader.item && inspectorLoader.item.showing === true
+
     // The Edit widgets bar rides a work-area surface, so a dock that reserves an
     // exclusive zone already sits outside it. A dock that reserves nothing (the
     // iRiS dock with reserve-space off) still paints there, so lift the bar by the
@@ -245,6 +297,11 @@ Scope {
             if (mon !== "" && mon !== root.monitorName)
                 return;
             root.openWidgetMenu(widget, 180, 140);
+        }
+        function onWidgetCustomizeRequested(mon, widget) {
+            if (mon !== "" && mon !== root.monitorName)
+                return;
+            root.openInspector(widget);
         }
     }
     // A widget frame's Settings button: open that built-in's own menu at the
@@ -953,6 +1010,7 @@ Scope {
         // colour modes; the adapter renders the vendored inir face in Ryoku's
         // look. Driven by the shared roster so a face is registered once.
         Repeater {
+            id: irisRepeater
             model: IrisRoster.faces
             delegate: Loader {
                 id: irisLoader
@@ -1338,7 +1396,9 @@ Scope {
                 root.openWidgetMenu(p[0], p[1], p[2]);
             }
             sourceComponent: Component {
-                WidgetMenu {}
+                WidgetMenu {
+                    onCustomizeRequested: (w) => root.openInspector(w)
+                }
             }
         }
 
@@ -1424,6 +1484,43 @@ Scope {
         }
     }
 
+    // The widget inspector (Customize sheet) rides its own Overlay surface next
+    // to the menu one: exclusiveZone 0 keeps it inside the work area, clear of
+    // the bars, dock and frame. Unlike the menu it never dismisses on an outside
+    // click -- the surface masks to the sheet, so a press off it falls through to
+    // the widgets and the user watches the widget retune live. Esc and the close
+    // button dismiss; keyboard is taken on demand for the text fields.
+    PanelWindow {
+        id: inspectorWin
+        screen: root.screen
+        visible: root.inspectorShowing
+        color: "transparent"
+        exclusiveZone: 0
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.namespace: "ryoku-desktop-inspector"
+        WlrLayershell.keyboardFocus: root.inspectorShowing ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+        anchors { top: true; left: true; right: true; bottom: true }
+        // Masked to the sheet so an outside press reaches the widgets; the video
+        // picker draws full-surface, so drop the mask while it is open.
+        mask: (root.inspectorShowing && !(inspectorLoader.item && inspectorLoader.item.pickerOpen === true)) ? inspectorMask : null
+        Region { id: inspectorMask; item: inspectorLoader.item ? inspectorLoader.item.sheetItem : null }
+
+        Loader {
+            id: inspectorLoader
+            anchors.fill: parent
+            z: 90
+            active: false
+            onItemChanged: if (item && root.pendingInspector) {
+                const p = root.pendingInspector;
+                root.pendingInspector = null;
+                root.openInspector(p);
+            }
+            sourceComponent: Component {
+                WidgetInspector {}
+            }
+        }
+    }
+
     // The Edit widgets bar on its own layer-shell surface (docs/stage.md). With
     // exclusiveZone 0 its geometry already excludes the bars and any dock or
     // frame-style island that reserves a zone (a dock that reserves nothing is
@@ -1453,6 +1550,7 @@ Scope {
             dockClearance: root.editBarDockClear
             onDone: StageCfg.StageSession.leave()
             onAddToggle: id => root.stageAddToggle(id)
+            onCustomize: id => root.openInspector(id)
         }
     }
 }

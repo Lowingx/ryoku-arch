@@ -30,6 +30,8 @@ Rectangle {
 
     signal toggle(string id)
     signal requestClose()
+    // Open the widget inspector (Customize sheet) for an enabled row.
+    signal customize(string id)
 
     // Short descriptions under each name. The labels and icons live in the roster;
     // these one-line hints are presentation copy, so they live with the surface
@@ -379,7 +381,7 @@ Rectangle {
                         visible: !dg.isHeader
                         anchors {
                             left: rowGlyph.right; leftMargin: Theme.s3
-                            right: rowSwitch.left; rightMargin: Theme.s3
+                            right: custBtn.visible ? custBtn.left : rowSwitch.left; rightMargin: Theme.s3
                             verticalCenter: parent.verticalCenter
                         }
                         spacing: 1
@@ -409,12 +411,30 @@ Rectangle {
                         on: dg.on
                         onToggled: v => { if (dg.entry) panel.toggle(dg.entry.id); }
                     }
+                    // A quiet Customize affordance: open the widget inspector for
+                    // an enabled row, so a face can be tuned from the picker too.
+                    MaterialIcon {
+                        id: custBtn
+                        visible: !dg.isHeader && dg.on
+                        anchors { right: rowSwitch.left; rightMargin: Theme.s3; verticalCenter: parent.verticalCenter }
+                        text: "tune"
+                        font.pixelSize: 18
+                        color: custMa.containsMouse ? Theme.ink : Theme.inkDim
+                        MouseArea {
+                            id: custMa
+                            anchors.fill: parent
+                            anchors.margins: -Theme.s1
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: if (dg.entry) panel.customize(dg.entry.id)
+                        }
+                    }
                     // Click anywhere left of the switch toggles the row and moves
                     // the highlight there.
                     MouseArea {
                         id: rowMa
                         visible: !dg.isHeader
-                        anchors { left: parent.left; right: rowSwitch.left; top: parent.top; bottom: parent.bottom }
+                        anchors { left: parent.left; right: custBtn.visible ? custBtn.left : rowSwitch.left; top: parent.top; bottom: parent.bottom }
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {

@@ -30,6 +30,8 @@ Item {
 
     signal done()
     signal addToggle(string id)
+    // Forwarded from the picker: open a widget's inspector (Customize sheet).
+    signal customize(string id)
 
     readonly property var ses: StageCfg.StageSession
     readonly property var grid: StageCfg.Config
@@ -308,5 +310,6 @@ Item {
         maxPanelHeight: bar.y - Theme.s2 - Theme.s5
         onToggle: id => ed.addToggle(id)
         onRequestClose: ed.pickerOpen = false
+        onCustomize: id => ed.customize(id)
     }
 }

@@ -97,6 +97,17 @@
   `modules/bar/RecordIsland.qml`, `modules/bar/popouts/CapturePopout.qml`).
 
 ### Changed
+- **A widget's Customize sheet replaces its screen-tall menu.** A desktop
+  widget's right-click menu is short again -- Style, Size, Lock, a primary
+  Customize row, Hide, and Settings/Reload -- and Customize opens a paper-and-ink
+  inspector docked beside the widget (on the side with more room, never over it)
+  on its own Overlay surface that stays open while the widget retunes live. Its
+  tabs -- Look, Placement, then one per group of the widget's own options panel,
+  derived from that panel's section headers without rewriting the panel -- gather
+  every setting the strip used to stack, and `ryoku-shell desktop customize
+  <widget>` plus a Customize affordance on the Edit-widgets picker open it too
+  (`modules/desktop/WidgetMenu.qml`, `modules/desktop/WidgetInspector.qml`,
+  `modules/desktop/Desktop.qml`, `modules/desktop/WidgetPicker.qml`, `shell.qml`).
 - **Ryoku's desktop is the one place widgets are drawn.** The vendored iRiS
   background widget canvas no longer mounts under the iRiS bar style, and no iRiS
   surface sits over the wallpaper, so a face is painted once, on Ryoku's

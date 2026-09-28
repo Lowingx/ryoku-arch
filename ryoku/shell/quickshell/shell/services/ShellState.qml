@@ -85,6 +85,11 @@ Singleton {
     signal widgetMenuRequested(string mon, string widget)
     function requestWidgetMenu(mon, widget) { root.widgetMenuRequested(mon, widget); }
 
+    // Open a desktop widget's inspector (the Customize sheet) from off-surface,
+    // the same addressable routing as the right-click menu above.
+    signal widgetCustomizeRequested(string mon, string widget)
+    function requestWidgetCustomize(mon, widget) { root.widgetCustomizeRequested(mon, widget); }
+
     // Open a surface on the focused monitor: the menu global-shortcut handlers
     // call this so a keybind lands on the active screen, matching the old
     // `ryoku-shell menu <id>` which routed to the daemon's activeMonitor.

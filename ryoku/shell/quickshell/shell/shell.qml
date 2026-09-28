@@ -817,6 +817,16 @@ ShellRoot {
             }
             ShellState.requestWidgetMenu(m, widget);
         }
+        // Open a widget's inspector (Customize sheet) on a monitor (empty =
+        // focused), the off-surface twin of the right-click Customize row.
+        function customize(widget: string, mon: string): void {
+            var m = mon;
+            if (!m || m.length === 0) {
+                const st = ShellState.forActive();
+                m = (st && st.modelData) ? st.modelData.name : "";
+            }
+            ShellState.requestWidgetCustomize(m, widget);
+        }
     }
 
     IpcHandler {
