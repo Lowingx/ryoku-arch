@@ -730,8 +730,8 @@ AbstractBackgroundWidget {
         surfaceAccent: root.widgetAccent3
         surfaceFill: root.widgetPlateColor
         surfaceUseBlur: root.effectiveBlur
-        screenX: root.x
-        screenY: root.y
+        screenX: root.ryokuScreenX
+        screenY: root.ryokuScreenY
         screenWidth: root.scaledScreenWidth
         screenHeight: root.scaledScreenHeight
         shown: root.backgroundOpacity > 0 || root.borderWidth > 0 || root.effectiveBlur

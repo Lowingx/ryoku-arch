@@ -18,7 +18,16 @@ Item {
         Config.revision
         return Config.getNestedValue(root.spec.path, root.spec.fallback)
     }
-    readonly property var choices: root.spec.choices ?? []
+    // A choice row may carry a Ryoku-specific vocabulary (Ink/Wallpaper/Custom for
+    // accent and highlight); fall back to the shared list.
+    readonly property var choices: (IrisStyle.ryokuFrontend && root.spec.ryokuChoices !== undefined)
+        ? root.spec.ryokuChoices : (root.spec.choices ?? [])
+    // A value stored under the other frontend's vocabulary (e.g. an iNiR "blue"
+    // seen under Ryoku) resolves to this frontend's default so the picker still
+    // shows what actually renders, without rewriting the stored value.
+    readonly property var selectedValue: (root.spec.kind === "choice"
+        && root.choices.length > 0 && !root.choices.some(choice => choice.value === root.value))
+        ? root.choices[0].value : root.value
     readonly property bool resettable: root.spec.fallback !== undefined && String(root.spec.path ?? "").startsWith("iris.")
     readonly property bool modified: root.resettable && !IrisOptions.same(root.value, root.spec.fallback)
     readonly property bool pictured: root.choices.some(choice => String(choice.glyph ?? "").length > 0)
@@ -115,7 +124,7 @@ Item {
 
             IrisText {
                 visible: root.swatched
-                text: Translation.tr(String(root.choices.find(choice => choice.value === root.value)?.label ?? ""))
+                text: Translation.tr(String(root.choices.find(choice => choice.value === root.selectedValue)?.label ?? ""))
                 color: IrisStyle.subtext
                 font.pixelSize: 12.5 * IrisStyle.typeScale
             }
@@ -352,7 +361,7 @@ Item {
                 MouseArea {
                     id: swatch
                     required property var modelData
-                    readonly property bool selected: root.value === swatch.modelData.value
+                    readonly property bool selected: root.selectedValue === swatch.modelData.value
                     readonly property string special: swatch.modelData.swatch !== undefined ? "" : String(swatch.modelData.value)
                     width: Math.round(30 * root.d)
                     height: width
@@ -379,7 +388,7 @@ Item {
                         radius: width / 2
                         border.width: 1
                         border.color: IrisStyle.borderStrong
-                        color: swatch.special === "wallpaper" ? IrisStyle.wallpaperLight
+                        color: swatch.special === "wallpaper" ? (IrisStyle.ryokuFrontend ? IrisStyle.accentWallpaper : IrisStyle.wallpaperLight)
                             : swatch.special === "accent" ? IrisStyle.accent
                             : swatch.special === "custom" ? "transparent"
                             : swatch.modelData.swatch
@@ -576,7 +585,7 @@ Item {
                 MouseArea {
                     id: chip
                     required property var modelData
-                    readonly property bool selected: chip.modelData.value === root.value
+                    readonly property bool selected: chip.modelData.value === root.selectedValue
                     width: chipLabel.implicitWidth + Math.round(24 * root.d)
                     height: Math.round(28 * root.d)
                     cursorShape: Qt.PointingHandCursor
@@ -614,7 +623,7 @@ Item {
 
         Rectangle {
             id: segmented
-            readonly property int selectedIndex: root.choices.findIndex(choice => choice.value === root.value)
+            readonly property int selectedIndex: root.choices.findIndex(choice => choice.value === root.selectedValue)
             implicitHeight: Math.round((root.pictured ? 52 : 28) * root.d)
             radius: root.pictured ? IrisStyle.radiusTile : height / 2
             color: IrisStyle.fillQuiet

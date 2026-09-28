@@ -28,6 +28,11 @@ Rectangle {
     property real screenWidth: 1920
     property real screenHeight: 1080
 
+    // The additive Ryoku skin for this surface, chosen per widget by the host —
+    // never the global iris.appearance.frontend. Default off keeps the upstream
+    // iRiS plate.
+    property bool ryokuStyle: false
+
     // Widget customization passthrough
     property real surfaceOpacity: 0.06
     property real surfaceBorderWidth: 1
@@ -122,7 +127,7 @@ Rectangle {
         root.colorMode === "auto" ? root.surfaceFill : root._plate, root._plateAlpha)
     // iRiS plates are the Island material (optionally carrying the wallpaper's
     // hue); a widget's own semantic fill would bring Material tones back in.
-    readonly property color _irisMaterial: IrisStyle.ryokuFrontend ? IrisStyle.surface
+    readonly property color _irisMaterial: root.ryokuStyle ? IrisStyle.surface
         : root._irisMaterialName === "tinted"
         ? ColorUtils.mix(IrisStyle.surface, Appearance.colors.colPrimary, 0.82) : IrisStyle.surface
     readonly property color _irisFill: root._irisClear || root._irisGlass

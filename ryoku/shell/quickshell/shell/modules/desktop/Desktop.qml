@@ -11,6 +11,10 @@ import "aio"
 import "stats"
 import "weather"
 import "notes"
+import "dayprogress"
+import "shape"
+import "iris"
+import "iris/IrisRoster.js" as IrisRoster
 import Ryoku.PluginKit
 import shell.services as Services
 import "../stage"
@@ -66,10 +70,13 @@ Scope {
     // Edit widgets on this monitor frees every widget for dragging and lifts
     // this desktop above open windows; Done restores the per-widget locks.
     readonly property bool stageComposing: StageCfg.StageSession.onMonitor(root.monitorName)
-    // Grab the keyboard while composing so Esc/Enter exit the mode (the bar owns
-    // the keys); dropping it hands the keyboard back like any widget edit.
+    // The editor grid the bar drives; slots snap to it while composing.
+    readonly property real editGridSize: StageCfg.Config.editGridSize
+    readonly property bool editGridSnap: StageCfg.Config.editGridSnap
+    // Snapshot the layout when a compose session opens so Reset can restore it.
+    // The edit bar lives on its own surface now and takes no keyboard, so the
+    // desktop layer no longer grabs the keyboard for it.
     onStageComposingChanged: {
-        win.kbWanted += root.stageComposing ? 1 : -1;
         if (root.stageComposing)
             root._snapshot();
     }
@@ -95,6 +102,8 @@ Scope {
             { id: "stats", label: "System stats", icon: "monitor_heart", enabled: Config.statsEnabled, group: "" },
             { id: "weather", label: "Weather", icon: "partly_cloudy_day", enabled: Config.weatherEnabled, group: "" },
             { id: "notes", label: "Notes", icon: "sticky_note_2", enabled: Config.notesEnabled, group: "" },
+            { id: "dayprogress", label: "Day Progress", icon: "donut_large", enabled: Config.dayprogressEnabled, group: "" },
+            { id: "shape", label: "Shape", icon: "category", enabled: Config.shapeEnabled, group: "" },
             { id: "visualizer", label: "Visualizer", icon: "graphic_eq", enabled: VizCfg.Config.enabled, group: "" }
         ];
         // Fallback group name for a plugin whose manifest names no set. Plain
@@ -122,6 +131,13 @@ Scope {
             });
         }
         const out = bi.slice();
+        // the vendored iRiS faces: one roster row each, on/off from widgets.json,
+        // grouped so the Hub's Add drop-down keeps them together.
+        const irisFaces = IrisRoster.faces;
+        for (var k = 0; k < irisFaces.length; k++) {
+            const f = irisFaces[k];
+            out.push({ id: f.prefix, label: f.label, icon: f.icon, enabled: Config[f.prefix + "Enabled"] === true, group: "iRiS widgets" });
+        }
         for (var g = 0; g < order.length; g++) {
             const rows = byGroup[order[g]];
             for (var r = 0; r < rows.length; r++)
@@ -166,15 +182,30 @@ Scope {
     // Arm-and-open for the right-click menus: the first open builds the menu
     // synchronously, and the pending request lands the moment it is ready.
     property var pendingWidgetMenu: null
+    property var pendingDesktopMenu: null
     property var pendingPluginMenu: null
+    // The bare-wallpaper right-click opens the system desktop menu; a widget's
+    // right-click opens its own menu. Two loaders keep the desktop menu the
+    // shared iRiS-structured surface (DesktopContextMenu), never the widget one.
     function openWidgetMenu(widget, x, y) {
+        if (widget === "desktop") {
+            root.openDesktopMenu(x, y);
+            return;
+        }
         if (widgetMenuLoader.item) {
-            if (widget === "desktop") widgetMenuLoader.item.openDesktop(x, y);
-            else widgetMenuLoader.item.openFor(widget, x, y);
+            widgetMenuLoader.item.openFor(widget, x, y);
             return;
         }
         root.pendingWidgetMenu = [widget, x, y];
         widgetMenuLoader.active = true;
+    }
+    function openDesktopMenu(x, y) {
+        if (desktopMenuLoader.item) {
+            desktopMenuLoader.item.openAt(x, y);
+            return;
+        }
+        root.pendingDesktopMenu = [x, y];
+        desktopMenuLoader.active = true;
     }
     function openPluginMenu(id, locked, x, y, manifest, placement) {
         if (pluginMenuLoader.item) {
@@ -183,6 +214,16 @@ Scope {
         }
         root.pendingPluginMenu = [id, locked, x, y, manifest, placement];
         pluginMenuLoader.active = true;
+    }
+    // Off-surface open of a widget's right-click menu (the `desktop menu` IPC /
+    // niri routing). Lands near the top-left of this monitor's canvas.
+    Connections {
+        target: Services.ShellState
+        function onWidgetMenuRequested(mon, widget) {
+            if (mon !== "" && mon !== root.monitorName)
+                return;
+            root.openWidgetMenu(widget, 180, 140);
+        }
     }
     // A widget frame's Settings button: open that built-in's own menu at the
     // frame's corner (its design, lock, size, opacity, colour, snap).
@@ -207,7 +248,8 @@ Scope {
         "aioEnabled", "aioStyle", "aioScale", "aioAnchor", "aioX", "aioY", "aioLocked", "aioOpacity", "aioColor", "aioColor2", "aioGradient",
         "statsEnabled", "statsScale", "statsAnchor", "statsX", "statsY", "statsLocked", "statsOpacity", "statsColor", "statsColor2", "statsGradient",
         "weatherEnabled", "weatherDesign", "weatherScale", "weatherAnchor", "weatherX", "weatherY", "weatherLocked", "weatherOpacity", "weatherColor", "weatherColor2", "weatherGradient",
-        "notesEnabled", "notesScale", "notesAnchor", "notesX", "notesY", "notesLocked", "notesOpacity", "notesWidth", "notesHeight", "notesColor", "notesColor2", "notesGradient"
+        "notesEnabled", "notesScale", "notesAnchor", "notesX", "notesY", "notesLocked", "notesOpacity", "notesWidth", "notesHeight", "notesColor", "notesColor2", "notesGradient",
+        "irisClockEnabled", "irisClockScale", "irisClockAnchor", "irisClockX", "irisClockY", "irisClockLocked", "irisClockOpacity", "irisClockBg", "irisClockColor", "irisClockColor2", "irisClockGradient", "irisClockSize", "irisClockOpts", "irisWeatherEnabled", "irisWeatherScale", "irisWeatherAnchor", "irisWeatherX", "irisWeatherY", "irisWeatherLocked", "irisWeatherOpacity", "irisWeatherBg", "irisWeatherColor", "irisWeatherColor2", "irisWeatherGradient", "irisWeatherSize", "irisWeatherOpts", "irisMediaEnabled", "irisMediaScale", "irisMediaAnchor", "irisMediaX", "irisMediaY", "irisMediaLocked", "irisMediaOpacity", "irisMediaBg", "irisMediaColor", "irisMediaColor2", "irisMediaGradient", "irisMediaSize", "irisMediaOpts", "irisControlsEnabled", "irisControlsScale", "irisControlsAnchor", "irisControlsX", "irisControlsY", "irisControlsLocked", "irisControlsOpacity", "irisControlsBg", "irisControlsColor", "irisControlsColor2", "irisControlsGradient", "irisControlsSize", "irisControlsOpts", "irisMonthEnabled", "irisMonthScale", "irisMonthAnchor", "irisMonthX", "irisMonthY", "irisMonthLocked", "irisMonthOpacity", "irisMonthBg", "irisMonthColor", "irisMonthColor2", "irisMonthGradient", "irisMonthSize", "irisMonthOpts", "irisAgendaEnabled", "irisAgendaScale", "irisAgendaAnchor", "irisAgendaX", "irisAgendaY", "irisAgendaLocked", "irisAgendaOpacity", "irisAgendaBg", "irisAgendaColor", "irisAgendaColor2", "irisAgendaGradient", "irisAgendaSize", "irisAgendaOpts", "irisTodoEnabled", "irisTodoScale", "irisTodoAnchor", "irisTodoX", "irisTodoY", "irisTodoLocked", "irisTodoOpacity", "irisTodoBg", "irisTodoColor", "irisTodoColor2", "irisTodoGradient", "irisTodoSize", "irisTodoOpts", "irisNotesEnabled", "irisNotesScale", "irisNotesAnchor", "irisNotesX", "irisNotesY", "irisNotesLocked", "irisNotesOpacity", "irisNotesBg", "irisNotesColor", "irisNotesColor2", "irisNotesGradient", "irisNotesSize", "irisNotesOpts", "irisTimersEnabled", "irisTimersScale", "irisTimersAnchor", "irisTimersX", "irisTimersY", "irisTimersLocked", "irisTimersOpacity", "irisTimersBg", "irisTimersColor", "irisTimersColor2", "irisTimersGradient", "irisTimersSize", "irisTimersOpts", "irisScreenEnabled", "irisScreenScale", "irisScreenAnchor", "irisScreenX", "irisScreenY", "irisScreenLocked", "irisScreenOpacity", "irisScreenBg", "irisScreenColor", "irisScreenColor2", "irisScreenGradient", "irisScreenSize", "irisScreenOpts", "irisVitalsEnabled", "irisVitalsScale", "irisVitalsAnchor", "irisVitalsX", "irisVitalsY", "irisVitalsLocked", "irisVitalsOpacity", "irisVitalsBg", "irisVitalsColor", "irisVitalsColor2", "irisVitalsGradient", "irisVitalsSize", "irisVitalsOpts", "irisBatteryEnabled", "irisBatteryScale", "irisBatteryAnchor", "irisBatteryX", "irisBatteryY", "irisBatteryLocked", "irisBatteryOpacity", "irisBatteryBg", "irisBatteryColor", "irisBatteryColor2", "irisBatteryGradient", "irisBatterySize", "irisBatteryOpts", "irisWorldEnabled", "irisWorldScale", "irisWorldAnchor", "irisWorldX", "irisWorldY", "irisWorldLocked", "irisWorldOpacity", "irisWorldBg", "irisWorldColor", "irisWorldColor2", "irisWorldGradient", "irisWorldSize", "irisWorldOpts", "irisDateEnabled", "irisDateScale", "irisDateAnchor", "irisDateX", "irisDateY", "irisDateLocked", "irisDateOpacity", "irisDateBg", "irisDateColor", "irisDateColor2", "irisDateGradient", "irisDateSize", "irisDateOpts", "irisProfileEnabled", "irisProfileScale", "irisProfileAnchor", "irisProfileX", "irisProfileY", "irisProfileLocked", "irisProfileOpacity", "irisProfileBg", "irisProfileColor", "irisProfileColor2", "irisProfileGradient", "irisProfileSize", "irisProfileOpts", "irisUptimeEnabled", "irisUptimeScale", "irisUptimeAnchor", "irisUptimeX", "irisUptimeY", "irisUptimeLocked", "irisUptimeOpacity", "irisUptimeBg", "irisUptimeColor", "irisUptimeColor2", "irisUptimeGradient", "irisUptimeSize", "irisUptimeOpts", "irisNewsEnabled", "irisNewsScale", "irisNewsAnchor", "irisNewsX", "irisNewsY", "irisNewsLocked", "irisNewsOpacity", "irisNewsBg", "irisNewsColor", "irisNewsColor2", "irisNewsGradient", "irisNewsSize", "irisNewsOpts", "irisClockStyle", "irisWeatherStyle", "irisMediaStyle", "irisControlsStyle", "irisMonthStyle", "irisAgendaStyle", "irisTodoStyle", "irisNotesStyle", "irisTimersStyle", "irisScreenStyle", "irisVitalsStyle", "irisBatteryStyle", "irisWorldStyle", "irisDateStyle", "irisProfileStyle", "irisUptimeStyle", "irisNewsStyle", "irisClockRadius", "irisClockPad", "irisClockBorder", "irisClockBorderOpacity", "irisClockBackingOpacity", "irisWeatherRadius", "irisWeatherPad", "irisWeatherBorder", "irisWeatherBorderOpacity", "irisWeatherBackingOpacity", "irisMediaRadius", "irisMediaPad", "irisMediaBorder", "irisMediaBorderOpacity", "irisMediaBackingOpacity", "irisControlsRadius", "irisControlsPad", "irisControlsBorder", "irisControlsBorderOpacity", "irisControlsBackingOpacity", "irisMonthRadius", "irisMonthPad", "irisMonthBorder", "irisMonthBorderOpacity", "irisMonthBackingOpacity", "irisAgendaRadius", "irisAgendaPad", "irisAgendaBorder", "irisAgendaBorderOpacity", "irisAgendaBackingOpacity", "irisTodoRadius", "irisTodoPad", "irisTodoBorder", "irisTodoBorderOpacity", "irisTodoBackingOpacity", "irisNotesRadius", "irisNotesPad", "irisNotesBorder", "irisNotesBorderOpacity", "irisNotesBackingOpacity", "irisTimersRadius", "irisTimersPad", "irisTimersBorder", "irisTimersBorderOpacity", "irisTimersBackingOpacity", "irisScreenRadius", "irisScreenPad", "irisScreenBorder", "irisScreenBorderOpacity", "irisScreenBackingOpacity", "irisVitalsRadius", "irisVitalsPad", "irisVitalsBorder", "irisVitalsBorderOpacity", "irisVitalsBackingOpacity", "irisBatteryRadius", "irisBatteryPad", "irisBatteryBorder", "irisBatteryBorderOpacity", "irisBatteryBackingOpacity", "irisWorldRadius", "irisWorldPad", "irisWorldBorder", "irisWorldBorderOpacity", "irisWorldBackingOpacity", "irisDateRadius", "irisDatePad", "irisDateBorder", "irisDateBorderOpacity", "irisDateBackingOpacity", "irisProfileRadius", "irisProfilePad", "irisProfileBorder", "irisProfileBorderOpacity", "irisProfileBackingOpacity", "irisUptimeRadius", "irisUptimePad", "irisUptimeBorder", "irisUptimeBorderOpacity", "irisUptimeBackingOpacity", "irisNewsRadius", "irisNewsPad", "irisNewsBorder", "irisNewsBorderOpacity", "irisNewsBackingOpacity", "irisCustomImageEnabled", "irisCustomImageScale", "irisCustomImageAnchor", "irisCustomImageX", "irisCustomImageY", "irisCustomImageLocked", "irisCustomImageOpacity", "irisCustomImageBg", "irisCustomImageColor", "irisCustomImageColor2", "irisCustomImageGradient", "irisCustomImageSize", "irisCustomImageOpts", "irisCustomImageStyle", "irisCustomImageRadius", "irisCustomImagePad", "irisCustomImageBorder", "irisCustomImageBorderOpacity", "irisCustomImageBackingOpacity", "irisEditorialEnabled", "irisEditorialScale", "irisEditorialAnchor", "irisEditorialX", "irisEditorialY", "irisEditorialLocked", "irisEditorialOpacity", "irisEditorialBg", "irisEditorialColor", "irisEditorialColor2", "irisEditorialGradient", "irisEditorialSize", "irisEditorialOpts", "irisEditorialStyle", "irisEditorialRadius", "irisEditorialPad", "irisEditorialBorder", "irisEditorialBorderOpacity", "irisEditorialBackingOpacity", "irisConverterEnabled", "irisConverterScale", "irisConverterAnchor", "irisConverterX", "irisConverterY", "irisConverterLocked", "irisConverterOpacity", "irisConverterBg", "irisConverterColor", "irisConverterColor2", "irisConverterGradient", "irisConverterSize", "irisConverterOpts", "irisConverterStyle", "irisConverterRadius", "irisConverterPad", "irisConverterBorder", "irisConverterBorderOpacity", "irisConverterBackingOpacity", "irisJpEnabled", "irisJpScale", "irisJpAnchor", "irisJpX", "irisJpY", "irisJpLocked", "irisJpOpacity", "irisJpBg", "irisJpColor", "irisJpColor2", "irisJpGradient", "irisJpSize", "irisJpOpts", "irisJpStyle", "irisJpRadius", "irisJpPad", "irisJpBorder", "irisJpBorderOpacity", "irisJpBackingOpacity", "irisVisualizerEnabled", "irisVisualizerScale", "irisVisualizerAnchor", "irisVisualizerX", "irisVisualizerY", "irisVisualizerLocked", "irisVisualizerOpacity", "irisVisualizerBg", "irisVisualizerColor", "irisVisualizerColor2", "irisVisualizerGradient", "irisVisualizerSize", "irisVisualizerOpts", "irisVisualizerStyle", "irisVisualizerRadius", "irisVisualizerPad", "irisVisualizerBorder", "irisVisualizerBorderOpacity", "irisVisualizerBackingOpacity"
     ]
     property var _snapConfig: null
     property var _snapPlugins: null
@@ -573,6 +615,8 @@ Scope {
                 freeY: Config.clockY
                 locked: root.stageComposing ? false : Config.clockLocked
                 composing: root.stageComposing
+                gridSize: root.editGridSize
+                snapEnabled: root.editGridSnap
                 bg: Config.clockBg
                 radius: Config.clockRadius
                 scaleCfg: Config.clockScale
@@ -604,6 +648,8 @@ Scope {
                 freeY: Config.calendarY
                 locked: root.stageComposing ? false : Config.calendarLocked
                 composing: root.stageComposing
+                gridSize: root.editGridSize
+                snapEnabled: root.editGridSnap
                 bg: "none"
                 scaleCfg: Config.calendarScale
                 onMenuRequested: (x, y, w) => root.openWidgetMenu(w, x, y)
@@ -643,6 +689,8 @@ Scope {
                 freeY: Config.musicY
                 locked: root.stageComposing ? false : Config.musicLocked
                 composing: root.stageComposing
+                gridSize: root.editGridSize
+                snapEnabled: root.editGridSnap
                 bg: "none"
                 scaleCfg: Config.musicScale
                 onMenuRequested: (x, y, w) => root.openWidgetMenu(w, x, y)
@@ -685,6 +733,8 @@ Scope {
                 freeY: Config.aioY
                 locked: root.stageComposing ? false : Config.aioLocked
                 composing: root.stageComposing
+                gridSize: root.editGridSize
+                snapEnabled: root.editGridSnap
                 bg: "none"
                 scaleCfg: Config.aioScale
                 onMenuRequested: (x, y, w) => root.openWidgetMenu(w, x, y)
@@ -718,6 +768,8 @@ Scope {
                 freeY: Config.statsY
                 locked: root.stageComposing ? false : Config.statsLocked
                 composing: root.stageComposing
+                gridSize: root.editGridSize
+                snapEnabled: root.editGridSnap
                 bg: "none"
                 scaleCfg: Config.statsScale
                 onMenuRequested: (x, y, w) => root.openWidgetMenu(w, x, y)
@@ -750,6 +802,8 @@ Scope {
                 freeY: Config.weatherY
                 locked: root.stageComposing ? false : Config.weatherLocked
                 composing: root.stageComposing
+                gridSize: root.editGridSize
+                snapEnabled: root.editGridSnap
                 bg: "none"
                 scaleCfg: Config.weatherScale
                 onMenuRequested: (x, y, w) => root.openWidgetMenu(w, x, y)
@@ -783,6 +837,8 @@ Scope {
                 freeY: Config.notesY
                 locked: root.stageComposing ? false : Config.notesLocked
                 composing: root.stageComposing
+                gridSize: root.editGridSize
+                snapEnabled: root.editGridSnap
                 bg: "none"
                 scaleCfg: Config.notesScale
                 onMenuRequested: (x, y, w) => root.openWidgetMenu(w, x, y)
@@ -801,6 +857,129 @@ Scope {
                 }
             }
             }
+            }
+        }
+
+        Loader {
+            id: dayprogressLoader
+            anchors.fill: parent
+            z: root.widgetZ("dayprogress")
+            active: root.widgetsEnabled && root.reloadReady && Config.dayprogressEnabled
+            sourceComponent: Component {
+            Item {
+                anchors.fill: parent
+            WidgetSlot {
+                id: dayprogressSlot
+                widget: "dayprogress"
+                z: root.widgetZ("dayprogress")
+                visible: true
+                anchor: Config.dayprogressAnchor
+                freeX: Config.dayprogressX
+                freeY: Config.dayprogressY
+                locked: root.stageComposing ? false : Config.dayprogressLocked
+                composing: root.stageComposing
+                gridSize: root.editGridSize
+                snapEnabled: root.editGridSnap
+                bg: "none"
+                scaleCfg: Config.dayprogressScale
+                onMenuRequested: (x, y, w) => root.openWidgetMenu(w, x, y)
+                onDropped: (box) => win.flashDrop(box)
+                onResized: if (root.stageComposing) StageCfg.StageSession.markDirty()
+                DayProgressWidget {
+                    s: Config.dayprogressScale
+                }
+            }
+            }
+            }
+        }
+
+        Loader {
+            id: shapeLoader
+            anchors.fill: parent
+            z: root.widgetZ("shape")
+            active: root.widgetsEnabled && root.reloadReady && Config.shapeEnabled
+            sourceComponent: Component {
+            Item {
+                anchors.fill: parent
+            WidgetSlot {
+                id: shapeSlot
+                widget: "shape"
+                z: root.widgetZ("shape")
+                visible: true
+                anchor: Config.shapeAnchor
+                freeX: Config.shapeX
+                freeY: Config.shapeY
+                locked: root.stageComposing ? false : Config.shapeLocked
+                composing: root.stageComposing
+                gridSize: root.editGridSize
+                snapEnabled: root.editGridSnap
+                bg: "none"
+                scaleCfg: Config.shapeScale
+                onMenuRequested: (x, y, w) => root.openWidgetMenu(w, x, y)
+                onDropped: (box) => win.flashDrop(box)
+                onResized: if (root.stageComposing) StageCfg.StageSession.markDirty()
+                ShapeWidget {
+                    s: Config.shapeScale
+                }
+            }
+            }
+            }
+        }
+
+        // one IrisFaceWidget slot per enabled iRiS face. Same host contract as
+        // the built-ins -- WidgetSlot owns placement/size/lock/backing and the
+        // colour modes; the adapter renders the vendored inir face in Ryoku's
+        // look. Driven by the shared roster so a face is registered once.
+        Repeater {
+            model: IrisRoster.faces
+            delegate: Loader {
+                id: irisLoader
+                required property var modelData
+                anchors.fill: parent
+                z: root.widgetZ(irisLoader.modelData.prefix)
+                active: root.widgetsEnabled && root.reloadReady
+                    && (Config[irisLoader.modelData.prefix + "Enabled"] === true)
+                sourceComponent: Component {
+                    Item {
+                        anchors.fill: parent
+                        WidgetSlot {
+                            id: irisSlot
+                            widget: irisLoader.modelData.prefix
+                            z: root.widgetZ(irisLoader.modelData.prefix)
+                            visible: true
+                            anchor: Config[irisLoader.modelData.prefix + "Anchor"]
+                            freeX: Config[irisLoader.modelData.prefix + "X"]
+                            freeY: Config[irisLoader.modelData.prefix + "Y"]
+                            locked: root.stageComposing ? false : Config[irisLoader.modelData.prefix + "Locked"]
+                            composing: root.stageComposing
+                            gridSize: root.editGridSize
+                            snapEnabled: root.editGridSnap
+                            // iNiR style: the face owns its plate, so the slot draws no
+                            // backing. Ryoku style: the slot draws the chosen backing.
+                            bg: Config[irisLoader.modelData.prefix + "Style"] === "ryoku"
+                                ? Config[irisLoader.modelData.prefix + "Bg"] : "none"
+                            scaleCfg: Config[irisLoader.modelData.prefix + "Scale"]
+                            // per-widget geometry (Ryoku-style backing / iNiR plate radius)
+                            radiusOverride: Config[irisLoader.modelData.prefix + "Radius"]
+                            pad: Config[irisLoader.modelData.prefix + "Pad"] >= 0
+                                ? Config[irisLoader.modelData.prefix + "Pad"] : 0
+                            borderWidth: Config[irisLoader.modelData.prefix + "Border"]
+                            borderOpacity: Config[irisLoader.modelData.prefix + "BorderOpacity"]
+                            backingOpacity: Config[irisLoader.modelData.prefix + "BackingOpacity"]
+                            onMenuRequested: (x, y, w) => root.openWidgetMenu(w, x, y)
+                            onDropped: (box) => win.flashDrop(box)
+                            onResized: if (root.stageComposing) StageCfg.StageSession.markDirty()
+                            IrisFaceWidget {
+                                faceId: irisLoader.modelData.id
+                                kind: irisLoader.modelData.kind
+                                prefix: irisLoader.modelData.prefix
+                                screen: root.screen
+                                hostX: irisSlot.x
+                                hostY: irisSlot.y
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -1014,7 +1193,24 @@ Scope {
                 root.openWidgetMenu(p[0], p[1], p[2]);
             }
             sourceComponent: Component {
-                WidgetMenu { desktop: root }
+                WidgetMenu {}
+            }
+        }
+
+        // The system desktop right-click menu (bare wallpaper): the shared
+        // iRiS-structured surface, its own loader so it never rides the widget one.
+        Loader {
+            id: desktopMenuLoader
+            anchors.fill: parent
+            z: 90
+            active: false
+            onItemChanged: if (item && root.pendingDesktopMenu) {
+                const p = root.pendingDesktopMenu;
+                root.pendingDesktopMenu = null;
+                root.openDesktopMenu(p[0], p[1]);
+            }
+            sourceComponent: Component {
+                DesktopContextMenu { desktop: root }
             }
         }
 
@@ -1156,24 +1352,6 @@ Scope {
                 }
             }
         }
-        // The Edit widgets toolbar (docs/stage.md, "Edit widgets"): one row
-        // docked top-centre. The desktop draws the per-widget frames and runs
-        // the drag/resize; this owns the toolbar and the Add drop-down.
-        StageWidgetsEditor {
-            z: 101
-            visible: root.stageComposing
-            monitor: root.screen ? root.screen.name : ""
-            items: root.addItems
-            onDone: StageCfg.StageSession.leave()
-            onAddToggle: id => root.stageAddToggle(id)
-            onVisualizer: {
-                StageCfg.StageSession.leave();
-                if (!VizCfg.Config.enabled)
-                    VizCfg.Config.setEnabled(true);
-                if (root.stageState)
-                    root.stageState.visualizerPlacing = true;
-            }
-        }
 
         // position/scale writeback for plugin tiles. ryoku-plugins-place
         // merges free x/y (+ optional scale/locked) into plugins.json;
@@ -1204,6 +1382,33 @@ Scope {
         Process {
             id: resetProc
             onRunningChanged: if (!resetProc.running) root._runResetQueue()
+        }
+    }
+
+    // The Edit widgets bar on its own layer-shell surface (docs/stage.md). With
+    // exclusiveZone 0 its geometry already excludes the bars, the dock and the
+    // frame-style island, so the bar rests bottom-centre in the work area on
+    // every bar style (the recording-island idiom). Only the bar takes input; the
+    // rest of the surface is click-through so the widgets under it still drag.
+    PanelWindow {
+        id: editBarWin
+        screen: root.screen
+        visible: root.stageComposing
+        color: "transparent"
+        exclusiveZone: 0
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.namespace: "ryoku-widgets-editbar"
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+        anchors { top: true; bottom: true; left: true; right: true }
+        mask: Region { item: editBar.barItem }
+
+        WidgetEditBar {
+            id: editBar
+            anchors.fill: parent
+            monitor: root.screen ? root.screen.name : ""
+            items: root.addItems
+            onDone: StageCfg.StageSession.leave()
+            onAddToggle: id => root.stageAddToggle(id)
         }
     }
 }

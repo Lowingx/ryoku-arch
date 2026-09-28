@@ -20,17 +20,16 @@ QtObject {
         return JSON.stringify(root.plain(a)) === JSON.stringify(root.plain(b))
     }
 
-    // In the Ryoku frontend the family is paper-and-ink: colour, material and
-    // glass are inversion or fixed tokens, so these knobs cannot change anything
-    // and are withheld rather than shown dead (a control that cannot work is not
-    // offered). Everything else — geometry, motion, layout, size, type scale —
-    // drives both frontends.
+    // In the Ryoku frontend the family is paper-and-ink, but the Colour tab still
+    // drives real colour: the accent and highlight follow the wallpaper (native
+    // matugen primary) or a chosen hue, badges pick their source, and the light a
+    // body carries is honoured. Material, glass and the wallpaper-tint knobs stay
+    // fixed tokens under paper-and-ink, so those are withheld rather than shown dead
+    // (a control that cannot work is not offered). Everything else — geometry,
+    // motion, layout, size, type scale — drives both frontends.
     readonly property var ryokuGatedPaths: new Set([
-        "iris.appearance.accent", "iris.appearance.theme.accentHue",
-        "iris.appearance.highlight", "iris.appearance.theme.highlightHue",
-        "iris.appearance.theme.badge", "iris.appearance.theme.surface", "iris.appearance.tint",
+        "iris.appearance.theme.surface", "iris.appearance.tint",
         "iris.appearance.glass.mode", "iris.appearance.glass.tint", "iris.appearance.glass.blur",
-        "iris.appearance.aura", "iris.appearance.theme.lightReach", "iris.appearance.theme.glow",
         "iris.appearance.theme.rimTint", "iris.appearance.theme.lines", "iris.appearance.theme.contrast",
         "iris.appearance.surfaces.cards.light", "iris.appearance.surfaces.controlCenter.light",
         "iris.appearance.surfaces.panels.light", "iris.appearance.surfaces.spotlight.light",
@@ -65,9 +64,9 @@ QtObject {
         { target: "material", group: "Frame", label: "Music drives", path: "iris.surround.music", visibleWhen: "background.edgeWidgets.organic.enable", kind: "choice", fallback: "widget", choices: [{label:"The wave",value:"widget"},{label:"The frame",value:"frame"}] },
         { target: "material", group: "Frame", label: "Band", description: "How thick the edge is.", path: "iris.surround.thickness", visibleWhen: "iris.surround.enable", kind: "range", fallback: 10, min: 2, max: 40, unit: " px" },
         { target: "material", group: "Frame", label: "Inner corners", description: "How far the corners turn inward.", path: "iris.surround.radius", visibleWhen: "iris.surround.enable", kind: "range", fallback: 22, min: 0, max: 64, unit: " px" },
-        { target: "colour", group: "Accent", label: "System accent", description: "Selection and controls across iRiS. Activity colours keep their identity.", path: "iris.appearance.accent", kind: "choice", fallback: "blue", choices: [{label:"Blue",value:"blue",swatch:IrisStyle.accents.blue},{label:"Mint",value:"mint",swatch:IrisStyle.accents.mint},{label:"Rose",value:"rose",swatch:IrisStyle.accents.rose},{label:"Lilac",value:"lilac",swatch:IrisStyle.accents.lilac},{label:"Theme",value:"theme",swatch:IrisStyle.themeAccent},{label:"Wallpaper",value:"wallpaper"},{label:"Custom",value:"custom"}] },
+        { target: "colour", group: "Accent", label: "System accent", description: "Selection and controls across iRiS. Activity colours keep their identity.", path: "iris.appearance.accent", kind: "choice", fallback: "blue", choices: [{label:"Blue",value:"blue",swatch:IrisStyle.accents.blue},{label:"Mint",value:"mint",swatch:IrisStyle.accents.mint},{label:"Rose",value:"rose",swatch:IrisStyle.accents.rose},{label:"Lilac",value:"lilac",swatch:IrisStyle.accents.lilac},{label:"Theme",value:"theme",swatch:IrisStyle.themeAccent},{label:"Wallpaper",value:"wallpaper"},{label:"Custom",value:"custom"}], ryokuChoices: [{label:"Ink",value:"ink",swatch:IrisStyle.text},{label:"Wallpaper",value:"wallpaper"},{label:"Custom",value:"custom"}] },
         { target: "colour", group: "Accent", label: "Accent hue", visibleWhen: "iris.appearance.accent=custom", path: "iris.appearance.theme.accentHue", kind: "hue", fallback: 212 },
-        { target: "colour", group: "Highlight", label: "Highlight", description: "The glanced detail: clock separator, day number, timers.", path: "iris.appearance.highlight", kind: "choice", fallback: "orange", choices: [{label:"Orange",value:"orange",swatch:IrisStyle.highlights.orange},{label:"Yellow",value:"yellow",swatch:IrisStyle.highlights.yellow},{label:"Red",value:"red",swatch:IrisStyle.highlights.red},{label:"Pink",value:"pink",swatch:IrisStyle.highlights.pink},{label:"Green",value:"green",swatch:IrisStyle.highlights.green},{label:"Accent",value:"accent"},{label:"Theme",value:"theme",swatch:IrisStyle.vividHighlight(Appearance.colors.colTertiary, IrisStyle.highlights.orange)},{label:"Wallpaper",value:"wallpaper"},{label:"Custom",value:"custom"}] },
+        { target: "colour", group: "Highlight", label: "Highlight", description: "The glanced detail: timers, badges and activity rings.", path: "iris.appearance.highlight", kind: "choice", fallback: "orange", choices: [{label:"Orange",value:"orange",swatch:IrisStyle.highlights.orange},{label:"Yellow",value:"yellow",swatch:IrisStyle.highlights.yellow},{label:"Red",value:"red",swatch:IrisStyle.highlights.red},{label:"Pink",value:"pink",swatch:IrisStyle.highlights.pink},{label:"Green",value:"green",swatch:IrisStyle.highlights.green},{label:"Accent",value:"accent"},{label:"Theme",value:"theme",swatch:IrisStyle.vividHighlight(Appearance.colors.colTertiary, IrisStyle.highlights.orange)},{label:"Wallpaper",value:"wallpaper"},{label:"Custom",value:"custom"}], ryokuChoices: [{label:"Ink",value:"ink",swatch:IrisStyle.text},{label:"Wallpaper",value:"wallpaper"},{label:"Custom",value:"custom"}] },
         { target: "colour", group: "Highlight", label: "Highlight hue", visibleWhen: "iris.appearance.highlight=custom", path: "iris.appearance.theme.highlightHue", kind: "hue", fallback: 32 },
         { target: "colour", group: "Badges", label: "Unread counts", description: "The family's red, your accent, the highlight, or a quiet neutral.", path: "iris.appearance.theme.badge", kind: "choice", fallback: "alert", choices: [{label:"Alert",value:"alert",swatch:IrisStyle.identity.red},{label:"Accent",value:"accent"},{label:"Highlight",value:"highlight",swatch:IrisStyle.secondaryAccent},{label:"Neutral",value:"neutral",swatch:IrisStyle.surfaceHighestOpaque}] },
         { target: "colour", group: "Light", label: "Light", description: "What an open card or panel is lit by: its own colour — the sky for weather, the highlight for timers — or the wallpaper's. It pours in from where the body grew.", path: "iris.appearance.aura", kind: "choice", fallback: "subtle", choices: [{label:"Off",value:"off",glyph:"light_off"},{label:"Subtle",value:"subtle",glyph:"light_mode"},{label:"Vivid",value:"vivid",glyph:"wb_sunny"}] },

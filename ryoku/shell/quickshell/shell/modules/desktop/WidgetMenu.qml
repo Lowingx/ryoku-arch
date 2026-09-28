@@ -8,25 +8,20 @@ import Ryoku.Ui.Singletons
 import shell.services as Services
 import "../visualizer/Singletons" as VizCfg
 import "../stage/Singletons" as StageCfg
+import "iris/IrisRoster.js" as IrisRoster
 
-// The desktop right-click menu, built on the shared DesktopMenu chrome in the
-// quick-settings sidebar idiom. Two scopes:
-//   right-click bare desktop = desktop menu (show/hide the clock, settings,
-//     reload)
-//   right-click a widget     = its menu (cycle design, toggle date, lock, snap
-//     to a compass zone, hide) + the same globals
-// Every action writes the same widgets Config the drag and Ryoku Settings do.
+// A desktop widget's right-click menu, built on the shared DesktopMenu chrome in
+// the quick-settings sidebar idiom: cycle the widget's design, tune its colour
+// and size, lock it, snap it to a compass zone or hide it, plus the shell
+// globals (Settings, Reload). The bare-wallpaper right-click is a separate
+// surface, DesktopContextMenu. Every action writes the same widgets Config the
+// drag and Ryoku Settings do.
 Item {
     id: menu
 
     anchors.fill: parent
 
     property string scope: "desktop"   // desktop | clock
-    // The owning Desktop surface. The menu's actions target the screen it was
-    // opened on; the compositor's focused output can be another monitor (or
-    // resolve to no slice at all), which made the editors a silent no-op or
-    // opened them on the wrong screen.
-    property var desktop: null
 
     readonly property bool isWidget: menu.scope !== "desktop"
     readonly property bool isClock: menu.scope === "clock"
@@ -36,14 +31,18 @@ Item {
     readonly property bool isStats: menu.scope === "stats"
     readonly property bool isWeather: menu.scope === "weather"
     readonly property bool isNotes: menu.scope === "notes"
+    readonly property bool isDayprogress: menu.scope === "dayprogress"
+    readonly property bool isShape: menu.scope === "shape"
     // only offer to place the spectrum when it is actually running
     readonly property bool vizOn: VizCfg.Config.enabled
     readonly property bool locked: menu.isWidget ? Config[menu.scope + "Locked"] : false
     readonly property string curAnchor: menu.isWidget ? Config[menu.scope + "Anchor"] : ""
     // clock faces persist as <scope>Design; the calendar and the music sheet
     // persist their look as <scope>Style.
-    readonly property string designKey: menu.isCalendar || menu.isMusic || menu.isAio
-        ? menu.scope + "Style" : menu.scope + "Design"
+    readonly property string designKey: menu.isCalendar || menu.isMusic || menu.isAio || menu.isDayprogress
+        ? menu.scope + "Style"
+        : menu.isShape ? menu.scope + "Kind"
+        : menu.scope + "Design"
     // A widget with one look (notes, stats) has no design key at all, so the
     // lookup must resolve to a string rather than undefined.
     readonly property string curDesign: menu.isWidget ? (Config[menu.designKey] ?? "") : ""
@@ -52,6 +51,17 @@ Item {
     readonly property string curColor: menu.isWidget ? (Config[menu.scope + "Color"] || "") : ""
     readonly property bool curGradient: menu.isWidget ? (Config[menu.scope + "Gradient"] === true) : false
     readonly property string colorMode: menu.curColor === "" ? "auto" : (menu.curGradient ? "gradient" : "solid")
+    // iRiS faces hosted in Ryoku's slot: the roster row (or null), the per-widget
+    // skin, and the face's own iRiS size ladder.
+    readonly property var irisFace: IrisRoster.byPrefix(menu.scope)
+    readonly property bool isIris: menu.irisFace !== null
+    readonly property bool isRyokuStyle: menu.isIris && Config[menu.scope + "Style"] === "ryoku"
+    readonly property bool isCanvas: menu.isIris && menu.irisFace.kind === "canvas"
+    readonly property string curIrisSize: menu.isIris ? (Config[menu.scope + "Size"] || menu.irisFace.sizes[0]) : ""
+    function cycleIrisSize() {
+        const s = menu.irisFace.sizes;
+        Config.set(menu.scope + "Size", s[(s.indexOf(menu.curIrisSize) + 1) % s.length]);
+    }
 
     readonly property var zones: [
         { "zone": "top-left", "glyph": "\u2196" }, { "zone": "top", "glyph": "\u2191" }, { "zone": "top-right", "glyph": "\u2197" },
@@ -68,11 +78,12 @@ Item {
         "aio": "一体",
         "stats": "計測",
         "weather": "天気",
-        "notes": "筆記"
+        "notes": "筆記",
+        "dayprogress": "経過",
+        "shape": "図形"
     })
 
     function openFor(widget, x, y) { menu.scope = widget; shell.px = x; shell.py = y; shell.open = true; }
-    function openDesktop(x, y) { menu.scope = "desktop"; shell.px = x; shell.py = y; shell.open = true; }
     function close() { shell.open = false; }
     function cap(s) { return s.length > 0 ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
@@ -82,7 +93,9 @@ Item {
             calendar: ["glass", "paper"],
             music: ["cover", "glass"],
             aio: ["wide", "tall"],
-            weather: ["compact", "full"]
+            weather: ["compact", "full"],
+            dayprogress: ["ring", "arc"],
+            shape: ["dot", "ring", "diamond", "square"]
         };
         const d = lists[menu.scope];
         if (!d)
@@ -133,81 +146,60 @@ Item {
         const d = ["off", "canvas", "custom"];
         Config.set("musicVideo", d[(d.indexOf(Config.musicVideo) + 1) % d.length]);
     }
-    // The three editors and the visualizer's own editor (docs/stage.md, "The
-    // desktop right-click menu"). Sessions open on the monitor the menu is on:
-    // the owning desktop's screen, falling back to the focused output only if
-    // the menu was built without one.
-    function targetState() {
-        return menu.desktop ? menu.desktop.stageState : Services.ShellState.forActive();
-    }
-    function activeMonitor() {
-        const st = menu.targetState();
-        return (st && st.modelData) ? st.modelData.name : "";
-    }
-    function editWidgets() {
-        StageCfg.StageSession.enterWidgets(menu.activeMonitor());
-        menu.close();
-    }
-    // Every Depth and Parallax setting lives on the Stage tab of Super+Esc;
-    // "#stage" deep-links the panel there (FrameMenuManager.openSurface).
-    function depthSettings() {
-        Services.ShellState.requestSurfaceActive("quick-settings#stage", undefined);
-        menu.close();
-    }
-    function customizeVisualizer() {
-        const st = menu.targetState();
-        if (!st)
-            return;
-        if (!VizCfg.Config.enabled)
-            VizCfg.Config.setEnabled(true);
-        st.visualizerPlacing = true;
-        menu.close();
-    }
-    // Depth off drops Parallax with it; Parallax on turns Depth on with it.
-    readonly property string stageEffect: StageCfg.StageBackend.effect
-    readonly property bool stageBusy: StageCfg.StageBackend.busy
-    readonly property int stagePct: StageCfg.StageBackend.percent
-    function toggleDepth() {
-        StageCfg.StageBackend.setEffect(menu.stageEffect === "off" ? "depth" : "off");
-    }
-    function toggleParallax() {
-        StageCfg.StageBackend.setEffect(menu.stageEffect === "parallax" ? "depth" : "parallax");
-    }
-    function changeWallpaper() {
-        Services.ShellState.requestSurfaceActive("wallpaper", null);
-        menu.close();
-    }
 
     DesktopMenu {
         id: shell
-        title: menu.scope
-        gloss: menu.glosses[menu.scope] || ""
-
-        // ── desktop scope ──────────────────────────────────────────────
-        MenuRow {
-            visible: !menu.isWidget
-            label: I18n.tr("Edit widgets")
-            onTriggered: menu.editWidgets()
-        }
-        MenuRow {
-            visible: !menu.isWidget
-            label: I18n.tr("Customize visualizer")
-            onTriggered: menu.customizeVisualizer()
-        }
-        MenuRow {
-            visible: !menu.isWidget
-            label: I18n.tr("Change wallpaper")
-            closeOnTrigger: false
-            onTriggered: menu.changeWallpaper()
-        }
+        title: menu.isIris ? I18n.tr(menu.irisFace.label) : menu.scope
+        gloss: menu.glosses[menu.scope] || (menu.isIris ? menu.irisFace.gloss : "")
 
         // ── widget scope ───────────────────────────────────────────────
         MenuRow {
-            visible: menu.isWidget && !menu.isStats && !menu.isNotes
+            visible: menu.isWidget && !menu.isStats && !menu.isNotes && !menu.isIris
             label: I18n.tr("Design")
             value: menu.cap(menu.curDesign)
             closeOnTrigger: false
             onTriggered: menu.cycleDesign()
+        }
+        // iRiS faces: pick the skin and the face's own size preset. Style is
+        // per-widget and never touches the global iris.appearance.frontend.
+        MenuRow {
+            visible: menu.isIris
+            label: I18n.tr("Style")
+            value: menu.isRyokuStyle ? "Ryoku" : "iNiR"
+            on: menu.isRyokuStyle
+            closeOnTrigger: false
+            onTriggered: Config.set(menu.scope + "Style", menu.isRyokuStyle ? "inir" : "ryoku")
+        }
+        MenuRow {
+            visible: menu.isIris && menu.irisFace.sizes.length > 1
+            label: I18n.tr("Size preset")
+            value: menu.cap(menu.curIrisSize)
+            closeOnTrigger: false
+            onTriggered: menu.cycleIrisSize()
+        }
+        MenuRow {
+            // Canvas widgets carry no iRiS ink token, so the Ryoku skin only
+            // wraps them in the slot backing (radius/border below); their own
+            // colours stay. State it rather than ship a dead colour picker.
+            visible: menu.isCanvas && menu.isRyokuStyle
+            label: I18n.tr("Ryoku style wraps this widget; it keeps its own colours")
+            closeOnTrigger: false
+        }
+        MenuRow {
+            visible: menu.isDayprogress
+            label: I18n.tr("Date")
+            value: Config.dayprogressShowDate ? "On" : "Off"
+            on: Config.dayprogressShowDate
+            closeOnTrigger: false
+            onTriggered: Config.toggle("dayprogressShowDate")
+        }
+        MenuRow {
+            visible: menu.isShape
+            label: I18n.tr("Outline")
+            value: Config.shapeOutline ? "On" : "Off"
+            on: Config.shapeOutline
+            closeOnTrigger: false
+            onTriggered: Config.toggle("shapeOutline")
         }
         MenuRow {
             visible: menu.isClock
@@ -296,9 +288,9 @@ Item {
         // Colour: the widget's ink follows the wallpaper (Auto), a solid pin, or
         // an A->B gradient -- the same model the visualiser wears. Solid/Gradient
         // reveal a compact picker; edits scrub live and persist on release.
-        MenuSection { visible: menu.isWidget; label: I18n.tr("Colour"); gloss: "彩色" }
+        MenuSection { visible: menu.isWidget && !menu.isCanvas; label: I18n.tr("Colour"); gloss: "彩色" }
         Item {
-            visible: menu.isWidget
+            visible: menu.isWidget && !menu.isCanvas
             width: parent.width
             implicitHeight: menu.isWidget ? colorCol.implicitHeight : 0
             Column {
@@ -333,6 +325,70 @@ Item {
                     gradient: menu.colorMode === "gradient"
                 }
             }
+        }
+
+        // Shape: per-widget geometry. Corner radius rounds the Ryoku backing and
+        // the iNiR face's own plate; the rest tune the Ryoku-style plate.
+        MenuSection { visible: menu.isIris; label: I18n.tr("Shape"); gloss: "形状" }
+        MenuSlider {
+            id: radiusSlider
+            visible: menu.isIris
+            label: I18n.tr("Corner radius")
+            from: 0
+            to: 120
+            step: 1
+            value: (menu.isIris && Config[menu.scope + "Radius"] >= 0) ? Config[menu.scope + "Radius"] : Theme.radius
+            valueText: Math.round(radiusSlider.value)
+            onMoved: (v) => Config.setLive(menu.scope + "Radius", Math.round(v))
+            onReleased: (v) => Config.set(menu.scope + "Radius", Math.round(v))
+        }
+        MenuSlider {
+            id: padSlider
+            visible: menu.isIris
+            label: I18n.tr("Padding")
+            from: 0
+            to: 48
+            step: 1
+            value: (menu.isIris && Config[menu.scope + "Pad"] >= 0) ? Config[menu.scope + "Pad"] : 0
+            valueText: Math.round(padSlider.value)
+            onMoved: (v) => Config.setLive(menu.scope + "Pad", Math.round(v))
+            onReleased: (v) => Config.set(menu.scope + "Pad", Math.round(v))
+        }
+        MenuSlider {
+            id: borderSlider
+            visible: menu.isRyokuStyle
+            label: I18n.tr("Border width")
+            from: 0
+            to: 4
+            step: 0.5
+            value: (menu.isIris && Config[menu.scope + "Border"] >= 0) ? Config[menu.scope + "Border"] : 1
+            valueText: borderSlider.value.toFixed(1)
+            onMoved: (v) => Config.setLive(menu.scope + "Border", v)
+            onReleased: (v) => Config.set(menu.scope + "Border", v)
+        }
+        MenuSlider {
+            id: borderOpSlider
+            visible: menu.isRyokuStyle
+            label: I18n.tr("Border opacity")
+            from: 0
+            to: 1
+            step: 0.01
+            value: (menu.isIris && Config[menu.scope + "BorderOpacity"] >= 0) ? Config[menu.scope + "BorderOpacity"] : 0.16
+            valueText: Math.round(borderOpSlider.value * 100) + "%"
+            onMoved: (v) => Config.setLive(menu.scope + "BorderOpacity", v)
+            onReleased: (v) => Config.set(menu.scope + "BorderOpacity", v)
+        }
+        MenuSlider {
+            id: backingOpSlider
+            visible: menu.isRyokuStyle
+            label: I18n.tr("Backing opacity")
+            from: 0
+            to: 1
+            step: 0.01
+            value: (menu.isIris && Config[menu.scope + "BackingOpacity"] >= 0) ? Config[menu.scope + "BackingOpacity"] : 0.5
+            valueText: Math.round(backingOpSlider.value * 100) + "%"
+            onMoved: (v) => Config.setLive(menu.scope + "BackingOpacity", v)
+            onReleased: (v) => Config.set(menu.scope + "BackingOpacity", v)
         }
 
         MenuSection { visible: menu.isWidget; label: I18n.tr("Snap"); gloss: "位置" }
@@ -387,39 +443,6 @@ Item {
             visible: menu.isWidget
             label: I18n.tr("Hide")
             onTriggered: Config.set(menu.scope + "Enabled", false)
-        }
-
-        // ── the two Stage switches, side by side (docs/stage.md) ────────
-        // The menu's own choice chips: a bone plate when the effect is on, a
-        // quiet tile when off, the state spelled out in the label.
-        MenuSection {}
-        Row {
-            id: stageRow
-            visible: !menu.isWidget
-            width: parent.width
-            spacing: Theme.s1
-            readonly property real cw: (width - Theme.s1) / 2
-            MenuChip {
-                width: stageRow.cw
-                height: Theme.ctlH + 6
-                selected: menu.stageEffect !== "off"
-                label: I18n.tr("Depth") + " \u00b7 " + (menu.stageBusy ? (menu.stagePct + "%")
-                    : menu.stageEffect !== "off" ? I18n.tr("On") : I18n.tr("Off"))
-                onClicked: menu.toggleDepth()
-            }
-            MenuChip {
-                width: stageRow.cw
-                height: Theme.ctlH + 6
-                selected: menu.stageEffect === "parallax"
-                label: I18n.tr("Parallax") + " \u00b7 " + (menu.stageEffect === "parallax" ? I18n.tr("On") : I18n.tr("Off"))
-                onClicked: menu.toggleParallax()
-            }
-        }
-
-        MenuRow {
-            visible: !menu.isWidget
-            label: I18n.tr("Depth settings…")
-            onTriggered: menu.depthSettings()
         }
 
         // ── globals ────────────────────────────────────────────────────

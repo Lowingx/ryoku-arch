@@ -2104,7 +2104,6 @@ function config() {
   "irisSessionScreen",
   "irisBackground",
   "irisWallpaperSelector",
-  "irisRegionSelector",
   "irisPolkit"
  ],
  "bar": {

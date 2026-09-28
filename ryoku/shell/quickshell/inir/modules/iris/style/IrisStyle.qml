@@ -213,15 +213,28 @@ QtObject {
     readonly property color themeAccent: root.ryokuFrontend ? Tokens.ink : root.legibleAccent(Appearance.colors.colPrimary, "#a8c7fa")
     readonly property var accents: ({ blue: "#a8c7fa", mint: "#8de0bd", rose: "#ffb2c4", lilac: "#d2baff" })
     readonly property var highlights: ({ orange: "#ff9f0a", yellow: "#ffd60a", red: "#ff6961", pink: "#ff6482", green: "#30d158" })
+    // Ryoku's wallpaper accent is the native matugen primary (Tokens.sun, resolved
+    // from ~/.cache/ryoku/colors.json); iNiR lifts the dominant wallpaper colour.
+    readonly property color accentWallpaper: root.ryokuFrontend ? Tokens.sun
+        : root.legibleAccent(Appearance.wallpaperDominantColor, root.themeAccent)
     readonly property color accent: {
-        if (root.ryokuFrontend) return Tokens.ink
+        if (root.ryokuFrontend) {
+            // Paper-and-ink stays monochrome by default (Ink); the wallpaper's
+            // matugen primary or a chosen hue is the opt-in colour.
+            const pick = root.appearance?.accent ?? "ink"
+            if (pick === "wallpaper") return root.accentWallpaper
+            if (pick === "custom") return Qt.hsla(root.hueOf("accentHue", 212), 0.62, Tokens.light ? 0.45 : 0.72, 1)
+            return Tokens.ink
+        }
         const choice = root.appearance?.accent ?? "blue"
         if (choice === "theme") return root.themeAccent
         if (choice === "wallpaper") return root.legibleAccent(Appearance.wallpaperDominantColor, root.themeAccent)
         if (choice === "custom") return Qt.hsla(root.hueOf("accentHue", 212), 0.7, 0.78, 1)
         return root.accents[choice] ?? root.accents.blue
     }
-    readonly property color onAccent: root.ryokuFrontend ? Tokens.inkOnBone : Qt.color("#101318")
+    readonly property color onAccent: root.ryokuFrontend
+        ? (root.accent.hslLightness > 0.62 ? Tokens.inkOnBone : Tokens.bone)
+        : Qt.color("#101318")
     readonly property color accentContainer: root.ryokuFrontend ? Tokens.bone : ColorUtils.mix(root.surface, root.accent, 0.78)
     readonly property color onAccentContainer: root.ryokuFrontend ? Tokens.inkOnBone : ColorUtils.mix(root.accent, root.text, 0.65)
     function vividHighlight(seed, fallback): color {
@@ -231,7 +244,15 @@ QtObject {
             Math.max(0.54, Math.min(0.66, c.hslLightness)), 1)
     }
     readonly property color secondaryAccent: {
-        if (root.ryokuFrontend) return Tokens.ink
+        if (root.ryokuFrontend) {
+            // The glanced detail (timers, badges, activity rings): Ink by default,
+            // the wallpaper's matugen primary or a chosen hue when asked.
+            const pick = root.appearance?.highlight ?? "ink"
+            if (pick === "accent") return root.accent
+            if (pick === "wallpaper") return root.accentWallpaper
+            if (pick === "custom") return Qt.hsla(root.hueOf("highlightHue", 32), 0.85, Tokens.light ? 0.48 : 0.6, 1)
+            return Tokens.ink
+        }
         const choice = root.appearance?.highlight ?? "orange"
         if (choice === "accent") return root.accent
         if (choice === "theme") return root.vividHighlight(Appearance.colors.colTertiary, root.highlights.orange)
@@ -272,16 +293,28 @@ QtObject {
         }
     }
     readonly property string badgeStyle: String(root.theme?.badge ?? "alert")
-    readonly property color badge: root.ryokuFrontend ? (root.badgeStyle === "neutral" ? root.surfaceHighestOpaque : Tokens.alert)
+    readonly property color badge: root.ryokuFrontend
+        ? (root.badgeStyle === "accent" ? root.accent
+            : root.badgeStyle === "highlight" ? root.secondaryAccent
+            : root.badgeStyle === "neutral" ? root.surfaceHighestOpaque
+            : Tokens.alert)
         : root.badgeStyle === "accent" ? root.accent
         : root.badgeStyle === "highlight" ? root.secondaryAccent
         : root.badgeStyle === "neutral" ? root.surfaceHighestOpaque
         : root.identity.red
-    readonly property color onBadge: root.ryokuFrontend ? (root.badgeStyle === "neutral" ? root.text : Qt.color("#ffffff"))
+    readonly property color onBadge: root.ryokuFrontend
+        ? (root.badgeStyle === "accent" ? root.onAccent
+            : root.badgeStyle === "highlight" ? root.onTintFor(root.secondaryAccent)
+            : root.badgeStyle === "neutral" ? root.text
+            : Qt.color("#ffffff"))
         : root.badgeStyle === "alert" ? root.onTint
         : root.badgeStyle === "neutral" ? root.text
         : root.badgeStyle === "highlight" ? root.onTintFor(root.secondaryAccent) : root.onAccent
-    readonly property color badgeInk: root.ryokuFrontend ? (root.badgeStyle === "neutral" ? root.text : Tokens.alert)
+    readonly property color badgeInk: root.ryokuFrontend
+        ? (root.badgeStyle === "accent" ? root.accent
+            : root.badgeStyle === "highlight" ? root.secondaryAccent
+            : root.badgeStyle === "neutral" ? root.text
+            : Tokens.alert)
         : root.badgeStyle === "alert" ? root.danger
         : root.badgeStyle === "neutral" ? root.text : root.badge
     readonly property color success: root.ryokuFrontend ? Tokens.ink : "#8de0a3"

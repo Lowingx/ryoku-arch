@@ -35,7 +35,69 @@ Item {
         "aioEnabled", "aioStyle", "aioScale", "aioOpacity", "aioAnchor", "aioX", "aioY", "aioLocked",
         "statsEnabled", "statsScale", "statsOpacity", "statsAnchor", "statsX", "statsY", "statsLocked",
         "weatherEnabled", "weatherDesign", "weatherScale", "weatherOpacity", "weatherAnchor", "weatherX", "weatherY", "weatherLocked",
-        "notesEnabled", "notesScale", "notesOpacity", "notesWidth", "notesHeight", "notesAnchor", "notesX", "notesY", "notesLocked"
+        "notesEnabled", "notesScale", "notesOpacity", "notesWidth", "notesHeight", "notesAnchor", "notesX", "notesY", "notesLocked",
+        "dayprogressEnabled", "dayprogressStyle", "dayprogressShowDate", "dayprogressScale", "dayprogressOpacity",
+        "dayprogressAnchor", "dayprogressX", "dayprogressY", "dayprogressLocked",
+        "shapeEnabled", "shapeKind", "shapeOutline", "shapeScale", "shapeOpacity",
+        "shapeAnchor", "shapeX", "shapeY", "shapeLocked",
+        // iRiS faces
+        "irisClockEnabled", "irisClockScale", "irisClockAnchor", "irisClockX", "irisClockY", "irisClockLocked", "irisClockOpacity", "irisClockBg",
+        "irisClockColor", "irisClockColor2", "irisClockGradient", "irisClockSize", "irisClockOpts", "irisClockStyle", "irisClockRadius", "irisClockPad",
+        "irisClockBorder", "irisClockBorderOpacity", "irisClockBackingOpacity", "irisWeatherEnabled", "irisWeatherScale", "irisWeatherAnchor", "irisWeatherX", "irisWeatherY",
+        "irisWeatherLocked", "irisWeatherOpacity", "irisWeatherBg", "irisWeatherColor", "irisWeatherColor2", "irisWeatherGradient", "irisWeatherSize", "irisWeatherOpts",
+        "irisWeatherStyle", "irisWeatherRadius", "irisWeatherPad", "irisWeatherBorder", "irisWeatherBorderOpacity", "irisWeatherBackingOpacity", "irisMediaEnabled", "irisMediaScale",
+        "irisMediaAnchor", "irisMediaX", "irisMediaY", "irisMediaLocked", "irisMediaOpacity", "irisMediaBg", "irisMediaColor", "irisMediaColor2",
+        "irisMediaGradient", "irisMediaSize", "irisMediaOpts", "irisMediaStyle", "irisMediaRadius", "irisMediaPad", "irisMediaBorder", "irisMediaBorderOpacity",
+        "irisMediaBackingOpacity", "irisControlsEnabled", "irisControlsScale", "irisControlsAnchor", "irisControlsX", "irisControlsY", "irisControlsLocked", "irisControlsOpacity",
+        "irisControlsBg", "irisControlsColor", "irisControlsColor2", "irisControlsGradient", "irisControlsSize", "irisControlsOpts", "irisControlsStyle", "irisControlsRadius",
+        "irisControlsPad", "irisControlsBorder", "irisControlsBorderOpacity", "irisControlsBackingOpacity", "irisMonthEnabled", "irisMonthScale", "irisMonthAnchor", "irisMonthX",
+        "irisMonthY", "irisMonthLocked", "irisMonthOpacity", "irisMonthBg", "irisMonthColor", "irisMonthColor2", "irisMonthGradient", "irisMonthSize",
+        "irisMonthOpts", "irisMonthStyle", "irisMonthRadius", "irisMonthPad", "irisMonthBorder", "irisMonthBorderOpacity", "irisMonthBackingOpacity", "irisAgendaEnabled",
+        "irisAgendaScale", "irisAgendaAnchor", "irisAgendaX", "irisAgendaY", "irisAgendaLocked", "irisAgendaOpacity", "irisAgendaBg", "irisAgendaColor",
+        "irisAgendaColor2", "irisAgendaGradient", "irisAgendaSize", "irisAgendaOpts", "irisAgendaStyle", "irisAgendaRadius", "irisAgendaPad", "irisAgendaBorder",
+        "irisAgendaBorderOpacity", "irisAgendaBackingOpacity", "irisTodoEnabled", "irisTodoScale", "irisTodoAnchor", "irisTodoX", "irisTodoY", "irisTodoLocked",
+        "irisTodoOpacity", "irisTodoBg", "irisTodoColor", "irisTodoColor2", "irisTodoGradient", "irisTodoSize", "irisTodoOpts", "irisTodoStyle",
+        "irisTodoRadius", "irisTodoPad", "irisTodoBorder", "irisTodoBorderOpacity", "irisTodoBackingOpacity", "irisNotesEnabled", "irisNotesScale", "irisNotesAnchor",
+        "irisNotesX", "irisNotesY", "irisNotesLocked", "irisNotesOpacity", "irisNotesBg", "irisNotesColor", "irisNotesColor2", "irisNotesGradient",
+        "irisNotesSize", "irisNotesOpts", "irisNotesStyle", "irisNotesRadius", "irisNotesPad", "irisNotesBorder", "irisNotesBorderOpacity", "irisNotesBackingOpacity",
+        "irisTimersEnabled", "irisTimersScale", "irisTimersAnchor", "irisTimersX", "irisTimersY", "irisTimersLocked", "irisTimersOpacity", "irisTimersBg",
+        "irisTimersColor", "irisTimersColor2", "irisTimersGradient", "irisTimersSize", "irisTimersOpts", "irisTimersStyle", "irisTimersRadius", "irisTimersPad",
+        "irisTimersBorder", "irisTimersBorderOpacity", "irisTimersBackingOpacity", "irisScreenEnabled", "irisScreenScale", "irisScreenAnchor", "irisScreenX", "irisScreenY",
+        "irisScreenLocked", "irisScreenOpacity", "irisScreenBg", "irisScreenColor", "irisScreenColor2", "irisScreenGradient", "irisScreenSize", "irisScreenOpts",
+        "irisScreenStyle", "irisScreenRadius", "irisScreenPad", "irisScreenBorder", "irisScreenBorderOpacity", "irisScreenBackingOpacity", "irisVitalsEnabled", "irisVitalsScale",
+        "irisVitalsAnchor", "irisVitalsX", "irisVitalsY", "irisVitalsLocked", "irisVitalsOpacity", "irisVitalsBg", "irisVitalsColor", "irisVitalsColor2",
+        "irisVitalsGradient", "irisVitalsSize", "irisVitalsOpts", "irisVitalsStyle", "irisVitalsRadius", "irisVitalsPad", "irisVitalsBorder", "irisVitalsBorderOpacity",
+        "irisVitalsBackingOpacity", "irisBatteryEnabled", "irisBatteryScale", "irisBatteryAnchor", "irisBatteryX", "irisBatteryY", "irisBatteryLocked", "irisBatteryOpacity",
+        "irisBatteryBg", "irisBatteryColor", "irisBatteryColor2", "irisBatteryGradient", "irisBatterySize", "irisBatteryOpts", "irisBatteryStyle", "irisBatteryRadius",
+        "irisBatteryPad", "irisBatteryBorder", "irisBatteryBorderOpacity", "irisBatteryBackingOpacity", "irisWorldEnabled", "irisWorldScale", "irisWorldAnchor", "irisWorldX",
+        "irisWorldY", "irisWorldLocked", "irisWorldOpacity", "irisWorldBg", "irisWorldColor", "irisWorldColor2", "irisWorldGradient", "irisWorldSize",
+        "irisWorldOpts", "irisWorldStyle", "irisWorldRadius", "irisWorldPad", "irisWorldBorder", "irisWorldBorderOpacity", "irisWorldBackingOpacity", "irisDateEnabled",
+        "irisDateScale", "irisDateAnchor", "irisDateX", "irisDateY", "irisDateLocked", "irisDateOpacity", "irisDateBg", "irisDateColor",
+        "irisDateColor2", "irisDateGradient", "irisDateSize", "irisDateOpts", "irisDateStyle", "irisDateRadius", "irisDatePad", "irisDateBorder",
+        "irisDateBorderOpacity", "irisDateBackingOpacity", "irisProfileEnabled", "irisProfileScale", "irisProfileAnchor", "irisProfileX", "irisProfileY", "irisProfileLocked",
+        "irisProfileOpacity", "irisProfileBg", "irisProfileColor", "irisProfileColor2", "irisProfileGradient", "irisProfileSize", "irisProfileOpts", "irisProfileStyle",
+        "irisProfileRadius", "irisProfilePad", "irisProfileBorder", "irisProfileBorderOpacity", "irisProfileBackingOpacity", "irisUptimeEnabled", "irisUptimeScale", "irisUptimeAnchor",
+        "irisUptimeX", "irisUptimeY", "irisUptimeLocked", "irisUptimeOpacity", "irisUptimeBg", "irisUptimeColor", "irisUptimeColor2", "irisUptimeGradient",
+        "irisUptimeSize", "irisUptimeOpts", "irisUptimeStyle", "irisUptimeRadius", "irisUptimePad", "irisUptimeBorder", "irisUptimeBorderOpacity", "irisUptimeBackingOpacity",
+        "irisNewsEnabled", "irisNewsScale", "irisNewsAnchor", "irisNewsX", "irisNewsY", "irisNewsLocked", "irisNewsOpacity", "irisNewsBg",
+        "irisNewsColor", "irisNewsColor2", "irisNewsGradient", "irisNewsSize", "irisNewsOpts", "irisNewsStyle", "irisNewsRadius", "irisNewsPad",
+        "irisNewsBorder", "irisNewsBorderOpacity", "irisNewsBackingOpacity",
+        // iRiS canvas widgets
+        "irisCustomImageEnabled", "irisCustomImageScale", "irisCustomImageAnchor", "irisCustomImageX", "irisCustomImageY", "irisCustomImageLocked", "irisCustomImageOpacity", "irisCustomImageBg",
+        "irisCustomImageColor", "irisCustomImageColor2", "irisCustomImageGradient", "irisCustomImageSize", "irisCustomImageOpts", "irisCustomImageStyle", "irisCustomImageRadius", "irisCustomImagePad",
+        "irisCustomImageBorder", "irisCustomImageBorderOpacity", "irisCustomImageBackingOpacity", "irisEditorialEnabled", "irisEditorialScale", "irisEditorialAnchor", "irisEditorialX", "irisEditorialY",
+        "irisEditorialLocked", "irisEditorialOpacity", "irisEditorialBg", "irisEditorialColor", "irisEditorialColor2", "irisEditorialGradient", "irisEditorialSize", "irisEditorialOpts",
+        "irisEditorialStyle", "irisEditorialRadius", "irisEditorialPad", "irisEditorialBorder", "irisEditorialBorderOpacity", "irisEditorialBackingOpacity", "irisConverterEnabled", "irisConverterScale",
+        "irisConverterAnchor", "irisConverterX", "irisConverterY", "irisConverterLocked", "irisConverterOpacity", "irisConverterBg", "irisConverterColor", "irisConverterColor2",
+        "irisConverterGradient", "irisConverterSize", "irisConverterOpts", "irisConverterStyle", "irisConverterRadius", "irisConverterPad", "irisConverterBorder", "irisConverterBorderOpacity",
+        "irisConverterBackingOpacity",
+
+ "irisJpEnabled", "irisJpScale", "irisJpAnchor", "irisJpX",
+        "irisJpY", "irisJpLocked", "irisJpOpacity", "irisJpBg", "irisJpColor", "irisJpColor2", "irisJpGradient", "irisJpSize",
+        "irisJpOpts", "irisJpStyle", "irisJpRadius", "irisJpPad", "irisJpBorder", "irisJpBorderOpacity", "irisJpBackingOpacity", "irisVisualizerEnabled",
+        "irisVisualizerScale", "irisVisualizerAnchor", "irisVisualizerX", "irisVisualizerY", "irisVisualizerLocked", "irisVisualizerOpacity", "irisVisualizerBg", "irisVisualizerColor",
+        "irisVisualizerColor2", "irisVisualizerGradient", "irisVisualizerSize", "irisVisualizerOpts", "irisVisualizerStyle", "irisVisualizerRadius", "irisVisualizerPad", "irisVisualizerBorder",
+        "irisVisualizerBorderOpacity", "irisVisualizerBackingOpacity"
     ]
 
     // Factory values mirror the wallpaper clock's canonical Config defaults.
@@ -58,17 +120,100 @@ Item {
         "weatherEnabled": false, "weatherDesign": "compact", "weatherScale": 1.0, "weatherOpacity": 1.0,
         "weatherAnchor": "top-right", "weatherX": 80, "weatherY": 80, "weatherLocked": false,
         "notesEnabled": false, "notesScale": 1.0, "notesOpacity": 1.0, "notesWidth": 260, "notesHeight": 180,
-        "notesAnchor": "right", "notesX": 80, "notesY": 80, "notesLocked": false
+        "notesAnchor": "right", "notesX": 80, "notesY": 80, "notesLocked": false,
+        "dayprogressEnabled": false, "dayprogressStyle": "ring", "dayprogressShowDate": true,
+        "dayprogressScale": 1.0, "dayprogressOpacity": 1.0, "dayprogressAnchor": "left",
+        "dayprogressX": 80, "dayprogressY": 260, "dayprogressLocked": false,
+        "shapeEnabled": false, "shapeKind": "dot", "shapeOutline": false,
+        "shapeScale": 1.0, "shapeOpacity": 1.0, "shapeAnchor": "bottom-left",
+        "shapeX": 80, "shapeY": 240, "shapeLocked": false,
+        // iRiS faces (defaults mirror the desktop Config)
+        "irisClockEnabled": false, "irisClockScale": 1.0, "irisClockAnchor": "free", "irisClockX": 120, "irisClockY": 120, "irisClockLocked": false,
+        "irisClockOpacity": 1.0, "irisClockBg": "card", "irisClockColor": "", "irisClockColor2": "", "irisClockGradient": false, "irisClockSize": "small",
+        "irisClockOpts": "", "irisClockStyle": "inir", "irisClockRadius": -1, "irisClockPad": -1, "irisClockBorder": -1, "irisClockBorderOpacity": -1,
+        "irisClockBackingOpacity": -1, "irisWeatherEnabled": false, "irisWeatherScale": 1.0, "irisWeatherAnchor": "free", "irisWeatherX": 168, "irisWeatherY": 160,
+        "irisWeatherLocked": false, "irisWeatherOpacity": 1.0, "irisWeatherBg": "card", "irisWeatherColor": "", "irisWeatherColor2": "", "irisWeatherGradient": false,
+        "irisWeatherSize": "small", "irisWeatherOpts": "", "irisWeatherStyle": "inir", "irisWeatherRadius": -1, "irisWeatherPad": -1, "irisWeatherBorder": -1,
+        "irisWeatherBorderOpacity": -1, "irisWeatherBackingOpacity": -1, "irisMediaEnabled": false, "irisMediaScale": 1.0, "irisMediaAnchor": "free", "irisMediaX": 216,
+        "irisMediaY": 200, "irisMediaLocked": false, "irisMediaOpacity": 1.0, "irisMediaBg": "card", "irisMediaColor": "", "irisMediaColor2": "",
+        "irisMediaGradient": false, "irisMediaSize": "medium", "irisMediaOpts": "", "irisMediaStyle": "inir", "irisMediaRadius": -1, "irisMediaPad": -1,
+        "irisMediaBorder": -1, "irisMediaBorderOpacity": -1, "irisMediaBackingOpacity": -1, "irisControlsEnabled": false, "irisControlsScale": 1.0, "irisControlsAnchor": "free",
+        "irisControlsX": 120, "irisControlsY": 240, "irisControlsLocked": false, "irisControlsOpacity": 1.0, "irisControlsBg": "card", "irisControlsColor": "",
+        "irisControlsColor2": "", "irisControlsGradient": false, "irisControlsSize": "medium", "irisControlsOpts": "", "irisControlsStyle": "inir", "irisControlsRadius": -1,
+        "irisControlsPad": -1, "irisControlsBorder": -1, "irisControlsBorderOpacity": -1, "irisControlsBackingOpacity": -1, "irisMonthEnabled": false, "irisMonthScale": 1.0,
+        "irisMonthAnchor": "free", "irisMonthX": 168, "irisMonthY": 280, "irisMonthLocked": false, "irisMonthOpacity": 1.0, "irisMonthBg": "card",
+        "irisMonthColor": "", "irisMonthColor2": "", "irisMonthGradient": false, "irisMonthSize": "medium", "irisMonthOpts": "", "irisMonthStyle": "inir",
+        "irisMonthRadius": -1, "irisMonthPad": -1, "irisMonthBorder": -1, "irisMonthBorderOpacity": -1, "irisMonthBackingOpacity": -1, "irisAgendaEnabled": false,
+        "irisAgendaScale": 1.0, "irisAgendaAnchor": "free", "irisAgendaX": 216, "irisAgendaY": 320, "irisAgendaLocked": false, "irisAgendaOpacity": 1.0,
+        "irisAgendaBg": "card", "irisAgendaColor": "", "irisAgendaColor2": "", "irisAgendaGradient": false, "irisAgendaSize": "medium", "irisAgendaOpts": "",
+        "irisAgendaStyle": "inir", "irisAgendaRadius": -1, "irisAgendaPad": -1, "irisAgendaBorder": -1, "irisAgendaBorderOpacity": -1, "irisAgendaBackingOpacity": -1,
+        "irisTodoEnabled": false, "irisTodoScale": 1.0, "irisTodoAnchor": "free", "irisTodoX": 120, "irisTodoY": 360, "irisTodoLocked": false,
+        "irisTodoOpacity": 1.0, "irisTodoBg": "card", "irisTodoColor": "", "irisTodoColor2": "", "irisTodoGradient": false, "irisTodoSize": "medium",
+        "irisTodoOpts": "", "irisTodoStyle": "inir", "irisTodoRadius": -1, "irisTodoPad": -1, "irisTodoBorder": -1, "irisTodoBorderOpacity": -1,
+        "irisTodoBackingOpacity": -1, "irisNotesEnabled": false, "irisNotesScale": 1.0, "irisNotesAnchor": "free", "irisNotesX": 168, "irisNotesY": 400,
+        "irisNotesLocked": false, "irisNotesOpacity": 1.0, "irisNotesBg": "card", "irisNotesColor": "", "irisNotesColor2": "", "irisNotesGradient": false,
+        "irisNotesSize": "medium", "irisNotesOpts": "", "irisNotesStyle": "inir", "irisNotesRadius": -1, "irisNotesPad": -1, "irisNotesBorder": -1,
+        "irisNotesBorderOpacity": -1, "irisNotesBackingOpacity": -1, "irisTimersEnabled": false, "irisTimersScale": 1.0, "irisTimersAnchor": "free", "irisTimersX": 216,
+        "irisTimersY": 440, "irisTimersLocked": false, "irisTimersOpacity": 1.0, "irisTimersBg": "card", "irisTimersColor": "", "irisTimersColor2": "",
+        "irisTimersGradient": false, "irisTimersSize": "medium", "irisTimersOpts": "", "irisTimersStyle": "inir", "irisTimersRadius": -1, "irisTimersPad": -1,
+        "irisTimersBorder": -1, "irisTimersBorderOpacity": -1, "irisTimersBackingOpacity": -1, "irisScreenEnabled": false, "irisScreenScale": 1.0, "irisScreenAnchor": "free",
+        "irisScreenX": 120, "irisScreenY": 480, "irisScreenLocked": false, "irisScreenOpacity": 1.0, "irisScreenBg": "card", "irisScreenColor": "",
+        "irisScreenColor2": "", "irisScreenGradient": false, "irisScreenSize": "medium", "irisScreenOpts": "", "irisScreenStyle": "inir", "irisScreenRadius": -1,
+        "irisScreenPad": -1, "irisScreenBorder": -1, "irisScreenBorderOpacity": -1, "irisScreenBackingOpacity": -1, "irisVitalsEnabled": false, "irisVitalsScale": 1.0,
+        "irisVitalsAnchor": "free", "irisVitalsX": 168, "irisVitalsY": 520, "irisVitalsLocked": false, "irisVitalsOpacity": 1.0, "irisVitalsBg": "card",
+        "irisVitalsColor": "", "irisVitalsColor2": "", "irisVitalsGradient": false, "irisVitalsSize": "medium", "irisVitalsOpts": "", "irisVitalsStyle": "inir",
+        "irisVitalsRadius": -1, "irisVitalsPad": -1, "irisVitalsBorder": -1, "irisVitalsBorderOpacity": -1, "irisVitalsBackingOpacity": -1, "irisBatteryEnabled": false,
+        "irisBatteryScale": 1.0, "irisBatteryAnchor": "free", "irisBatteryX": 216, "irisBatteryY": 560, "irisBatteryLocked": false, "irisBatteryOpacity": 1.0,
+        "irisBatteryBg": "card", "irisBatteryColor": "", "irisBatteryColor2": "", "irisBatteryGradient": false, "irisBatterySize": "small", "irisBatteryOpts": "",
+        "irisBatteryStyle": "inir", "irisBatteryRadius": -1, "irisBatteryPad": -1, "irisBatteryBorder": -1, "irisBatteryBorderOpacity": -1, "irisBatteryBackingOpacity": -1,
+        "irisWorldEnabled": false, "irisWorldScale": 1.0, "irisWorldAnchor": "free", "irisWorldX": 120, "irisWorldY": 600, "irisWorldLocked": false,
+        "irisWorldOpacity": 1.0, "irisWorldBg": "card", "irisWorldColor": "", "irisWorldColor2": "", "irisWorldGradient": false, "irisWorldSize": "medium",
+        "irisWorldOpts": "", "irisWorldStyle": "inir", "irisWorldRadius": -1, "irisWorldPad": -1, "irisWorldBorder": -1, "irisWorldBorderOpacity": -1,
+        "irisWorldBackingOpacity": -1, "irisDateEnabled": false, "irisDateScale": 1.0, "irisDateAnchor": "free", "irisDateX": 168, "irisDateY": 640,
+        "irisDateLocked": false, "irisDateOpacity": 1.0, "irisDateBg": "card", "irisDateColor": "", "irisDateColor2": "", "irisDateGradient": false,
+        "irisDateSize": "small", "irisDateOpts": "", "irisDateStyle": "inir", "irisDateRadius": -1, "irisDatePad": -1, "irisDateBorder": -1,
+        "irisDateBorderOpacity": -1, "irisDateBackingOpacity": -1, "irisProfileEnabled": false, "irisProfileScale": 1.0, "irisProfileAnchor": "free", "irisProfileX": 216,
+        "irisProfileY": 680, "irisProfileLocked": false, "irisProfileOpacity": 1.0, "irisProfileBg": "card", "irisProfileColor": "", "irisProfileColor2": "",
+        "irisProfileGradient": false, "irisProfileSize": "medium", "irisProfileOpts": "", "irisProfileStyle": "inir", "irisProfileRadius": -1, "irisProfilePad": -1,
+        "irisProfileBorder": -1, "irisProfileBorderOpacity": -1, "irisProfileBackingOpacity": -1, "irisUptimeEnabled": false, "irisUptimeScale": 1.0, "irisUptimeAnchor": "free",
+        "irisUptimeX": 120, "irisUptimeY": 720, "irisUptimeLocked": false, "irisUptimeOpacity": 1.0, "irisUptimeBg": "card", "irisUptimeColor": "",
+        "irisUptimeColor2": "", "irisUptimeGradient": false, "irisUptimeSize": "small", "irisUptimeOpts": "", "irisUptimeStyle": "inir", "irisUptimeRadius": -1,
+        "irisUptimePad": -1, "irisUptimeBorder": -1, "irisUptimeBorderOpacity": -1, "irisUptimeBackingOpacity": -1, "irisNewsEnabled": false, "irisNewsScale": 1.0,
+        "irisNewsAnchor": "free", "irisNewsX": 168, "irisNewsY": 760, "irisNewsLocked": false, "irisNewsOpacity": 1.0, "irisNewsBg": "card",
+        "irisNewsColor": "", "irisNewsColor2": "", "irisNewsGradient": false, "irisNewsSize": "medium", "irisNewsOpts": "", "irisNewsStyle": "inir",
+        "irisNewsRadius": -1, "irisNewsPad": -1, "irisNewsBorder": -1, "irisNewsBorderOpacity": -1, "irisNewsBackingOpacity": -1,
+        // iRiS canvas widgets
+        "irisCustomImageEnabled": false, "irisCustomImageScale": 1.0, "irisCustomImageAnchor": "free", "irisCustomImageX": 216, "irisCustomImageY": 800, "irisCustomImageLocked": false,
+        "irisCustomImageOpacity": 1.0, "irisCustomImageBg": "card", "irisCustomImageColor": "", "irisCustomImageColor2": "", "irisCustomImageGradient": false, "irisCustomImageSize": "small",
+        "irisCustomImageOpts": "", "irisCustomImageStyle": "inir", "irisCustomImageRadius": -1, "irisCustomImagePad": -1, "irisCustomImageBorder": -1, "irisCustomImageBorderOpacity": -1,
+        "irisCustomImageBackingOpacity": -1, "irisEditorialEnabled": false, "irisEditorialScale": 1.0, "irisEditorialAnchor": "free", "irisEditorialX": 120, "irisEditorialY": 840,
+        "irisEditorialLocked": false, "irisEditorialOpacity": 1.0, "irisEditorialBg": "card", "irisEditorialColor": "", "irisEditorialColor2": "", "irisEditorialGradient": false,
+        "irisEditorialSize": "small", "irisEditorialOpts": "", "irisEditorialStyle": "inir", "irisEditorialRadius": -1, "irisEditorialPad": -1, "irisEditorialBorder": -1,
+        "irisEditorialBorderOpacity": -1, "irisEditorialBackingOpacity": -1, "irisConverterEnabled": false, "irisConverterScale": 1.0, "irisConverterAnchor": "free", "irisConverterX": 168,
+        "irisConverterY": 880, "irisConverterLocked": false, "irisConverterOpacity": 1.0, "irisConverterBg": "card", "irisConverterColor": "", "irisConverterColor2": "",
+        "irisConverterGradient": false, "irisConverterSize": "small", "irisConverterOpts": "", "irisConverterStyle": "inir", "irisConverterRadius": -1, "irisConverterPad": -1,
+        "irisConverterBorder": -1, "irisConverterBorderOpacity": -1, "irisConverterBackingOpacity": -1,.0,
+.0,
+
+ "irisJpEnabled": false, "irisJpScale": 1.0,
+        "irisJpAnchor": "free", "irisJpX": 120, "irisJpY": 960, "irisJpLocked": false, "irisJpOpacity": 1.0, "irisJpBg": "card",
+        "irisJpColor": "", "irisJpColor2": "", "irisJpGradient": false, "irisJpSize": "small", "irisJpOpts": "", "irisJpStyle": "inir",
+        "irisJpRadius": -1, "irisJpPad": -1, "irisJpBorder": -1, "irisJpBorderOpacity": -1, "irisJpBackingOpacity": -1, "irisVisualizerEnabled": false,
+        "irisVisualizerScale": 1.0, "irisVisualizerAnchor": "free", "irisVisualizerX": 168, "irisVisualizerY": 1000, "irisVisualizerLocked": false, "irisVisualizerOpacity": 1.0,
+        "irisVisualizerBg": "card", "irisVisualizerColor": "", "irisVisualizerColor2": "", "irisVisualizerGradient": false, "irisVisualizerSize": "small", "irisVisualizerOpts": "",
+        "irisVisualizerStyle": "inir", "irisVisualizerRadius": -1, "irisVisualizerPad": -1, "irisVisualizerBorder": -1, "irisVisualizerBorderOpacity": -1, "irisVisualizerBackingOpacity": -1
     })
 
     // Scale and opacity persist as ratios; the sheet edits integer percents.
     readonly property var pctKeys: ({
         "clockOpacity": true, "calendarOpacity": true, "musicOpacity": true,
-        "aioOpacity": true, "statsOpacity": true, "weatherOpacity": true, "notesOpacity": true
+        "aioOpacity": true, "statsOpacity": true, "weatherOpacity": true, "notesOpacity": true,
+        "dayprogressOpacity": true, "shapeOpacity": true, "irisClockOpacity": true, "irisWeatherOpacity": true, "irisMediaOpacity": true, "irisControlsOpacity": true, "irisMonthOpacity": true, "irisAgendaOpacity": true, "irisTodoOpacity": true, "irisNotesOpacity": true, "irisTimersOpacity": true, "irisScreenOpacity": true, "irisVitalsOpacity": true, "irisBatteryOpacity": true, "irisWorldOpacity": true, "irisDateOpacity": true, "irisProfileOpacity": true, "irisUptimeOpacity": true, "irisNewsOpacity": true, "irisCustomImageOpacity": true, "irisEditorialOpacity": true, "irisConverterOpacity": true, "irisJpOpacity": true, "irisVisualizerOpacity": true
     })
     readonly property var scaleKeys: ({
         "clockScale": true, "calendarScale": true, "musicScale": true,
-        "aioScale": true, "statsScale": true, "weatherScale": true, "notesScale": true
+        "aioScale": true, "statsScale": true, "weatherScale": true, "notesScale": true,
+        "dayprogressScale": true, "shapeScale": true, "irisClockScale": true, "irisWeatherScale": true, "irisMediaScale": true, "irisControlsScale": true, "irisMonthScale": true, "irisAgendaScale": true, "irisTodoScale": true, "irisNotesScale": true, "irisTimersScale": true, "irisScreenScale": true, "irisVitalsScale": true, "irisBatteryScale": true, "irisWorldScale": true, "irisDateScale": true, "irisProfileScale": true, "irisUptimeScale": true, "irisNewsScale": true, "irisCustomImageScale": true, "irisEditorialScale": true, "irisConverterScale": true, "irisJpScale": true, "irisVisualizerScale": true
     })
 
     property var draft: ({})
@@ -382,6 +527,444 @@ Item {
             property int notesX: 80
             property int notesY: 80
             property bool notesLocked: false
+            property bool dayprogressEnabled: false
+            property string dayprogressStyle: "ring"
+            property bool dayprogressShowDate: true
+            property real dayprogressScale: 1.0
+            property real dayprogressOpacity: 1.0
+            property string dayprogressAnchor: "left"
+            property int dayprogressX: 80
+            property int dayprogressY: 260
+            property bool dayprogressLocked: false
+            property bool shapeEnabled: false
+            property string shapeKind: "dot"
+            property bool shapeOutline: false
+            property real shapeScale: 1.0
+            property real shapeOpacity: 1.0
+            property string shapeAnchor: "bottom-left"
+            property int shapeX: 80
+            property int shapeY: 240
+            property bool shapeLocked: false
+            // iRiS faces — declared so a Hub Save preserves every per-widget key
+            property bool irisClockEnabled: false
+            property real irisClockScale: 1.0
+            property string irisClockAnchor: "free"
+            property int irisClockX: 120
+            property int irisClockY: 120
+            property bool irisClockLocked: false
+            property real irisClockOpacity: 1.0
+            property string irisClockBg: "card"
+            property string irisClockColor: ""
+            property string irisClockColor2: ""
+            property bool irisClockGradient: false
+            property string irisClockSize: "small"
+            property string irisClockOpts: ""
+            property string irisClockStyle: "inir"
+            property int irisClockRadius: -1
+            property real irisClockPad: -1
+            property real irisClockBorder: -1
+            property real irisClockBorderOpacity: -1
+            property real irisClockBackingOpacity: -1
+            property bool irisWeatherEnabled: false
+            property real irisWeatherScale: 1.0
+            property string irisWeatherAnchor: "free"
+            property int irisWeatherX: 168
+            property int irisWeatherY: 160
+            property bool irisWeatherLocked: false
+            property real irisWeatherOpacity: 1.0
+            property string irisWeatherBg: "card"
+            property string irisWeatherColor: ""
+            property string irisWeatherColor2: ""
+            property bool irisWeatherGradient: false
+            property string irisWeatherSize: "small"
+            property string irisWeatherOpts: ""
+            property string irisWeatherStyle: "inir"
+            property int irisWeatherRadius: -1
+            property real irisWeatherPad: -1
+            property real irisWeatherBorder: -1
+            property real irisWeatherBorderOpacity: -1
+            property real irisWeatherBackingOpacity: -1
+            property bool irisMediaEnabled: false
+            property real irisMediaScale: 1.0
+            property string irisMediaAnchor: "free"
+            property int irisMediaX: 216
+            property int irisMediaY: 200
+            property bool irisMediaLocked: false
+            property real irisMediaOpacity: 1.0
+            property string irisMediaBg: "card"
+            property string irisMediaColor: ""
+            property string irisMediaColor2: ""
+            property bool irisMediaGradient: false
+            property string irisMediaSize: "medium"
+            property string irisMediaOpts: ""
+            property string irisMediaStyle: "inir"
+            property int irisMediaRadius: -1
+            property real irisMediaPad: -1
+            property real irisMediaBorder: -1
+            property real irisMediaBorderOpacity: -1
+            property real irisMediaBackingOpacity: -1
+            property bool irisControlsEnabled: false
+            property real irisControlsScale: 1.0
+            property string irisControlsAnchor: "free"
+            property int irisControlsX: 120
+            property int irisControlsY: 240
+            property bool irisControlsLocked: false
+            property real irisControlsOpacity: 1.0
+            property string irisControlsBg: "card"
+            property string irisControlsColor: ""
+            property string irisControlsColor2: ""
+            property bool irisControlsGradient: false
+            property string irisControlsSize: "medium"
+            property string irisControlsOpts: ""
+            property string irisControlsStyle: "inir"
+            property int irisControlsRadius: -1
+            property real irisControlsPad: -1
+            property real irisControlsBorder: -1
+            property real irisControlsBorderOpacity: -1
+            property real irisControlsBackingOpacity: -1
+            property bool irisMonthEnabled: false
+            property real irisMonthScale: 1.0
+            property string irisMonthAnchor: "free"
+            property int irisMonthX: 168
+            property int irisMonthY: 280
+            property bool irisMonthLocked: false
+            property real irisMonthOpacity: 1.0
+            property string irisMonthBg: "card"
+            property string irisMonthColor: ""
+            property string irisMonthColor2: ""
+            property bool irisMonthGradient: false
+            property string irisMonthSize: "medium"
+            property string irisMonthOpts: ""
+            property string irisMonthStyle: "inir"
+            property int irisMonthRadius: -1
+            property real irisMonthPad: -1
+            property real irisMonthBorder: -1
+            property real irisMonthBorderOpacity: -1
+            property real irisMonthBackingOpacity: -1
+            property bool irisAgendaEnabled: false
+            property real irisAgendaScale: 1.0
+            property string irisAgendaAnchor: "free"
+            property int irisAgendaX: 216
+            property int irisAgendaY: 320
+            property bool irisAgendaLocked: false
+            property real irisAgendaOpacity: 1.0
+            property string irisAgendaBg: "card"
+            property string irisAgendaColor: ""
+            property string irisAgendaColor2: ""
+            property bool irisAgendaGradient: false
+            property string irisAgendaSize: "medium"
+            property string irisAgendaOpts: ""
+            property string irisAgendaStyle: "inir"
+            property int irisAgendaRadius: -1
+            property real irisAgendaPad: -1
+            property real irisAgendaBorder: -1
+            property real irisAgendaBorderOpacity: -1
+            property real irisAgendaBackingOpacity: -1
+            property bool irisTodoEnabled: false
+            property real irisTodoScale: 1.0
+            property string irisTodoAnchor: "free"
+            property int irisTodoX: 120
+            property int irisTodoY: 360
+            property bool irisTodoLocked: false
+            property real irisTodoOpacity: 1.0
+            property string irisTodoBg: "card"
+            property string irisTodoColor: ""
+            property string irisTodoColor2: ""
+            property bool irisTodoGradient: false
+            property string irisTodoSize: "medium"
+            property string irisTodoOpts: ""
+            property string irisTodoStyle: "inir"
+            property int irisTodoRadius: -1
+            property real irisTodoPad: -1
+            property real irisTodoBorder: -1
+            property real irisTodoBorderOpacity: -1
+            property real irisTodoBackingOpacity: -1
+            property bool irisNotesEnabled: false
+            property real irisNotesScale: 1.0
+            property string irisNotesAnchor: "free"
+            property int irisNotesX: 168
+            property int irisNotesY: 400
+            property bool irisNotesLocked: false
+            property real irisNotesOpacity: 1.0
+            property string irisNotesBg: "card"
+            property string irisNotesColor: ""
+            property string irisNotesColor2: ""
+            property bool irisNotesGradient: false
+            property string irisNotesSize: "medium"
+            property string irisNotesOpts: ""
+            property string irisNotesStyle: "inir"
+            property int irisNotesRadius: -1
+            property real irisNotesPad: -1
+            property real irisNotesBorder: -1
+            property real irisNotesBorderOpacity: -1
+            property real irisNotesBackingOpacity: -1
+            property bool irisTimersEnabled: false
+            property real irisTimersScale: 1.0
+            property string irisTimersAnchor: "free"
+            property int irisTimersX: 216
+            property int irisTimersY: 440
+            property bool irisTimersLocked: false
+            property real irisTimersOpacity: 1.0
+            property string irisTimersBg: "card"
+            property string irisTimersColor: ""
+            property string irisTimersColor2: ""
+            property bool irisTimersGradient: false
+            property string irisTimersSize: "medium"
+            property string irisTimersOpts: ""
+            property string irisTimersStyle: "inir"
+            property int irisTimersRadius: -1
+            property real irisTimersPad: -1
+            property real irisTimersBorder: -1
+            property real irisTimersBorderOpacity: -1
+            property real irisTimersBackingOpacity: -1
+            property bool irisScreenEnabled: false
+            property real irisScreenScale: 1.0
+            property string irisScreenAnchor: "free"
+            property int irisScreenX: 120
+            property int irisScreenY: 480
+            property bool irisScreenLocked: false
+            property real irisScreenOpacity: 1.0
+            property string irisScreenBg: "card"
+            property string irisScreenColor: ""
+            property string irisScreenColor2: ""
+            property bool irisScreenGradient: false
+            property string irisScreenSize: "medium"
+            property string irisScreenOpts: ""
+            property string irisScreenStyle: "inir"
+            property int irisScreenRadius: -1
+            property real irisScreenPad: -1
+            property real irisScreenBorder: -1
+            property real irisScreenBorderOpacity: -1
+            property real irisScreenBackingOpacity: -1
+            property bool irisVitalsEnabled: false
+            property real irisVitalsScale: 1.0
+            property string irisVitalsAnchor: "free"
+            property int irisVitalsX: 168
+            property int irisVitalsY: 520
+            property bool irisVitalsLocked: false
+            property real irisVitalsOpacity: 1.0
+            property string irisVitalsBg: "card"
+            property string irisVitalsColor: ""
+            property string irisVitalsColor2: ""
+            property bool irisVitalsGradient: false
+            property string irisVitalsSize: "medium"
+            property string irisVitalsOpts: ""
+            property string irisVitalsStyle: "inir"
+            property int irisVitalsRadius: -1
+            property real irisVitalsPad: -1
+            property real irisVitalsBorder: -1
+            property real irisVitalsBorderOpacity: -1
+            property real irisVitalsBackingOpacity: -1
+            property bool irisBatteryEnabled: false
+            property real irisBatteryScale: 1.0
+            property string irisBatteryAnchor: "free"
+            property int irisBatteryX: 216
+            property int irisBatteryY: 560
+            property bool irisBatteryLocked: false
+            property real irisBatteryOpacity: 1.0
+            property string irisBatteryBg: "card"
+            property string irisBatteryColor: ""
+            property string irisBatteryColor2: ""
+            property bool irisBatteryGradient: false
+            property string irisBatterySize: "small"
+            property string irisBatteryOpts: ""
+            property string irisBatteryStyle: "inir"
+            property int irisBatteryRadius: -1
+            property real irisBatteryPad: -1
+            property real irisBatteryBorder: -1
+            property real irisBatteryBorderOpacity: -1
+            property real irisBatteryBackingOpacity: -1
+            property bool irisWorldEnabled: false
+            property real irisWorldScale: 1.0
+            property string irisWorldAnchor: "free"
+            property int irisWorldX: 120
+            property int irisWorldY: 600
+            property bool irisWorldLocked: false
+            property real irisWorldOpacity: 1.0
+            property string irisWorldBg: "card"
+            property string irisWorldColor: ""
+            property string irisWorldColor2: ""
+            property bool irisWorldGradient: false
+            property string irisWorldSize: "medium"
+            property string irisWorldOpts: ""
+            property string irisWorldStyle: "inir"
+            property int irisWorldRadius: -1
+            property real irisWorldPad: -1
+            property real irisWorldBorder: -1
+            property real irisWorldBorderOpacity: -1
+            property real irisWorldBackingOpacity: -1
+            property bool irisDateEnabled: false
+            property real irisDateScale: 1.0
+            property string irisDateAnchor: "free"
+            property int irisDateX: 168
+            property int irisDateY: 640
+            property bool irisDateLocked: false
+            property real irisDateOpacity: 1.0
+            property string irisDateBg: "card"
+            property string irisDateColor: ""
+            property string irisDateColor2: ""
+            property bool irisDateGradient: false
+            property string irisDateSize: "small"
+            property string irisDateOpts: ""
+            property string irisDateStyle: "inir"
+            property int irisDateRadius: -1
+            property real irisDatePad: -1
+            property real irisDateBorder: -1
+            property real irisDateBorderOpacity: -1
+            property real irisDateBackingOpacity: -1
+            property bool irisProfileEnabled: false
+            property real irisProfileScale: 1.0
+            property string irisProfileAnchor: "free"
+            property int irisProfileX: 216
+            property int irisProfileY: 680
+            property bool irisProfileLocked: false
+            property real irisProfileOpacity: 1.0
+            property string irisProfileBg: "card"
+            property string irisProfileColor: ""
+            property string irisProfileColor2: ""
+            property bool irisProfileGradient: false
+            property string irisProfileSize: "medium"
+            property string irisProfileOpts: ""
+            property string irisProfileStyle: "inir"
+            property int irisProfileRadius: -1
+            property real irisProfilePad: -1
+            property real irisProfileBorder: -1
+            property real irisProfileBorderOpacity: -1
+            property real irisProfileBackingOpacity: -1
+            property bool irisUptimeEnabled: false
+            property real irisUptimeScale: 1.0
+            property string irisUptimeAnchor: "free"
+            property int irisUptimeX: 120
+            property int irisUptimeY: 720
+            property bool irisUptimeLocked: false
+            property real irisUptimeOpacity: 1.0
+            property string irisUptimeBg: "card"
+            property string irisUptimeColor: ""
+            property string irisUptimeColor2: ""
+            property bool irisUptimeGradient: false
+            property string irisUptimeSize: "small"
+            property string irisUptimeOpts: ""
+            property string irisUptimeStyle: "inir"
+            property int irisUptimeRadius: -1
+            property real irisUptimePad: -1
+            property real irisUptimeBorder: -1
+            property real irisUptimeBorderOpacity: -1
+            property real irisUptimeBackingOpacity: -1
+            property bool irisNewsEnabled: false
+            property real irisNewsScale: 1.0
+            property string irisNewsAnchor: "free"
+            property int irisNewsX: 168
+            property int irisNewsY: 760
+            property bool irisNewsLocked: false
+            property real irisNewsOpacity: 1.0
+            property string irisNewsBg: "card"
+            property string irisNewsColor: ""
+            property string irisNewsColor2: ""
+            property bool irisNewsGradient: false
+            property string irisNewsSize: "medium"
+            property string irisNewsOpts: ""
+            property string irisNewsStyle: "inir"
+            property int irisNewsRadius: -1
+            property real irisNewsPad: -1
+            property real irisNewsBorder: -1
+            property real irisNewsBorderOpacity: -1
+            property real irisNewsBackingOpacity: -1
+            // iRiS canvas widgets
+            property bool irisCustomImageEnabled: false
+            property real irisCustomImageScale: 1.0
+            property string irisCustomImageAnchor: "free"
+            property int irisCustomImageX: 216
+            property int irisCustomImageY: 800
+            property bool irisCustomImageLocked: false
+            property real irisCustomImageOpacity: 1.0
+            property string irisCustomImageBg: "card"
+            property string irisCustomImageColor: ""
+            property string irisCustomImageColor2: ""
+            property bool irisCustomImageGradient: false
+            property string irisCustomImageSize: "small"
+            property string irisCustomImageOpts: ""
+            property string irisCustomImageStyle: "inir"
+            property int irisCustomImageRadius: -1
+            property real irisCustomImagePad: -1
+            property real irisCustomImageBorder: -1
+            property real irisCustomImageBorderOpacity: -1
+            property real irisCustomImageBackingOpacity: -1
+            property bool irisEditorialEnabled: false
+            property real irisEditorialScale: 1.0
+            property string irisEditorialAnchor: "free"
+            property int irisEditorialX: 120
+            property int irisEditorialY: 840
+            property bool irisEditorialLocked: false
+            property real irisEditorialOpacity: 1.0
+            property string irisEditorialBg: "card"
+            property string irisEditorialColor: ""
+            property string irisEditorialColor2: ""
+            property bool irisEditorialGradient: false
+            property string irisEditorialSize: "small"
+            property string irisEditorialOpts: ""
+            property string irisEditorialStyle: "inir"
+            property int irisEditorialRadius: -1
+            property real irisEditorialPad: -1
+            property real irisEditorialBorder: -1
+            property real irisEditorialBorderOpacity: -1
+            property real irisEditorialBackingOpacity: -1
+            property bool irisConverterEnabled: false
+            property real irisConverterScale: 1.0
+            property string irisConverterAnchor: "free"
+            property int irisConverterX: 168
+            property int irisConverterY: 880
+            property bool irisConverterLocked: false
+            property real irisConverterOpacity: 1.0
+            property string irisConverterBg: "card"
+            property string irisConverterColor: ""
+            property string irisConverterColor2: ""
+            property bool irisConverterGradient: false
+            property string irisConverterSize: "small"
+            property string irisConverterOpts: ""
+            property string irisConverterStyle: "inir"
+            property int irisConverterRadius: -1
+            property real irisConverterPad: -1
+            property real irisConverterBorder: -1
+            property real irisConverterBorderOpacity: -1
+            property real irisConverterBackingOpacity: -1
+            property bool irisJpEnabled: false
+            property real irisJpScale: 1.0
+            property string irisJpAnchor: "free"
+            property int irisJpX: 120
+            property int irisJpY: 960
+            property bool irisJpLocked: false
+            property real irisJpOpacity: 1.0
+            property string irisJpBg: "card"
+            property string irisJpColor: ""
+            property string irisJpColor2: ""
+            property bool irisJpGradient: false
+            property string irisJpSize: "small"
+            property string irisJpOpts: ""
+            property string irisJpStyle: "inir"
+            property int irisJpRadius: -1
+            property real irisJpPad: -1
+            property real irisJpBorder: -1
+            property real irisJpBorderOpacity: -1
+            property real irisJpBackingOpacity: -1
+            property bool irisVisualizerEnabled: false
+            property real irisVisualizerScale: 1.0
+            property string irisVisualizerAnchor: "free"
+            property int irisVisualizerX: 168
+            property int irisVisualizerY: 1000
+            property bool irisVisualizerLocked: false
+            property real irisVisualizerOpacity: 1.0
+            property string irisVisualizerBg: "card"
+            property string irisVisualizerColor: ""
+            property string irisVisualizerColor2: ""
+            property bool irisVisualizerGradient: false
+            property string irisVisualizerSize: "small"
+            property string irisVisualizerOpts: ""
+            property string irisVisualizerStyle: "inir"
+            property int irisVisualizerRadius: -1
+            property real irisVisualizerPad: -1
+            property real irisVisualizerBorder: -1
+            property real irisVisualizerBorderOpacity: -1
+            property real irisVisualizerBackingOpacity: -1
         }
     }
 
@@ -441,7 +1024,32 @@ Item {
         { "tab": "calendar", "title": I18n.tr("Calendar"),     "jp": "暦",   "enable": "calendarEnabled", "anchor": "calendarAnchor", "natW": 330, "natH": 210 },
         { "tab": "music",    "title": I18n.tr("Music"),        "jp": "音楽", "enable": "musicEnabled",    "anchor": "musicAnchor",    "natW": 400, "natH": 216 },
         { "tab": "weather",  "title": I18n.tr("Weather"),      "jp": "天気", "enable": "weatherEnabled",  "anchor": "weatherAnchor",  "natW": 220, "natH": 390 },
-        { "tab": "notes",    "title": I18n.tr("Notes"),        "jp": "メモ", "enable": "notesEnabled",    "anchor": "notesAnchor",    "natW": 260, "natH": 180 }
+        { "tab": "notes",    "title": I18n.tr("Notes"),        "jp": "メモ", "enable": "notesEnabled",    "anchor": "notesAnchor",    "natW": 260, "natH": 180 },
+        { "tab": "dayprogress", "title": I18n.tr("Day Progress"), "jp": "経過", "enable": "dayprogressEnabled", "anchor": "dayprogressAnchor", "natW": 200, "natH": 224 },
+        { "tab": "shape",    "title": I18n.tr("Shape"),        "jp": "図形", "enable": "shapeEnabled",    "anchor": "shapeAnchor",    "natW": 140, "natH": 140 },
+        // iRiS faces (hosted in Ryoku slots; previews are null — icon card only)
+        { "tab": "irisClock", "title": I18n.tr("Clock"), "jp": "時計", "enable": "irisClockEnabled", "anchor": "irisClockAnchor", "natW": 356, "natH": 200 },
+        { "tab": "irisWeather", "title": I18n.tr("Weather"), "jp": "天気", "enable": "irisWeatherEnabled", "anchor": "irisWeatherAnchor", "natW": 356, "natH": 200 },
+        { "tab": "irisMedia", "title": I18n.tr("Now Playing"), "jp": "音楽", "enable": "irisMediaEnabled", "anchor": "irisMediaAnchor", "natW": 356, "natH": 200 },
+        { "tab": "irisControls", "title": I18n.tr("Controls"), "jp": "操作", "enable": "irisControlsEnabled", "anchor": "irisControlsAnchor", "natW": 356, "natH": 200 },
+        { "tab": "irisMonth", "title": I18n.tr("Calendar"), "jp": "暦", "enable": "irisMonthEnabled", "anchor": "irisMonthAnchor", "natW": 356, "natH": 200 },
+        { "tab": "irisAgenda", "title": I18n.tr("Up next"), "jp": "予定", "enable": "irisAgendaEnabled", "anchor": "irisAgendaAnchor", "natW": 356, "natH": 200 },
+        { "tab": "irisTodo", "title": I18n.tr("Tasks"), "jp": "課題", "enable": "irisTodoEnabled", "anchor": "irisTodoAnchor", "natW": 356, "natH": 200 },
+        { "tab": "irisNotes", "title": I18n.tr("Notes"), "jp": "筆記", "enable": "irisNotesEnabled", "anchor": "irisNotesAnchor", "natW": 356, "natH": 200 },
+        { "tab": "irisTimers", "title": I18n.tr("Timers"), "jp": "計時", "enable": "irisTimersEnabled", "anchor": "irisTimersAnchor", "natW": 356, "natH": 200 },
+        { "tab": "irisScreen", "title": I18n.tr("Screen Time"), "jp": "時間", "enable": "irisScreenEnabled", "anchor": "irisScreenAnchor", "natW": 356, "natH": 200 },
+        { "tab": "irisVitals", "title": I18n.tr("Vitals"), "jp": "計測", "enable": "irisVitalsEnabled", "anchor": "irisVitalsAnchor", "natW": 356, "natH": 200 },
+        { "tab": "irisBattery", "title": I18n.tr("Batteries"), "jp": "電池", "enable": "irisBatteryEnabled", "anchor": "irisBatteryAnchor", "natW": 356, "natH": 200 },
+        { "tab": "irisWorld", "title": I18n.tr("World clock"), "jp": "世界", "enable": "irisWorldEnabled", "anchor": "irisWorldAnchor", "natW": 356, "natH": 200 },
+        { "tab": "irisDate", "title": I18n.tr("Date"), "jp": "日付", "enable": "irisDateEnabled", "anchor": "irisDateAnchor", "natW": 200, "natH": 200 },
+        { "tab": "irisProfile", "title": I18n.tr("Profile"), "jp": "人物", "enable": "irisProfileEnabled", "anchor": "irisProfileAnchor", "natW": 356, "natH": 200 },
+        { "tab": "irisUptime", "title": I18n.tr("Uptime"), "jp": "稼働", "enable": "irisUptimeEnabled", "anchor": "irisUptimeAnchor", "natW": 200, "natH": 200 },
+        { "tab": "irisNews", "title": I18n.tr("News"), "jp": "報道", "enable": "irisNewsEnabled", "anchor": "irisNewsAnchor", "natW": 356, "natH": 200 },
+        { "tab": "irisCustomImage", "title": I18n.tr("Custom Image"), "jp": "画像", "enable": "irisCustomImageEnabled", "anchor": "irisCustomImageAnchor", "natW": 320, "natH": 200 },
+        { "tab": "irisEditorial", "title": I18n.tr("Editorial"), "jp": "社説", "enable": "irisEditorialEnabled", "anchor": "irisEditorialAnchor", "natW": 360, "natH": 200 },
+        { "tab": "irisConverter", "title": I18n.tr("Image Converter"), "jp": "変換", "enable": "irisConverterEnabled", "anchor": "irisConverterAnchor", "natW": 300, "natH": 200 },
+        { "tab": "irisJp", "title": I18n.tr("Japanese Type"), "jp": "縦書", "enable": "irisJpEnabled", "anchor": "irisJpAnchor", "natW": 200, "natH": 200 },
+        { "tab": "irisVisualizer", "title": I18n.tr("iRiS Visualizer"), "jp": "音波", "enable": "irisVisualizerEnabled", "anchor": "irisVisualizerAnchor", "natW": 304, "natH": 200 }
     ]
     function widgetOf(tab) { for (var i = 0; i < pg.widgets.length; i++) if (pg.widgets[i].tab === tab) return pg.widgets[i]; return null; }
     readonly property var curWidget: pg.selected === "" ? null : pg.widgetOf(pg.selected)
@@ -459,8 +1067,10 @@ Item {
     Component { id: weatherPrevC; Loader { anchors.fill: parent; source: Qt.resolvedUrl("../WeatherPreview.qml")
         onLoaded: { item.design = Qt.binding(() => pg.draft.weatherDesign || "compact"); } } }
     Component { id: notesPrevC; Loader { anchors.fill: parent; source: Qt.resolvedUrl("../NotesPreview.qml") } }
+    Component { id: dayprogressPrevC; Loader { anchors.fill: parent; source: Qt.resolvedUrl("../DayProgressPreview.qml") } }
+    Component { id: shapePrevC; Loader { anchors.fill: parent; source: Qt.resolvedUrl("../ShapePreview.qml") } }
     function previewFor(tab) {
-        switch (tab) { case "aio": return aioPrevC; case "stats": return statsPrevC; case "calendar": return calPrevC; case "music": return musicPrevC; case "weather": return weatherPrevC; case "notes": return notesPrevC; default: return clockPrevC; }
+        switch (tab) { case "clock": return clockPrevC; case "aio": return aioPrevC; case "stats": return statsPrevC; case "calendar": return calPrevC; case "music": return musicPrevC; case "weather": return weatherPrevC; case "notes": return notesPrevC; case "dayprogress": return dayprogressPrevC; case "shape": return shapePrevC; default: return null; }
     }
 
     // ── store-installed desktop widgets ──────────────────────────────────────

@@ -41,7 +41,7 @@ AbstractBackgroundWidget {
         surfaceAccent: root.widgetAccent
         surfaceFill: root.widgetPlateColor
         surfaceUseBlur: root.effectiveBlur
-        screenX: root.x; screenY: root.y
+        screenX: root.ryokuScreenX; screenY: root.ryokuScreenY
         screenWidth: root.scaledScreenWidth; screenHeight: root.scaledScreenHeight
     }
 

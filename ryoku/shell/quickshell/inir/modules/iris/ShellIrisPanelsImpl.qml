@@ -16,7 +16,6 @@ import inir.modules.iris.sidebar
 import inir.modules.iris.studio
 import inir.modules.iris.polkit
 import inir.modules.iris.wallpaper
-import inir.modules.background
 
 Item {
     id: root
@@ -133,29 +132,12 @@ Item {
         component: IrisPalette {}
     }
 
-    // The iRiS desktop widget canvas: transparent, at WlrLayer.Bottom above
-    // ryogami's wallpaper. Loaded only when desktop widgets are on; the bare
-    // fallback lives in ShellIrisCriticalPanels.
-    LazyLoader {
-        activeAsync: Config.ready && GlobalStates.deferredPanelsReady
-            && (Config.options?.enabledPanels ?? []).includes("irisBackground")
-            && (Config.options?.iris?.modules?.desktopWidgets ?? true)
-        component: Background {}
-    }
-
     OnDemandPanelLoader {
         identifier: "irisWallpaperSelector"
         open: GlobalStates.wallpaperSelectorOpen
         requireEnabledPanel: false
         closeGraceMs: IrisStyle.settleDuration + 120
         component: IrisWallpaperPicker {}
-    }
-
-    OnDemandPanelLoader {
-        identifier: "irisRegionSelector"
-        open: GlobalStates.regionSelectorOpen || GlobalStates.annotationEditorOpen
-        requireEnabledPanel: false
-        source: "../regionSelector/RegionSelector.qml"
     }
 
     // The daemon is the single PolicyKit agent; this only presents its prompt in

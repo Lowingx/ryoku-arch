@@ -91,7 +91,7 @@ AbstractWidget {
     property bool _irisSizing: false
     property bool _irisPreviewing: false
     property var _resizePreviewValues: ({})
-    readonly property real scaleFactor: _baseScale
+    readonly property real scaleFactor: root.ryokuScaleOverride > 0 ? root.ryokuScaleOverride : _baseScale
     property bool _geometryReady: false
     readonly property bool animateGeometry: root._geometryReady && root.animationsActive
         && !root._isResizing && !root.containsPress
@@ -152,7 +152,8 @@ AbstractWidget {
         const v = root._readConfigKey("borderOpacity");
         return (v !== undefined && v !== null) ? Math.max(0, Math.min(1, Number(v))) : 0.08;
     }
-    readonly property real cornerRadiusOverride: root._readConfigKey("cornerRadius") ?? -1
+    readonly property real cornerRadiusOverride: root.ryokuRadiusOverride >= 0 ? root.ryokuRadiusOverride
+        : root._readConfigKey("cornerRadius") ?? -1
     readonly property string colorMode: root._readConfigKey("colorMode") ?? "auto"
     // A direct binding creates a resize/config revision cycle.
     property string placementStrategy: "free"
@@ -545,7 +546,7 @@ AbstractWidget {
     readonly property bool _isZonePlacement: root._snapZones.indexOf(root.placementStrategy) >= 0
     draggable: (placementStrategy === "free" || GlobalStates.widgetEditMode) && !GlobalStates.screenLocked && !root.locked
     function syncFreePositionFromConfig(): void {
-        if (!Config.ready || root.containsPress || root._isResizing) return;
+        if (root.ryokuHosted || !Config.ready || root.containsPress || root._isResizing) return;
         if (root.placementStrategy !== "free") return;
         root.x = root.targetX;
         root.y = root.targetY;
@@ -2082,13 +2083,41 @@ AbstractWidget {
         return Math.max(0, Math.min(100, Number.isFinite(value) ? value : 100)) / 100
     }
     readonly property bool irisWallpaperTint: String(root.irisWidgetOptions.tint ?? "wallpaper") === "wallpaper"
-    readonly property color irisAccent: IrisStyle.ryokuFrontend ? IrisStyle.text
+    // Ryoku host hooks (set only when a Ryoku desktop slot hosts this widget;
+    // every one is inert at its default, so the vendored iRiS frame is unchanged).
+    //   ryokuHosted   drops the region sampling and hands the face its real
+    //                 on-screen position through ryokuHostX / ryokuHostY.
+    //   ryokuStyle    picks the additive Ryoku skin for THIS widget, per widget —
+    //                 never the global iris.appearance.frontend.
+    //   ink/accent/size/scale/option overrides carry Ryoku's colour modes, size
+    //                 control and per-face options without writing any iRiS config.
+    property bool ryokuHosted: false
+    property bool ryokuStyle: false
+    property real ryokuHostX: 0
+    property real ryokuHostY: 0
+    property color ryokuInkOverride: "transparent"
+    property color ryokuAccentOverride: "transparent"
+    property string ryokuSizeOverride: ""
+    property real ryokuScaleOverride: -1
+    property real ryokuRadiusOverride: -1
+    property var ryokuOptionOverrides: ({})
+    readonly property color irisAccent: root.ryokuAccentOverride.a > 0 ? root.ryokuAccentOverride
+        : root.ryokuStyle ? IrisStyle.text
         : root.irisWallpaperTint ? IrisStyle.legibleAccent(Appearance.colors.colPrimary, IrisStyle.accent) : IrisStyle.accent
-    readonly property color irisAccent2: IrisStyle.ryokuFrontend ? IrisStyle.text
+    readonly property color irisAccent2: root.ryokuAccentOverride.a > 0 ? root.ryokuAccentOverride
+        : root.ryokuStyle ? IrisStyle.text
         : root.irisWallpaperTint ? IrisStyle.legibleAccent(Appearance.colors.colSecondary, IrisStyle.success) : IrisStyle.success
-    readonly property color irisAccent3: IrisStyle.ryokuFrontend ? IrisStyle.text
+    readonly property color irisAccent3: root.ryokuAccentOverride.a > 0 ? root.ryokuAccentOverride
+        : root.ryokuStyle ? IrisStyle.text
         : root.irisWallpaperTint ? IrisStyle.legibleAccent(Appearance.colors.colTertiary, IrisStyle.secondaryAccent) : IrisStyle.secondaryAccent
-    readonly property color irisTintedPlate: IrisStyle.ryokuFrontend ? IrisStyle.surfaceHighOpaque : ColorUtils.mix(IrisStyle.surface, root.irisAccent, 0.82)
+    readonly property color irisTintedPlate: root.ryokuStyle ? IrisStyle.surfaceHighOpaque : ColorUtils.mix(IrisStyle.surface, root.irisAccent, 0.82)
+    // A hosted widget renders at the slot's origin (Ryoku's WidgetSlot places it);
+    // its real on-screen position stays available as ryokuScreenX/Y so a glass
+    // face or a widget surface still crops the wallpaper under it.
+    Binding { target: root; property: "x"; value: 0; when: root.ryokuHosted; restoreMode: Binding.RestoreNone }
+    Binding { target: root; property: "y"; value: 0; when: root.ryokuHosted; restoreMode: Binding.RestoreNone }
+    readonly property real ryokuScreenX: root.ryokuHosted ? root.ryokuHostX : root.x
+    readonly property real ryokuScreenY: root.ryokuHosted ? root.ryokuHostY : root.y
     readonly property color irisPlate: root.irisMaterial === "tinted" ? root.irisTintedPlate : IrisStyle.surface
 
     property Component irisFace: null
@@ -2113,10 +2142,12 @@ AbstractWidget {
         const shared = String(root.irisWidgetOptions.material ?? "glass")
         return root.irisMaterials.includes(own) ? own : root.irisMaterials.includes(shared) ? shared : "glass"
     }
-    readonly property bool irisReadsRegion: root.irisFaced && (root.irisMaterial === "glass" || root.irisMaterial === "clear")
+    readonly property bool irisReadsRegion: root.irisFaced && !root.ryokuHosted && (root.irisMaterial === "glass" || root.irisMaterial === "clear")
     onIrisReadsRegionChanged: if (root.irisReadsRegion) _placementDebounce.restart()
     onIrisSizeChanged: if (root.irisReadsRegion && !root._irisSizing) _placementDebounce.restart()
     readonly property string irisSize: {
+        if (root.ryokuSizeOverride.length > 0 && root.irisSizes.includes(root.ryokuSizeOverride))
+            return root.ryokuSizeOverride
         const chosen = String(root._readConfigKey("iris.size") ?? "")
         return root.irisSizes.includes(chosen) ? chosen : root.irisDefaultSize
     }
@@ -2126,6 +2157,8 @@ AbstractWidget {
     readonly property real irisFaceHeight: root.irisSize === "large" ? root.irisUnit * 2 + root.irisGutter : root.irisUnit
     readonly property var irisSizeLabels: ({ small: Translation.tr("Small"), medium: Translation.tr("Medium"), large: Translation.tr("Large") })
     function irisOption(key: string, fallback: var): var {
+        if (root.ryokuOptionOverrides && root.ryokuOptionOverrides[key] !== undefined)
+            return root.ryokuOptionOverrides[key]
         const value = root._readConfigKey("iris." + key)
         return value === undefined || value === null ? fallback : value
     }

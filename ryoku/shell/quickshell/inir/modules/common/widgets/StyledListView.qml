@@ -18,9 +18,9 @@ ListView {
     // Accumulated scroll destination so wheel deltas stack while animating
     property real scrollTargetY: 0
 
-    property real touchpadScrollFactor: Config?.options.interactions.scrolling.touchpadScrollFactor ?? 100
-    property real mouseScrollFactor: Config?.options.interactions.scrolling.mouseScrollFactor ?? 50
-    property real mouseScrollDeltaThreshold: Config?.options.interactions.scrolling.mouseScrollDeltaThreshold ?? 120
+    property real touchpadScrollFactor: Config?.options?.interactions?.scrolling?.touchpadScrollFactor ?? 100
+    property real mouseScrollFactor: Config?.options?.interactions?.scrolling?.mouseScrollFactor ?? 50
+    property real mouseScrollDeltaThreshold: Config?.options?.interactions?.scrolling?.mouseScrollDeltaThreshold ?? 120
 
     function resetDrag() {
         root.dragIndex = -1
@@ -32,7 +32,7 @@ ListView {
     ScrollBar.vertical: StyledScrollBar {}
 
     MouseArea {
-        visible: Config?.options.interactions.scrolling.fasterTouchpadScroll
+        visible: Config?.options?.interactions?.scrolling?.fasterTouchpadScroll ?? false
         anchors.fill: parent
         acceptedButtons: Qt.NoButton
         onWheel: function(wheelEvent) {

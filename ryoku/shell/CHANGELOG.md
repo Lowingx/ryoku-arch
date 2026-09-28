@@ -7,16 +7,130 @@
   (also in Studio and in Ryoku Hub's Bar Studio) switches the whole frame
   between the Ryoku look, paper and ink with kanji-sealed navigation,
   hairlines and inverted selection, and the iNiR look, kept exactly as
-  upstream draws it. The Ryoku look is the default; controls that would only
-  recolour the frame hide while it is on.
+  upstream draws it. The Ryoku look is the default; only the material, glass
+  and wallpaper-tint knobs -- fixed tokens under paper and ink -- hide while it
+  is on.
 - **The rest of iRiS came over.** Its desktop widgets (drawn above Ryoku's
   wallpaper), the wallpaper gallery (library, Wallhaven and live scenery,
-  applied through ryogami), the region toolbar for screenshots, OCR, search
-  and recording, a PolicyKit prompt that presents Ryoku's own agent, and an
-  optional ask-before-closing sheet. Super+Shift+S opens the region toolbar
-  while iRiS is the bar style.
+  applied through ryogami), a PolicyKit prompt that presents Ryoku's own
+  agent, and an optional ask-before-closing sheet.
+- **ryoshot gains the region-selector front.** The screenshot tool now opens an
+  iNiR-style floating bar -- Shot, Edit, OCR, Search, Record and a colour
+  picker -- with crosshair guides that follow the cursor and rectangle, window
+  or whole-monitor selection. Shot copies and saves with a thumbnail; Edit
+  drops the grab into ryoshot's annotate/beautify editor; OCR and Search reuse
+  the shell's tools; the colour pick samples the frozen capture so it works on
+  Hyprland and niri alike; Record hands the region to the shell recorder.
+  Super+Shift+S and Print open it on every bar style, and the iRiS region IPC
+  and the Control Center Capture tile launch it too. The duplicate iRiS region
+  selector was removed (`ryoku/shell/quickshell/ryoshot/`,
+  `inir/modules/regionSelector/`).
+- **The desktop widget editor is the iRiS one, in Ryoku's look.** Edit widgets
+  opens a floating bar -- grid snap, grid step, and a scrolling rail of the whole
+  roster, each widget a tile that inverts to a bone plate when it is placed --
+  drawn in paper and ink and riding every bar style, replacing the old Add
+  drop-down toolbar. Two iRiS widgets join the roster, rendered in the Ryoku look
+  and stored in `widgets.json` beside the built-ins: **Day Progress** (a ring of
+  the day elapsed) and **Shape** (a decorative mark). Every widget takes the same
+  base -- placement, size, lock, backing and the Auto / Fixed / Gradient colour
+  modes -- from `WidgetSlot`, plus its own options, and `ryoku-shell desktop
+  editWidgets` opens the editor from a keybind on niri too
+  (`modules/desktop/WidgetEditBar.qml`, `modules/desktop/dayprogress/`,
+  `modules/desktop/shape/`, `shell.qml`).
+- **The whole iRiS face roster is addable, and skinnable per widget.** Every
+  vendored iRiS face -- clock, weather, now playing, controls, calendar, up
+  next, tasks, notes, timers, screen time, vitals, batteries, world clock,
+  date, profile, uptime and news -- now joins the roster through one adapter
+  that hosts the upstream face inside `WidgetSlot`, so placement, size, lock and
+  persistence come from Ryoku while the face itself is never reimplemented. Each
+  carries a per-widget Style: iNiR draws it exactly as upstream (the default),
+  and Ryoku is an added paper-and-ink skin -- chosen in the right-click menu and
+  the Hub, never by the global frontend. Alongside the shared base and the Auto
+  / Fixed / Gradient colour, each face gains its own geometry: corner radius,
+  padding, hairline width and opacity, and backing opacity, all starting at
+  today's look. `ryoku-shell desktop menu <widget>` opens a face's menu from a
+  keybind too (`modules/desktop/iris/`, `modules/desktop/WidgetMenu.qml`,
+  `modules/desktop/WidgetSlot.qml`).
+- **The face-less iRiS widgets came over too.** The canvas widgets that have no
+  face -- custom image, editorial, image converter, Japanese typography and the
+  iRiS visualizer -- host the whole upstream widget at the slot's origin,
+  unmodified in iNiR style; the Ryoku style wraps them in the slot's backing and
+  geometry (their own colours stay, and the menu says so). The mascot is left
+  out: its animation assets are not shipped in this tree, so it would only draw a
+  broken frame (`modules/desktop/iris/IrisCanvasProvider.qml`). Hosting a
+  list-based face no longer trips `StyledListView` on a cold iRiS config
+  (`inir/modules/common/widgets/StyledListView.qml`).
+- **The screen recorder is iNiR's, in the Ryoku look (clean cutover).** The old
+  gpu-screen-recorder/wf-recorder backend and its frame-docked record HUD are
+  gone; recording now runs iNiR's wf-recorder pipeline -- hardware encode
+  dispatched to the strongest GPU (NVENC on NVIDIA, VAAPI on a discrete AMD/Intel
+  render node, libx264 fallback), compositor-neutral wlr-screencopy capture -- and
+  is driven through one command API, `ryoku-shell record start|stop|status`,
+  handled by the daemon. The floating record island -- a draggable pill with a
+  live clock, the audio state and a stop button -- replaces the old HUD as the one
+  recording surface on every bar style, placed on the output being recorded and
+  clamped inside its work area. A default (Quick) capture saves and notifies; the
+  capture card keeps its opt-in post-actions -- Studio (records with a cursor
+  sidecar and opens the clip in Ryoku Motion), Edit-when-done, and a Discord-sized
+  copy (`scripts/ryoku-cmd-record`, `scripts/ryoku-cmd-recording-saved`,
+  `scripts/ryoku-cmd-studiorecord`, `scripts/ryoku-cmd-edit-recording`,
+  `scripts/ryoku-cmd-discord-compress`, `ipc/record.go`, `services/Recorder.qml`,
+  `modules/bar/RecordIsland.qml`, `modules/bar/popouts/CapturePopout.qml`).
 
 ### Changed
+- **Ryoku's desktop is the one place widgets are drawn.** The vendored iRiS
+  background widget canvas no longer mounts under the iRiS bar style -- the bare
+  wallpaper passthrough takes its place -- so a face is painted once, on Ryoku's
+  desktop, rather than twice. The Ryoku-versus-iNiR widget look is keyed per
+  widget now, not by `iris.appearance.frontend`, so flipping the frame's
+  frontend leaves the desktop faces alone
+  (`inir/modules/iris/ShellIrisPanelsImpl.qml`,
+  `inir/modules/iris/critical/ShellIrisCriticalPanels.qml`,
+  `inir/modules/background/widgets/AbstractBackgroundWidget.qml`,
+  `inir/modules/background/widgets/WidgetSurface.qml`).
+- **The Ryoku look keeps its Colour tab.** Accent and highlight follow the
+  wallpaper -- Ryoku's native matugen primary, from `~/.cache/ryoku/colors.json`
+  -- or a chosen hue, badges pick their source, and the light an open body
+  carries is honoured. Ink stays the monochrome default, so the paper-and-ink
+  base is unchanged until you ask for colour. The look toggle at the foot of the
+  Settings rail now sits flush with the rail's rows instead of cramped against
+  the mark (`inir/modules/iris/style/IrisStyle.qml`,
+  `inir/modules/iris/settings/IrisOptions.qml`, `IrisSetting.qml`,
+  `IrisSettings.qml`).
+
+- **Desktop widget cards are paper, and moving them is smooth.** A backed
+  widget's plate is now pure-black paper with a palette-following bone hairline
+  instead of a fixed dark glass card. Dragging a widget follows the pointer
+  freely and snaps to the grid once, on release, with an animated settle -- no
+  per-frame writes, so it no longer feels laggy -- honouring the editor's snap
+  toggle and step. The edit bar's roster rail scrolls with the wheel, touchpad or
+  a flick and fades at its edges, with no arrow buttons to click
+  (`modules/desktop/WidgetSlot.qml`, `modules/desktop/WidgetEditBar.qml`,
+  `modules/stage/Singletons/Config.qml`).
+
+- **One right-click menu, everywhere.** The desktop right-click menu is now the
+  same surface on every bar style: the iRiS menu's structure -- a calm grid of
+  quick-action tiles (wallpaper, widgets, visualiser, search), each sized to its
+  name so nothing clips, over the
+  desktop's own actions -- drawn in Ryoku's paper and ink, with the card growing
+  out of the click point. The dock's app menu and the in-shell tray menu wear the
+  same rows and inks, so a context menu reads as one family instead of three
+  (`modules/desktop/DesktopContextMenu.qml`, `MenuQuick.qml`, `MenuRow.qml`,
+  `modules/dock/DockMenu.qml`, `modules/bar/TrayMenu.qml`).
+
+- **The Super+S chat is the desktop's one live window on the shared agent
+  session.** It renders the daemon's stream as it arrives: thinking streams open
+  then folds to a one-line Thought when the answer starts, the reply reads in the
+  order the agent worked with its segments falling in around the tool calls, and
+  each tool row shows its kind, input, status and auto-approval with an
+  output-or-diff peek. Approvals are answered inline, a read-only switch
+  auto-approves reads, and the agent and model chip opens a searchable picker over
+  the agent's whole model list. The launcher quick ask's continue now opens this
+  chat rather than a separate page (`modules/bar/panel/PanelChat.qml`,
+  `ChatMessage.qml`, `ChatToolRow.qml`, `ChatApproval.qml`, `ChatModelPicker.qml`,
+  `services/Needle.qml`, `services/lib/chatstate.js`,
+  `modules/launcher/shared/AskPanel.qml`).
+
 - **iRiS cards and the Control Center grow out of the frame.** The default
   iRiS theme now melts an opened body into the bubble or edge it came from, so
   it reads as one silhouette with the frame instead of a panel floating beside

@@ -112,7 +112,7 @@ PanelWindow {
         const value = Config.getNestedValue(spec.path, spec.fallback)
         switch (spec.kind) {
         case "switch": return value ? Translation.tr(spec.label) : ""
-        case "choice": return Translation.tr(String((spec.choices ?? []).find(choice => choice.value === value)?.label ?? ""))
+        case "choice": return Translation.tr(String(((IrisStyle.ryokuFrontend && spec.ryokuChoices !== undefined ? spec.ryokuChoices : spec.choices) ?? []).find(choice => choice.value === value)?.label ?? ""))
         case "range": return spec.zeroLabel && Number(value) === 0 ? Translation.tr(spec.zeroLabel)
             : Translation.tr(spec.label) + " " + Math.round(Number(value)) + (spec.unit ?? "")
         default: return ""
@@ -373,21 +373,19 @@ PanelWindow {
 
                     Item { Layout.fillHeight: true }
 
-                    RowLayout {
+                    Item {
                         Layout.fillWidth: true
-                        Layout.leftMargin: 8 * root.d
                         Layout.bottomMargin: 4 * root.d
-                        spacing: 8 * root.d
-                        IrisMark { implicitSize: Math.round(22 * root.d) }
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 0
-                            IrisText { text: "iRiS"; font.pixelSize: 13 * IrisStyle.typeScale; font.weight: Font.DemiBold }
-                            IrisText {
-                                text: IrisStyle.ryokuFrontend ? Translation.tr("Ryoku look") : Translation.tr("By iNiR shell")
-                                color: IrisStyle.muted
-                                font.pixelSize: 11 * IrisStyle.typeScale
-                            }
+                        implicitHeight: Math.max(footerMark.implicitHeight, footerText.implicitHeight, frontendSwitch.implicitHeight)
+                        // The rail rows reach the content edge with a 10 px right pad;
+                        // the look switch is anchored to that same edge so it reads with
+                        // the rows rather than cramped against the mark.
+                        IrisMark {
+                            id: footerMark
+                            anchors.left: parent.left
+                            anchors.leftMargin: 8 * root.d
+                            anchors.verticalCenter: parent.verticalCenter
+                            implicitSize: Math.round(22 * root.d)
                         }
                         // Flips the whole iRiS family between Ryoku's paper-and-ink
                         // language and the upstream iNiR look, live. Kept here so a
@@ -395,6 +393,9 @@ PanelWindow {
                         MouseArea {
                             id: frontendSwitch
                             readonly property bool ryoku: IrisStyle.ryokuFrontend
+                            anchors.right: parent.right
+                            anchors.rightMargin: 10 * root.d
+                            anchors.verticalCenter: parent.verticalCenter
                             implicitWidth: Math.round(46 * root.d)
                             implicitHeight: Math.round(24 * root.d)
                             hoverEnabled: true
@@ -427,6 +428,23 @@ PanelWindow {
                                     font.pixelSize: 11 * IrisStyle.typeScale
                                     font.weight: Font.Bold
                                 }
+                            }
+                        }
+                        ColumnLayout {
+                            id: footerText
+                            anchors.left: footerMark.right
+                            anchors.leftMargin: 8 * root.d
+                            anchors.right: frontendSwitch.left
+                            anchors.rightMargin: 8 * root.d
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 0
+                            IrisText { text: "iRiS"; font.pixelSize: 13 * IrisStyle.typeScale; font.weight: Font.DemiBold }
+                            IrisText {
+                                Layout.fillWidth: true
+                                text: IrisStyle.ryokuFrontend ? Translation.tr("Ryoku look") : Translation.tr("By iNiR shell")
+                                color: IrisStyle.muted
+                                font.pixelSize: 11 * IrisStyle.typeScale
+                                elide: Text.ElideRight
                             }
                         }
                     }

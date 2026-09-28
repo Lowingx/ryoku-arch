@@ -89,38 +89,20 @@ Singleton {
     property bool screenLocked: false
     property bool sessionOpen: false
 
-    // ── Region selector (screenshot / record / OCR / search) ──────────────
-    property bool regionSelectorOpen: false
-    property var regionSelectorAction: 0
-    property var regionSelectorMode: 0
-    // Explicit screenshot callers must remain deterministic. The dedicated
-    // compositor binds for screenshot, OCR and visual search are separate
-    // contracts; opening one must never inherit state left by another tool.
-    function openRegionScreenshot(): void {
-        regionSelectorAction = 0
-        regionSelectorMode = 0
-        regionSelectorOpen = true
+    // ── Region capture (screenshot / record / OCR / search) ────────────────
+    // ryoshot owns the region-selector front now, so every entry point launches
+    // that separate config instead of an in-shell overlay. A bind-spawned qs
+    // surface does not inherit the daemon's shared QML module path, so set it
+    // here the same way the compositor binds do. An action preselects the front
+    // tool (matching ryoshot's RYOSHOT_ACTION); omit it for the plain tool.
+    function launchRegionCapture(action): void {
+        const qmlPath = Quickshell.env("HOME") + "/.local/lib/qt6/qml"
+        const args = ["env", "QML_IMPORT_PATH=" + qmlPath, "QML2_IMPORT_PATH=" + qmlPath]
+        if (action && action.length > 0)
+            args.push("RYOSHOT_ACTION=" + action)
+        args.push("flock", "-n", "-o", "/tmp/ryoshot.lock", "qs", "-c", "ryoshot")
+        Quickshell.execDetached(args)
     }
-
-    // The unified snip menu may restore the last toolbar choice. Raw ordinals
-    // mirror RegionSelection's enums: action 0 Shot, 1 Edit, 2 Search, 3 OCR
-    // (record is never restored); mode 0 rectangle, 1 circle.
-    function openRememberedRegionTool(): void {
-        let action = 0
-        let mode = 0
-        if (Config.options?.regionSelector?.rememberSnipChoice ?? true) {
-            const savedAction = Config.options?.regionSelector?.lastAction ?? 0
-            const savedMode = Config.options?.regionSelector?.lastMode ?? 0
-            if (savedAction >= 0 && savedAction <= 3) action = savedAction
-            if (savedMode === 1) mode = savedMode
-        }
-        regionSelectorAction = action
-        regionSelectorMode = mode
-        regionSelectorOpen = true
-    }
-    // Native screenshot annotation editor (Edit action).
-    property bool annotationEditorOpen: false
-    property string annotationEditorPath: ""
 
     // ── Wallpaper picker ──────────────────────────────────────────────────
     property bool wallpaperSelectorOpen: false

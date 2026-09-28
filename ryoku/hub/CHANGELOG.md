@@ -4,6 +4,11 @@
 ### Added
 - **Bar Studio switches iRiS between its Ryoku and iNiR looks.** The iRiS
   card has a Look control that flips the live frame (`pages/BarStudioPage.qml`).
+- **Every iRiS face has a card on the Desktop Widgets page.** The whole roster
+  joins the built-in grid, each with its own settings -- Style (iNiR or Ryoku),
+  size preset, backing, corner radius, size, opacity and placement -- and the
+  page keeps every per-widget key on Save (`pages/WidgetsPage.qml`,
+  `schema/WidgetsPage.js`).
 - **The Visualizer tab edits the new edge field.** The Desktop page's
   Visualizer tab grew an EDGE FIELD section - lit edges, reach, material,
   movement, effect, colour mode, corners and flow up front, the deep drives

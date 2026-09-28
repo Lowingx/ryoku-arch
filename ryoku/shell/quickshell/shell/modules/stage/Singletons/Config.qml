@@ -21,6 +21,13 @@ Singleton {
     property alias shadowAngle: adapter.shadowAngle
     property alias motion: adapter.motion
     property alias front: adapter.front
+    // Edit-widgets grid: the snap step and whether dragging snaps to it. These
+    // are editor preferences (not a per-widget placement), so they live on
+    // stage.json rather than widgets.json, where the Hub would drop an unknown
+    // key on Save. The desktop editor bar drives them; slots and the drag guides
+    // read them while composing.
+    property alias editGridSize: adapter.editGridSize
+    property alias editGridSnap: adapter.editGridSnap
 
     // Motion sub-fields, read directly by the renderer (defaults guard a
     // half-written file). Amount is a word the UI shows; the renderer needs the
@@ -65,6 +72,19 @@ Singleton {
     function setEdge(v) { adapter.edge = Math.max(0, Math.min(1, v)); settle.restart(); }
     function setShadow(v) { adapter.shadow = Math.max(0, Math.min(1, v)); settle.restart(); }
     function setShadowAngle(v) { adapter.shadowAngle = Math.round(v); settle.restart(); }
+
+    // Grid step cycles through a small ladder; snap is a plain toggle. Written
+    // eagerly (a deliberate editor pick, not a drag).
+    function setEditGridSize(v) {
+        const sizes = [16, 32, 48, 64];
+        adapter.editGridSize = sizes.indexOf(v) >= 0 ? v : 32;
+        file.writeAdapter();
+    }
+    function cycleEditGridSize() {
+        const sizes = [16, 32, 48, 64];
+        root.setEditGridSize(sizes[(sizes.indexOf(adapter.editGridSize) + 1) % sizes.length]);
+    }
+    function toggleEditGridSnap() { adapter.editGridSnap = !adapter.editGridSnap; file.writeAdapter(); }
 
     function _setMotion(key, v) {
         var m = {};
@@ -120,6 +140,8 @@ Singleton {
             property int shadowAngle: 90
             property var motion: ({ amount: "normal", idle: "none", music: false, musicLevel: 0.6, speed: 1.0, mouse: true, sensitivity: 1.0, range: 1.0, backdrop: 0.0 })
             property var front: []
+            property int editGridSize: 32
+            property bool editGridSnap: true
         }
     }
 

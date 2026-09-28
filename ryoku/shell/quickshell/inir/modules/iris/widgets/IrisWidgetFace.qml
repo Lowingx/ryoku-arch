@@ -17,6 +17,10 @@ Item {
     property color light: "transparent"
     property real padding: root.dp(16)
     default property alias content: body.data
+    // Ryoku host mode: skip the face's own plate/shadow/wash so the hosting Ryoku
+    // WidgetSlot owns the backing and the colour-mode ink mask reaches the glyphs.
+    // Defaults off, so the iRiS desktop frame is unchanged.
+    property bool ryokuBare: false
 
     readonly property string size: root.widget.irisSize
     readonly property bool small: root.size === "small"
@@ -41,7 +45,8 @@ Item {
 
     readonly property color accent: root.widget.irisAccent
     readonly property color highlight: root.widget.irisAccent3
-    readonly property color ink: IrisStyle.text
+    readonly property color ink: root.widget.ryokuInkOverride !== undefined && root.widget.ryokuInkOverride.a > 0
+        ? root.widget.ryokuInkOverride : IrisStyle.text
     readonly property color inkSecondary: IrisStyle.secondaryOf(root.ink)
     readonly property color inkTertiary: IrisStyle.tertiaryOf(root.ink)
     readonly property int figureWeight: root.widget.widgetTitleWeight
@@ -56,7 +61,7 @@ Item {
 
     RectangularShadow {
         anchors.fill: parent
-        visible: !root.clear
+        visible: !root.clear && !root.ryokuBare
         radius: root.radius
         blur: root.dp(28)
         spread: -root.dp(4)
@@ -66,7 +71,7 @@ Item {
 
     Loader {
         anchors.fill: parent
-        active: root.glass
+        active: root.glass && !root.ryokuBare
         sourceComponent: ClippingRectangle {
             id: glassPane
             visible: wallpaper.status === Image.Ready
@@ -94,7 +99,7 @@ Item {
                 width: root.width + glassPane.margin * 2
                 height: root.height + glassPane.margin * 2
                 sourceItem: wallpaper
-                sourceRect: Qt.rect(root.widget.x - glassPane.margin, root.widget.y - glassPane.margin, crop.width, crop.height)
+                sourceRect: Qt.rect(root.widget.ryokuScreenX - glassPane.margin, root.widget.ryokuScreenY - glassPane.margin, crop.width, crop.height)
                 textureSize: Qt.size(Math.max(1, Math.round(crop.width / 2)), Math.max(1, Math.round(crop.height / 2)))
                 smooth: true
                 layer.enabled: true
@@ -109,6 +114,7 @@ Item {
     }
 
     Rectangle {
+        visible: !root.ryokuBare
         anchors.fill: parent
         radius: root.radius
         color: root.plateColor
@@ -121,7 +127,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         anchors.margins: 1
-        visible: !root.clear && root.light.a > 0
+        visible: !root.clear && root.light.a > 0 && !root.ryokuBare
         opacity: root.glass ? IrisStyle.glassWash : 1
         radius: Math.max(0, root.radius - 1)
         gradient: Gradient {
@@ -134,7 +140,7 @@ Item {
         id: body
         anchors.fill: parent
         anchors.margins: root.padding
-        layer.enabled: root.clear
+        layer.enabled: root.clear && !root.ryokuBare
         layer.effect: MultiEffect {
             shadowEnabled: true
             shadowColor: IrisStyle.plateShadow

@@ -30,11 +30,11 @@ Item {
         component: IrisBar {}
     }
 
-    // The lightweight bare-desktop surface shows only when the widget canvas is
-    // off; the canvas itself lives in ShellIrisPanelsImpl.
+    // The bare iRiS background surface paints nothing, so the wallpaper shows
+    // through. Ryoku's own desktop is the single desktop-widget host, so the
+    // inir widget canvas is retired and this passthrough is always present.
     CriticalPanelLoader {
         identifier: "irisBackground"
-        extraCondition: !(Config.options?.iris?.modules?.desktopWidgets ?? true)
         component: IrisBackground {}
     }
 
