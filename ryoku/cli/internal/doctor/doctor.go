@@ -127,6 +127,7 @@ func reconcilers() []reconciler {
 		{i18n.T("stale install crypt mapper"), reconcileStaleCryptMapper},
 		{i18n.T("ryoku package channel"), reconcileRyokuChannel},
 		{i18n.T("ryoku package database"), reconcileRyokuSyncDB},
+		{i18n.T("ryoku channel pin"), reconcileChannelPin},
 		{i18n.T("boot guard"), reconcileBootGuard},
 		{i18n.T("update channel checkout"), reconcileUpdateChannel},
 		{i18n.T("update checkout pointer"), reconcileRepoPointer},

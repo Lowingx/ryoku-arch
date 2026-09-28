@@ -33,6 +33,25 @@
   (`internal/doctor/reconcile_boot_rw.go`).
 
 ### Fixed
+- **The boot guard's revert no longer strands the channel pin.** A failed
+  update's auto-revert rewrote the `[ryoku]` pin to the previous release and
+  then ran a narrower pacman transaction that could not move the compositor
+  split metas (`ryoku-desktop-hyprland` pins `ryoku-desktop=<exact>`); the
+  downgrade failed with the pin already changed, leaving the pin, the sync db,
+  and the installed set disagreeing so `ryoku status` read "behind" backwards
+  and `ryoku wm use niri` refused (#291). The pacman side of a channel move now
+  lives in one place (`moveRyokuSetToChannel`) that both `ryoku track` and the
+  revert use: it drops the unserved split metas and moves the whole set in one
+  transaction. The pin is transactional (`retargetChannel`) -- any failure
+  restores the previous `[ryoku]` Server exactly, re-syncs, and reinstalls any
+  split meta the move had already dropped, so a failed downgrade never strands a
+  box without ryoku-desktop-hyprland/niri -- and the guard records the tracked
+  channel so its notice names `ryoku track <channel>` as the
+  way back. `ryoku doctor` heals a box already wedged this way (a stale release
+  pin older than the installed release, unless `ryoku track v...` recorded it on
+  purpose) and `ryoku status` says so plainly instead of "behind N"
+  (`internal/updater/channelmove.go`, `internal/updater/bootguard.go`,
+  `internal/doctor/reconcile_channel_pin.go`).
 - **`ryoku update` releases its sleep guard even when the cutover fails.**
   Every failure between acquiring the durable update inhibitor and the final
   release (a failed session-bind, a reload that errored) returned with the

@@ -147,10 +147,11 @@ func Track(channel string) error {
 			return nil
 		}
 		fmt.Printf(i18n.T("==> Already tracking %s; moving the Ryoku set to what it serves\n"), channel)
-		return runChannelUpdate()
+		recordChannelIntent(channel)
+		return retargetChannel(channel, runChannelUpdate)
 	}
 
-	migrated, err := switchToPackageChannel(channel)
+	migrated, err := migrateOffCheckout()
 	if err != nil {
 		return err
 	}
@@ -170,24 +171,36 @@ func Track(channel string) error {
 		fmt.Println(i18n.T("==> ryoku-desktop is not installed here; the channel switch installs it from the selected channel."))
 	}
 	fmt.Println(i18n.T("==> Updates now come from packages: `ryoku update` runs pacman."))
-	return runChannelUpdate()
+	// Record the deliberate choice before the move: it is the signal the doctor
+	// uses to tell a pin the user asked for from one a failed boot-guard revert
+	// left behind (#291). retargetChannel makes the pin transactional -- a failed
+	// move restores the previous [ryoku] Server exactly and re-syncs.
+	recordChannelIntent(channel)
+	return retargetChannel(channel, runChannelUpdate)
 }
 
-// switchToPackageChannel performs the filesystem side of a packaged track:
-// migrate a source-tracked box off its checkout (retire tracking, keep the
-// clone) and rewrite the [ryoku] Server to channel. It touches no pacman and no
-// network, so it is unit-testable; the caller runs the pacman side after.
-func switchToPackageChannel(channel string) (migrated bool, err error) {
-	if sys.SourceTracked() {
-		if err := sys.RetireSourceTracking(); err != nil {
-			return false, fmt.Errorf(i18n.T("could not retire the source checkout: %w"), err)
-		}
-		migrated = true
+// recordChannelIntent writes the channel Track is moving to as the deliberate
+// choice. Best effort: a box that could not record it just defaults to stable
+// when the doctor later reconciles the pin.
+func recordChannelIntent(channel string) {
+	if err := sys.WriteChannelIntent(channel); err != nil {
+		fmt.Fprintf(os.Stderr, i18n.T("note: could not record the tracked channel: %v\n"), err)
 	}
-	if err := sys.SetPackagedChannel(channel); err != nil {
-		return migrated, err
+}
+
+// migrateOffCheckout retires a source-tracked box's checkout as the update
+// source (the ~/ryoku-arch clone stays on disk) so `ryoku track` can move it
+// onto packages. Returns whether it migrated. It touches no pacman and no
+// network, so it is unit-testable; the pin and the move are the caller's
+// transactional job (retargetChannel).
+func migrateOffCheckout() (migrated bool, err error) {
+	if !sys.SourceTracked() {
+		return false, nil
 	}
-	return migrated, nil
+	if err := sys.RetireSourceTracking(); err != nil {
+		return false, fmt.Errorf(i18n.T("could not retire the source checkout: %w"), err)
+	}
+	return true, nil
 }
 
 // runChannelUpdate is the pacman side of a track (the forced -Syyu plus an
