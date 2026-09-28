@@ -173,6 +173,13 @@
   grazes the frame.
 
 ### Fixed
+- **The QS Bar Quotes stream rotates through its bundled quotes again.** The
+  mode only read `~/.config/quickshell/bar/quotes.txt`, which nothing ships,
+  so every install showed the one inline fallback quote forever. It now falls
+  back to the `quotes.txt` bundled beside the bar and cycles through it on the
+  existing 16s timer. A custom list at `~/.config/quickshell/bar/quotes.txt`
+  still wins; keep it in `~/.config/ryoku/user_edits/quickshell/bar/quotes.txt`
+  so `ryoku update` lays it back instead of pruning it with the quickshell tree.
 - **A failed `deploy.sh` cutover no longer strands the sleep guard.** The
   deploy path takes the same durable inhibitor the package hooks do, and a
   later failure (session-bind, a config reload) exited through errexit with
