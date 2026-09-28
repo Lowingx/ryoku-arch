@@ -452,9 +452,9 @@ write_session_environment_from_pid() {
 # Fallback resolver for a compositor whose clients live in the user manager
 # rather than the login1 scope: scan the calling user's own processes for one
 # that names this exact session and a Wayland display, preferring a process
-# that also carries the window manager's IPC socket (the shell and the other
-# compositor clients) so `$provider_bin environment` resolves NIRI_SOCKET /
-# HYPRLAND_INSTANCE_SIGNATURE. A process from any other session id is skipped.
+# the provider can read its IPC handle from (the shell and the other
+# compositor clients), so `$provider_bin environment` has something to report.
+# A process from any other session id is skipped.
 discover_session_environment_from_user() {
   local sid=$1 session_type=$2 provider=$3 provider_bin=$4 path=$5
   local proc_root=${RYOKU_PROC_ROOT:-/proc}
@@ -468,17 +468,17 @@ discover_session_environment_from_user() {
     [[ -r $proc/status && -r $proc/environ ]] || continue
     proc_uid="$(awk '/^Uid:/ { print $2; exit }' "$proc/status" 2>/dev/null || true)"
     [[ $proc_uid == "$self_uid" ]] || continue
-    proc_sid="" has_wayland=0 has_socket=0
+    proc_sid="" has_wayland=0
     while IFS= read -r -d '' entry; do
       key=${entry%%=*}
       case "$key" in
         XDG_SESSION_ID) proc_sid=${entry#*=} ;;
         WAYLAND_DISPLAY) [[ -n ${entry#*=} ]] && has_wayland=1 ;;
-        NIRI_SOCKET|HYPRLAND_INSTANCE_SIGNATURE) [[ -n ${entry#*=} ]] && has_socket=1 ;;
       esac
     done < <(cat "$proc/environ" 2>/dev/null || true)
     [[ $proc_sid == "$sid" && $has_wayland == 1 ]] || continue
-    if (( has_socket )); then
+    has_socket="$("$provider_bin" environment "$pid" 2>/dev/null | tr -d '\0')"
+    if [[ -n $has_socket ]]; then
       preferred_pid=$pid
       break
     fi
