@@ -412,8 +412,14 @@ discover_session_environment() {
 # session, write its compositor environment file: the XDG/display keys, the
 # window-manager tag, and the provider's own IPC socket read from the process.
 # Returns 0 only on a written file, so a scan can stop at the first match.
+# allow_missing_sid=1 lets a session manager (uwsm) or a compositor autostart
+# child stand in for the requested session when it carries no XDG_SESSION_ID
+# at all; the caller has already proven the session is unambiguous. The file
+# always names the resolved sid, so every later consumer keeps checking it.
 write_session_environment_from_pid() {
   local sid=$1 session_type=$2 provider=$3 provider_bin=$4 pid=$5 path=$6
+  local allow_missing_sid=${7:-0}
+  local proc_root=${RYOKU_PROC_ROOT:-/proc}
   local entry key value tmp
   local -a keys=(
     XDG_SESSION_ID XDG_SESSION_TYPE XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP
@@ -421,7 +427,7 @@ write_session_environment_from_pid() {
   )
   local -A found=()
   [[ $pid =~ ^[0-9]+$ ]] || return 1
-  [[ -r /proc/$pid/environ ]] || return 1
+  [[ -r $proc_root/$pid/environ ]] || return 1
   while IFS= read -r -d '' entry; do
     key=${entry%%=*}
     value=${entry#*=}
@@ -431,7 +437,10 @@ write_session_environment_from_pid() {
         found[$key]=$value
         ;;
     esac
-  done < <(cat "/proc/$pid/environ" 2>/dev/null || true)
+  done < <(cat "$proc_root/$pid/environ" 2>/dev/null || true)
+  if [[ -z ${found[XDG_SESSION_ID]:-} && $allow_missing_sid == 1 ]]; then
+    found[XDG_SESSION_ID]=$sid
+  fi
   [[ ${found[XDG_SESSION_ID]:-} == "$sid" ]] || return 1
   [[ $session_type == wayland && -n ${found[WAYLAND_DISPLAY]:-} ]] || return 1
   tmp="$path.$$"
@@ -454,12 +463,16 @@ write_session_environment_from_pid() {
 # that names this exact session and a Wayland display, preferring a process
 # the provider can read its IPC handle from (the shell and the other
 # compositor clients), so `$provider_bin environment` has something to report.
-# A process from any other session id is skipped.
+# A process from any other session id is skipped. A process carrying no
+# XDG_SESSION_ID at all (a uwsm user-manager launch, which deliberately keeps
+# transient session vars out of the manager) is accepted last, and only when
+# this user holds exactly one open graphical Ryoku session to attribute it to.
 discover_session_environment_from_user() {
   local sid=$1 session_type=$2 provider=$3 provider_bin=$4 path=$5
   local proc_root=${RYOKU_PROC_ROOT:-/proc}
-  local self_uid proc pid proc_uid entry key proc_sid
-  local preferred_pid="" plain_pid="" has_wayland has_socket
+  local self_uid proc pid proc_uid entry key value proc_sid desktop
+  local preferred_pid="" plain_pid="" anon_pid="" single_checked=-1 single=0
+  local has_wayland has_socket
   [[ $session_type == wayland ]] || return 1
   self_uid="$(id -u)"
   for proc in "$proc_root"/[0-9]*; do
@@ -468,26 +481,66 @@ discover_session_environment_from_user() {
     [[ -r $proc/status && -r $proc/environ ]] || continue
     proc_uid="$(awk '/^Uid:/ { print $2; exit }' "$proc/status" 2>/dev/null || true)"
     [[ $proc_uid == "$self_uid" ]] || continue
-    proc_sid="" has_wayland=0
+    proc_sid="" has_wayland=0 desktop=""
     while IFS= read -r -d '' entry; do
       key=${entry%%=*}
+      value=${entry#*=}
       case "$key" in
-        XDG_SESSION_ID) proc_sid=${entry#*=} ;;
-        WAYLAND_DISPLAY) [[ -n ${entry#*=} ]] && has_wayland=1 ;;
+        XDG_SESSION_ID) proc_sid=$value ;;
+        XDG_CURRENT_DESKTOP) desktop=${value,,} ;;
+        WAYLAND_DISPLAY) [[ -n $value ]] && has_wayland=1 ;;
       esac
     done < <(cat "$proc/environ" 2>/dev/null || true)
-    [[ $proc_sid == "$sid" && $has_wayland == 1 ]] || continue
+    [[ $has_wayland == 1 ]] || continue
     has_socket="$("$provider_bin" environment "$pid" 2>/dev/null | tr -d '\0')"
-    if [[ -n $has_socket ]]; then
-      preferred_pid=$pid
-      break
+    if [[ $proc_sid == "$sid" ]]; then
+      if [[ -n $has_socket ]]; then
+        preferred_pid=$pid
+        break
+      fi
+      [[ -n $plain_pid ]] || plain_pid=$pid
+      continue
     fi
-    [[ -n $plain_pid ]] || plain_pid=$pid
+    [[ -z $proc_sid ]] || continue
+    # A session manager that keeps transient vars out of the user manager
+    # (uwsm) leaves its compositor with no XDG_SESSION_ID at all, so the exact
+    # match can never fire. Accept the process only when its desktop name
+    # still identifies this compositor and this user holds exactly one open
+    # graphical Ryoku session, which makes attribution unambiguous. Keep
+    # scanning: an exact-match process found later still outranks this one.
+    [[ $desktop == *"$provider"* ]] || continue
+    if (( single_checked < 0 )); then
+      single_user_session "$sid" && single=1
+      single_checked=$single
+    fi
+    (( single == 1 )) || continue
+    if [[ -n $has_socket ]]; then
+      anon_pid=$pid
+      continue
+    fi
+    [[ -n $anon_pid ]] || anon_pid=$pid
   done
   pid=${preferred_pid:-$plain_pid}
-  [[ -n $pid ]] || return 1
+  if [[ -n $pid ]]; then
+    write_session_environment_from_pid \
+      "$sid" "$session_type" "$provider" "$provider_bin" "$pid" "$path" 0
+    return
+  fi
+  [[ -n $anon_pid ]] || return 1
   write_session_environment_from_pid \
-    "$sid" "$session_type" "$provider" "$provider_bin" "$pid" "$path"
+    "$sid" "$session_type" "$provider" "$provider_bin" "$anon_pid" "$path" 1
+}
+
+# True when $sid is the only open graphical Ryoku session this user owns: the
+# proof that lets a Wayland process without an XDG_SESSION_ID be attributed to
+# it without risking a cross-session environment bind.
+single_user_session() {
+  local wanted=$1 count=0 line
+  while read -r line; do
+    [[ ${line%% *} == "$wanted" ]] || return 1
+    count=$((count + 1))
+  done < <(current_user_graphical_sessions 2>/dev/null || true)
+  [[ $count == 1 ]]
 }
 
 bind_session_environment() {
@@ -1594,7 +1647,11 @@ start_target_session() {
   for _ in {1..150}; do
     if ryoku-shell "$ready" >/dev/null 2>&1; then
       start_target_clamshell "$ready"
-      systemctl --user restart ryogami.service
+      # The wallpaper is cosmetic: a start-limit-hit here used to abort the
+      # cutover through errexit before its guards were released, leaving a
+      # durable sleep block behind that denied every later suspend (#282).
+      systemctl --user restart ryogami.service >/dev/null 2>&1 ||
+        log "ryogami did not restart; the wallpaper waits for the next login"
       return 0
     fi
     sleep 0.1
@@ -1619,8 +1676,17 @@ start_login_session() {
   (( EUID != 0 )) || { log "session startup must run as the graphical user" >&2; return 1; }
   local sid="${1:-${XDG_SESSION_ID:-}}" activity
   [[ $sid =~ ^[A-Za-z0-9_.-]+$ ]] || return 2
+  user_guard_sid=$sid
   exec 8>"${XDG_RUNTIME_DIR:-/tmp}/ryoku-power-cutover.lock"
   flock 8
+  # Any unexpected failure (errexit, a killed unit) must not strand the
+  # durable sleep block: a leaked guard denies every later suspend with
+  # logind's "Operation denied due to active block inhibitor" (#282, #285).
+  # Success paths release it themselves; a closing session keeps it, because
+  # its own user manager takes the inhibitor down.
+  trap 'if (( $? != 0 )) && ! user_guard_session_closing; then
+          release_user_guard
+        fi' EXIT
   start_user_guard
   if ! qylock_stage_matches_installer; then
     ensure_qylock_generation_guard
@@ -1666,6 +1732,22 @@ release_user_guard() {
   fi
 }
 
+# The login1 session the current guarded run protects. The EXIT trap fires
+# after the guarded function returned, so it reads this global, not a local.
+user_guard_sid=""
+
+# True when the guarded login1 session is closing or gone: then the durable
+# guard must stay, because the session's own user manager takes the transient
+# unit (and its inhibitor) down at logout, and releasing early would open the
+# very suspend window the guard exists to close. An unknown session releases:
+# the guard's job is done, and holding it would leak.
+user_guard_session_closing() {
+  local sid=${user_guard_sid:-${XDG_SESSION_ID:-}} state
+  [[ $sid =~ ^[A-Za-z0-9_.-]+$ ]] || return 1
+  state="$(loginctl show-session "$sid" -p State --value 2>/dev/null)" || return 1
+  [[ $state != active && $state != online ]]
+}
+
 user_cutover() {
   (( EUID != 0 )) || { log "session cutover must run as the graphical user" >&2; return 1; }
   local selected_sid=""
@@ -1677,6 +1759,17 @@ user_cutover() {
   done
   exec 8>"${XDG_RUNTIME_DIR:-/tmp}/ryoku-power-cutover.lock"
   flock 8
+  # Any unexpected failure (errexit, a killed unit) must not strand the
+  # durable sleep block: a leaked guard denies every later suspend with
+  # logind's "Operation denied due to active block inhibitor" (#282, #285).
+  # Success paths release it themselves. A closing session keeps it: its own
+  # user manager takes the transient unit, and the inhibitor with it, down at
+  # logout, and releasing early would open the very window the guard exists
+  # to close. The waiter keeps it between retries and releases it when it
+  # gives up.
+  trap 'if (( $? != 0 )) && ! user_guard_session_closing; then
+          release_user_guard
+        fi' EXIT
   start_user_guard
   if target_policy_present; then
     request_qylock_generation_guard
@@ -1686,7 +1779,8 @@ user_cutover() {
       else
         log "deferring generation cutover until every loaded lock exits"
         schedule_qylock_cutover
-        # Keep the durable user inhibitor until the waiter completes.
+        # Keep the durable user inhibitor until the waiter completes; the
+        # zero status keeps the EXIT trap quiet.
         return 0
       fi
     fi

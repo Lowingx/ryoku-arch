@@ -11,6 +11,32 @@
   `tests/monitor-custom-mode.sh`.
 
 ### Fixed
+- `power/ryoku-power-cutover`: **a failed cutover never strands its sleep
+  guard.** The session cutover and the login startup take a durable sleep
+  inhibitor before they stop the lid and idle owners, and only the success
+  paths released it. Any failure after that point (a wallpaper daemon in
+  start-limit-hit, a session-bind that cannot resolve the compositor
+  environment) exited with the block still live, and logind denied every
+  later suspend, lid-close included, with "Operation denied due to active
+  block inhibitor" until logout or a reboot (#282, #285). Both entry points
+  now release the guard on any non-zero exit, and the wallpaper restart is
+  demoted to a warning: it is cosmetic, and it used to abort a cutover that
+  had already succeeded. A run whose session is closing keeps the guard,
+  because that session's own user manager takes the inhibitor down with it,
+  and releasing early would open the suspend window the guard exists to
+  close (`tests/power-cutover.sh` covers the leak, the release, and the
+  closing-session hold).
+- `power/ryoku-power-cutover`: **a uwsm-launched compositor is found.** uwsm
+  deliberately keeps transient session variables out of the user manager, so
+  its Hyprland runs as a session service carrying no `XDG_SESSION_ID` at all,
+  and the login1 scope holds only sddm-helper and the launcher. Neither the
+  scope scan nor the user scan could resolve the compositor environment, so
+  every package cutover on such a box failed at session-bind and left the
+  shell stopped (#282). The user scan now accepts a Wayland process with no
+  session id when its desktop name identifies this compositor *and* this user
+  holds exactly one open graphical Ryoku session, which makes the attribution
+  unambiguous; with two sessions open it still refuses, and an exact match
+  found later still outranks it.
 - `power/ryoku-power-cutover`: **a killed generation guard releases its
   locks.** The hold keeps the launch and generation flocks exclusive while a
   cutover swaps lockscreen generations, and its keep-alive coprocess inherited

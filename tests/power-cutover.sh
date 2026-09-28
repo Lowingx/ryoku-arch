@@ -346,7 +346,11 @@ case "$name:${1:-}" in
     ;;
   loginctl:list-sessions)
     if [[ ${EXTRA_SESSION:-0} == 1 ]]; then
-      printf '9 %s user seat0\n8 %s user seat0\n' "$(id -u)" "$(id -u)"
+      if [[ ${ONLY_SESSION_NINE:-0} == 1 ]]; then
+        printf '9 %s user seat0\n' "$(id -u)"
+      else
+        printf '9 %s user seat0\n8 %s user seat0\n' "$(id -u)" "$(id -u)"
+      fi
     fi
     ;;
   loginctl:show-session)
@@ -653,6 +657,59 @@ if grep -qxF 'systemctl --user stop ryoku-power-cutover-guard.service' "$tmp/cal
   fail "closing-session cutover released its durable sleep guard"
 fi
 rm -f "$tmp/state/user-guard"
+
+# A cutover that fails mid-flight while its session stays open must not
+# strand the durable sleep guard: a leaked block denies every later suspend
+# with logind's "Operation denied due to active block inhibitor" (#282, #285).
+: >"$tmp/calls"
+if SHELL_RESTART_FAIL=1 CUTOVER_LOG="$tmp/calls" CUTOVER_STATE="$tmp/state" \
+    XDG_RUNTIME_DIR="$tmp/runtime-user" XDG_SESSION_ID=9 XDG_STATE_HOME="$tmp/state-home" \
+    RYOKU_CUTOVER_TARGET_ROOT="$tmp/bin" RYOKU_CUTOVER_PROVIDER_ROOT="$tmp/bin" \
+    RYOKU_CUTOVER_INSTALLED_HELPER="$helper" \
+    RYOKU_QYLOCK_INSTALLER="$tmp/qylock-install" PATH="$tmp/bin:$PATH" \
+    "$helper" user >/dev/null 2>&1; then
+  fail "a cutover whose shell restart failed reported success"
+fi
+grep -qxF 'systemctl --user stop ryoku-power-cutover-guard.service' "$tmp/calls" \
+  || fail "a failed cutover leaked its durable sleep guard"
+
+# uwsm keeps transient session variables out of the user manager, so its
+# compositor carries no XDG_SESSION_ID at all. When this user holds exactly
+# one open graphical session, the user scan must attribute such a Wayland
+# process to it; with a second session open the attribution is ambiguous and
+# must be refused (#282).
+mkdir -p "$tmp/proc/90001" "$tmp/empty-cgroup/test.scope"
+printf 'Name:\thyprland\nUid:\t%s\t%s\t%s\t%s\n' \
+  "$(id -u)" "$(id -u)" "$(id -u)" "$(id -u)" >"$tmp/proc/90001/status"
+printf 'WAYLAND_DISPLAY=wayland-uwsm\0XDG_CURRENT_DESKTOP=testwm\0' \
+  >"$tmp/proc/90001/environ"
+: >"$tmp/empty-cgroup/test.scope/cgroup.procs"
+rm -f "$tmp/runtime-user/ryoku-session.9.environment"
+if ! ONLY_SESSION_NINE=1 EXTRA_SESSION=1 PATH="$tmp/bin:$PATH" \
+    CUTOVER_LOG="$tmp/calls" CUTOVER_STATE="$tmp/state" \
+    XDG_RUNTIME_DIR="$tmp/runtime-user" RYOKU_PROC_ROOT="$tmp/proc" \
+    RYOKU_CGROUP_ROOT="$tmp/empty-cgroup" RYOKU_CUTOVER_PROVIDER_ROOT="$tmp/bin" \
+    bash -c 'source "$1"; discover_session_environment 9' _ "$helper"; then
+  fail "the user scan refused a Wayland process with no XDG_SESSION_ID"
+fi
+envmap=$(tr '\0' '\n' <"$tmp/runtime-user/ryoku-session.9.environment")
+grep -qx 'XDG_SESSION_ID=9' <<<"$envmap" \
+  || fail "the attributed session environment named the wrong session"
+grep -qx 'WAYLAND_DISPLAY=wayland-uwsm' <<<"$envmap" \
+  || fail "the attributed session environment lost the compositor display"
+grep -qx 'RYOKU_WM=testwm' <<<"$envmap" \
+  || fail "the attributed session environment lost the window-manager tag"
+grep -qx 'TESTWM_SOCKET=session-nine' <<<"$envmap" \
+  || fail "the attributed session environment lost the provider IPC socket"
+rm -f "$tmp/runtime-user/ryoku-session.9.environment"
+if EXTRA_SESSION=1 PATH="$tmp/bin:$PATH" \
+    XDG_RUNTIME_DIR="$tmp/runtime-user" RYOKU_PROC_ROOT="$tmp/proc" \
+    RYOKU_CGROUP_ROOT="$tmp/empty-cgroup" RYOKU_CUTOVER_PROVIDER_ROOT="$tmp/bin" \
+    bash -c 'source "$1"; discover_session_environment 9' _ "$helper"; then
+  fail "the user scan attributed an ownerless process across two open sessions"
+fi
+[[ ! -e $tmp/runtime-user/ryoku-session.9.environment ]] \
+  || fail "an ambiguous attribution still wrote the session environment"
 
 mkdir -p "$tmp/watch-bin" "$tmp/watch-runtime"
 cat >"$tmp/watch-bin/dbus-monitor" <<'EOF'
