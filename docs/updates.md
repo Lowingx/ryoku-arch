@@ -319,12 +319,14 @@ release is tagged.**
 On a packaged box the channel is nothing but the `Server` line of the `[ryoku]`
 stanza, so there is no second state to drift from it:
 
-- `ryoku track unstable-dev` turns any box into a **testing box**: it follows the
+- `ryoku track unstable` turns any box into a **testing box**: it follows the
   `testing` channel, rebuilt on every push to `unstable-dev`, so a tester gets
-  each push as signed packages through `ryoku update`. `ryoku track main` returns
-  it to **stable** (named releases). The two are aliases for `ryoku track testing`
-  and `ryoku track stable`.
-- `ryoku track stable | testing | v<tag>` rewrites that line and runs an update
+  each push as signed packages through `ryoku update`. `ryoku track stable`
+  returns it to **stable** (named releases). `unstable` is the user-facing name
+  of the `testing` channel (its internal key -- the repo path, the `[ryoku]`
+  `Server`, the channel-intent file -- stays `testing`); `ryoku track testing`
+  still works as a quiet synonym.
+- `ryoku track stable | unstable | v<tag>` rewrites that line and runs an update
   that moves the Ryoku set to what the channel serves, down as well as up: the
   databases are force-refreshed (a frozen release's db is older than the
   channel's, so pacman would keep the cached one), then the installed
@@ -338,7 +340,7 @@ stanza, so there is no second state to drift from it:
 - The doctor names the channel it finds and warns, without touching it, when
   `[ryoku]` points at a mirror Ryoku does not publish.
 
-`ryoku track main | unstable-dev --source` is the developer path: it builds and
+`ryoku track stable | unstable --source` is the developer path: it builds and
 tracks a git checkout instead of packages (see `docs/development.md`). A box
 already on a checkout is migrated onto packages by a plain track without
 `--source`: the checkout is retired as the update source (the `~/ryoku-arch`

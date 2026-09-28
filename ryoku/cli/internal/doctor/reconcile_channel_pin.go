@@ -33,13 +33,13 @@ func reconcileChannelPin(checkOnly bool) recResult {
 	case channelPinStale:
 		if checkOnly {
 			return wouldRes(i18n.T("the [ryoku] pin %s is older than the installed release %s, so this box can take no updates"), pin, installed).
-				withFix(i18n.T("ryoku track %s"), want)
+				withFix(i18n.T("ryoku track %s"), sys.TrackName(want))
 		}
 		if err := updater.RetargetChannel(want); err != nil {
-			return failRes(i18n.T("could not restore the %s channel from the stale pin %s: %v"), want, pin, err).
-				withFix(i18n.T("ryoku track %s"), want)
+			return failRes(i18n.T("could not restore the %s channel from the stale pin %s: %v"), sys.DisplayChannel(want), pin, err).
+				withFix(i18n.T("ryoku track %s"), sys.TrackName(want))
 		}
-		return fixedRes(i18n.T("restored the %s channel; the [ryoku] pin was stuck on %s while %s is installed"), want, pin, installed)
+		return fixedRes(i18n.T("restored the %s channel; the [ryoku] pin was stuck on %s while %s is installed"), sys.DisplayChannel(want), pin, installed)
 	default:
 		return okRes(i18n.T("channel pin matches the installed release"))
 	}

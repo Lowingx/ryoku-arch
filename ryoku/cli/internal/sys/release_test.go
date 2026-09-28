@@ -22,6 +22,36 @@ func TestChannelServerRoundTrips(t *testing.T) {
 	}
 }
 
+// The testing channel is shown as "unstable" everywhere the CLI prints a channel
+// to the user; stable and a release tag are shown as themselves. TrackName maps
+// a channel or a source branch to a `ryoku track` argument that still works, so
+// a printed hint never names the retired main/unstable-dev.
+func TestDisplayChannelAndTrackName(t *testing.T) {
+	display := map[string]string{
+		"testing":         "unstable",
+		"stable":          "stable",
+		"v0.55.7-beta.19": "v0.55.7-beta.19",
+		"unstable":        "unstable",
+	}
+	for in, want := range display {
+		if got := DisplayChannel(in); got != want {
+			t.Errorf("DisplayChannel(%q) = %q, want %q", in, got, want)
+		}
+	}
+	track := map[string]string{
+		"testing":         "unstable",
+		"unstable-dev":    "unstable",
+		"main":            "stable",
+		"stable":          "stable",
+		"v0.55.7-beta.19": "v0.55.7-beta.19",
+	}
+	for in, want := range track {
+		if got := TrackName(in); got != want {
+			t.Errorf("TrackName(%q) = %q, want %q", in, got, want)
+		}
+	}
+}
+
 func TestChannelOfServerAcceptsWhatBoxesCarry(t *testing.T) {
 	cases := map[string]string{
 		"https://repo.ryoku.dev/stable/$arch":                            "stable",

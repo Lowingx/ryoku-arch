@@ -112,7 +112,7 @@ func TestRetargetChannelRestoresOnFailure(t *testing.T) {
 	}
 }
 
-// track main on a box whose updates come from a checkout (a recorded pointer plus
+// tracking a channel on a box whose updates come from a checkout (a recorded pointer plus
 // a RYOKU_CHANNEL=unstable-dev env file) migrates it onto packages: both are
 // removed so the update path resolves to packages, not the checkout, while the
 // clone directory itself is left on disk. The pin is the caller's separate,

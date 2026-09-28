@@ -125,14 +125,14 @@ func sanitize(s string) string {
 // longer drives updates). Building from a checkout is `ryoku track ... --source`.
 func Track(channel string) error {
 	if sys.ChannelServer(channel) == "" {
-		return fmt.Errorf(i18n.T("unknown channel %q: stable, testing, or a release tag (see `ryoku rollback` for the list)"), channel)
+		return fmt.Errorf(i18n.T("unknown channel %q: stable, unstable, or a release tag (see `ryoku rollback` for the list)"), channel)
 	}
 	source := sys.SourceTracked()
 	install := !sys.PkgInstalled("ryoku-desktop")
 	// A pure source box with no ryoku-desktop and no [ryoku] repo to install it
 	// from cannot be moved onto packages here; the doctor adds the repo first.
 	if install && sys.RyokuServer() == "" {
-		return fmt.Errorf(i18n.T("no ryoku-desktop package and no [ryoku] repo to install it from; run `ryoku doctor` to add the repo, then `ryoku track %s`"), channel)
+		return fmt.Errorf(i18n.T("no ryoku-desktop package and no [ryoku] repo to install it from; run `ryoku doctor` to add the repo, then `ryoku track %s`"), sys.TrackName(channel))
 	}
 	// A deliberate private mirror (a Server Ryoku does not publish) is never
 	// silently overwritten, unless we are migrating a source box off its checkout.
@@ -143,10 +143,10 @@ func Track(channel string) error {
 	// if the channel now serves something newer than what is installed.
 	if !source && !install && sys.PackagedChannel() == channel {
 		if serves := channelServes(channel).Release; serves == "" || serves == sys.ReadRelease().Release {
-			fmt.Printf(i18n.T("already on %s\n"), channel)
+			fmt.Printf(i18n.T("already on %s\n"), sys.DisplayChannel(channel))
 			return nil
 		}
-		fmt.Printf(i18n.T("==> Already tracking %s; moving the Ryoku set to what it serves\n"), channel)
+		fmt.Printf(i18n.T("==> Already tracking %s; moving the Ryoku set to what it serves\n"), sys.DisplayChannel(channel))
 		recordChannelIntent(channel)
 		return retargetChannel(channel, runChannelUpdate)
 	}
@@ -161,9 +161,9 @@ func Track(channel string) error {
 	}
 	switch {
 	case channel == sys.ChannelTesting:
-		fmt.Println(i18n.T("==> Now tracking testing packages: rebuilt on every push to unstable-dev. `ryoku track main` returns to stable releases."))
+		fmt.Println(i18n.T("==> Now tracking unstable packages: rebuilt on every push. `ryoku track stable` returns to stable releases."))
 	case sys.IsReleaseTag(channel):
-		fmt.Printf(i18n.T("==> Pinned to release %s. `ryoku update` keeps this release; `ryoku track main` follows releases again.\n"), channel)
+		fmt.Printf(i18n.T("==> Pinned to release %s. `ryoku update` keeps this release; `ryoku track stable` follows releases again.\n"), channel)
 	default:
 		fmt.Println(i18n.T("==> Now tracking stable packages: named releases as they are published."))
 	}

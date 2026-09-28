@@ -30,6 +30,11 @@ const RepoBase = "https://repo.ryoku.dev/stable"
 const (
 	ChannelStable  = "stable"
 	ChannelTesting = "testing"
+	// ChannelUnstable is the user-facing name of the testing channel. The
+	// command line and every message the CLI prints use it; ChannelTesting
+	// stays the internal key -- the repo path, the [ryoku] Server, and the
+	// channel-intent value on disk.
+	ChannelUnstable = "unstable"
 )
 
 // PacmanConf is where the [ryoku] stanza lives; a var so tests point it at a
@@ -155,6 +160,32 @@ func ChannelURL(channel string) string {
 	return strings.Replace(ChannelServer(channel), "$arch", "x86_64", 1)
 }
 
+// DisplayChannel is the user-facing name of a package channel: the testing
+// channel reads as "unstable", while its internal key stays "testing". Every
+// other name (stable, a release tag) is shown as itself. Callers that print a
+// PackagedChannel or ReadChannelIntent value to the user route it through here.
+func DisplayChannel(channel string) string {
+	if channel == ChannelTesting {
+		return ChannelUnstable
+	}
+	return channel
+}
+
+// TrackName is the `ryoku track` argument a user runs to follow a channel or a
+// source branch, so a hint the CLI prints always names a command that still
+// works: the testing channel and the unstable-dev branch are both reached with
+// "unstable", the main branch with "stable". A package channel otherwise maps
+// through DisplayChannel.
+func TrackName(channel string) string {
+	switch channel {
+	case "unstable-dev":
+		return ChannelUnstable
+	case "main":
+		return ChannelStable
+	}
+	return DisplayChannel(channel)
+}
+
 // RyokuServer returns the Server line of the [ryoku] stanza in pacman.conf, or
 // "" when the stanza is absent.
 func RyokuServer() string {
@@ -190,7 +221,7 @@ func PackagedChannel() string { return ChannelOfServer(RyokuServer()) }
 func SetPackagedChannel(channel string) error {
 	server := ChannelServer(channel)
 	if server == "" {
-		return fmt.Errorf(i18n.T("unknown channel %q (stable, testing, or a release tag like v0.55.7-beta.19)"), channel)
+		return fmt.Errorf(i18n.T("unknown channel %q (stable, unstable, or a release tag like v0.55.7-beta.19)"), channel)
 	}
 	return SetRyokuServer(server)
 }

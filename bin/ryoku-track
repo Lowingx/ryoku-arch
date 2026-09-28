@@ -2,7 +2,7 @@
 # ryoku track --source: build a Ryoku box from a git checkout and make `ryoku
 # update` follow the branch. Installs build tools, clones/updates the repo,
 # checks out the branch, records it, and rebuilds + redeploys from the checkout.
-# The developer path; plain `ryoku track main|unstable-dev` tracks packages.
+# The developer path; plain `ryoku track stable|unstable` tracks packages.
 # Non-destructive: user_edits and Hub settings survive. `ryoku recovery` resets.
 #
 #   main          build from the stable branch

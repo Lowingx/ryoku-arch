@@ -32,6 +32,19 @@
   forced. The btrfs root's read-only flip stays `reconcileBtrfsHealth`'s
   (`internal/doctor/reconcile_boot_rw.go`).
 
+### Changed
+- **`ryoku track` speaks stable and unstable.** The channel switch is now
+  `ryoku track stable` and `ryoku track unstable`; the old `ryoku track main`
+  and `ryoku track unstable-dev` are retired and fail naming their replacement.
+  `unstable` is the user-facing name of the `testing` channel (its internal key
+  -- the repo path, the `[ryoku]` `Server`, the channel-intent file -- is
+  unchanged, and `ryoku track testing` still works as a quiet synonym), and
+  every message the CLI prints (`status`, `version --branch`, the doctor, the
+  boot guard notice, help) says `unstable`, never `testing`. `--source` takes
+  the new names too: `ryoku track stable --source` builds from the `main`
+  branch, `ryoku track unstable --source` from `unstable-dev` (`track.go`,
+  `internal/sys/release.go`, `internal/updater/release.go`).
+
 ### Fixed
 - **The doctor's reverse-PRIME guard (#270) now sees the pin the machine
   actually runs.** The render-pin-vs-panel check resolved the pin through

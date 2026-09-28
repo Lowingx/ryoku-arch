@@ -1276,12 +1276,12 @@ func printReleases() {
 	if sys.ResolveRepo() != "" {
 		fmt.Println(i18n.T("RELEASES  not on this box"))
 		fmt.Printf(i18n.T("  this box builds from a source checkout of %s; releases apply to packaged installs.\n"), ryokuChannel())
-		fmt.Println(i18n.T("  ryoku track main|unstable-dev   moves it onto stable|testing packages (with releases)"))
+		fmt.Println(i18n.T("  ryoku track stable|unstable   moves it onto stable|unstable packages (with releases)"))
 		return
 	}
 	ch := sys.PackagedChannel()
 	rel := sys.ReadRelease()
-	fmt.Printf(i18n.T("RELEASES  repo.ryoku.dev, channel: %s\n"), orDash(ch))
+	fmt.Printf(i18n.T("RELEASES  repo.ryoku.dev, channel: %s\n"), orDash(sys.DisplayChannel(ch)))
 	if rel.Release != "" {
 		fmt.Printf(i18n.T("  running    %s%s\n"), withSpace(rel.Name), rel.Release)
 	}
@@ -1501,7 +1501,7 @@ func Status(args []string) error {
 	case r.ChannelPinStale:
 		// The pin is a frozen release OLDER than what is installed (#291): the box
 		// can take no updates, and "behind N commit(s)" reads exactly backwards.
-		fmt.Printf(i18n.T("channel pin:   %s is older than the installed %s; run `ryoku track %s` to reconcile\n"), orDash(r.Channel), orDash(r.Release), r.RecoverChannel)
+		fmt.Printf(i18n.T("channel pin:   %s is older than the installed %s; run `ryoku track %s` to reconcile\n"), orDash(r.Channel), orDash(r.Release), sys.TrackName(r.RecoverChannel))
 	case r.Available:
 		fmt.Printf(i18n.T("available:     %s\n"), orDash(r.Latest))
 		fmt.Printf(i18n.T("behind:        %d commit(s)\n"), r.Behind)
@@ -1625,7 +1625,7 @@ func packagedStatus(installed, latest string) statusReport {
 		Latest:         latestSha,
 		Updates:        []updateItem{}, // non-nil, so a current box marshals [] like the git path
 		Recent:         []updateItem{}, // non-nil, so the JSON stays stable when nothing is fetched
-		Channel:        ryokuChannel(),
+		Channel:        sys.DisplayChannel(ryokuChannel()),
 		Snapshots:      snaps,
 		SnapshotsKnown: snapsKnown,
 		Release:        sys.ReadRelease().Release,

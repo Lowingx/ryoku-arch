@@ -205,7 +205,7 @@ log "linting the materialized QML for load failures"
 #    and report the channel from the [ryoku] Server line, and `ryoku track`
 #    must refuse to move a box whose [ryoku] points at a mirror Ryoku does not
 #    publish (this local repo), instead of rewriting it into a channel it
-#    cannot serve. the live switch itself (stable -> testing -> a pinned
+#    cannot serve. the live switch itself (stable -> unstable -> a pinned
 #    release) needs the published channels and runs in the VM install test.
 log "checking release naming and channel handling"
 [[ -f /etc/ryoku-release ]] || die "ryoku-desktop did not ship /etc/ryoku-release"
@@ -243,7 +243,7 @@ SigLevel = Never
 Server = file://$OUT
 EOF
 fi
-if runuser -u "$TESTUSER" -- env "HOME=/home/$TESTUSER" ryoku track testing 2>/tmp/track.err; then
+if runuser -u "$TESTUSER" -- env "HOME=/home/$TESTUSER" ryoku track unstable 2>/tmp/track.err; then
   die "ryoku track must refuse a [ryoku] repo Ryoku does not publish"
 fi
 grep -q "does not publish" /tmp/track.err || die "unexpected track refusal: $(cat /tmp/track.err)"
