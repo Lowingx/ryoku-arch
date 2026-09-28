@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "advarsel: kunne ikke deaktivere %s",
   "warning: could not hand off to the updated binary: %v": "advarsel: kunne ikke overlevere til oppdatert binær: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "advarsel: kunne ikke oppdatere pakkedb før driverinstall; foreldet speil kan fortsatt mislykkes (fortsetter)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "advarsel: kunne ikke fjerne %s (fortsetter)",
   "warning: could not remove %s; the package step may abort on a conflict": "advarsel: kunne ikke fjerne %s; pakkesteg kan avbrytes ved konflikt",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

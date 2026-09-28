@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "चेतावनी: %s अक्षम नहीं कर सके",
   "warning: could not hand off to the updated binary: %v": "चेतावनी: updated binary को हस्तांतरित नहीं कर सके: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "चेतावनी: driver install से पहले package db refresh नहीं कर सके, पुरानी mirror डाउनलोड विफल कर सकती है (जारी)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "चेतावनी: %s हटा नहीं सके (जारी)",
   "warning: could not remove %s; the package step may abort on a conflict": "चेतावनी: %s हटा नहीं सके, package चरण conflict पर abort हो सकता है",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

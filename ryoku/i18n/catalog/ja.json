@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "警告: %s を無効にできませんでした",
   "warning: could not hand off to the updated binary: %v": "警告: 更新されたバイナリに引き継ぎできませんでした: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "警告: ドライバインストール前にパッケージ DB を更新できませんでした。古いミラーでもダウンロードが失敗する可能性があります (続行中)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "警告: %s を削除できませんでした (続行中)",
   "warning: could not remove %s; the package step may abort on a conflict": "警告: %s を削除できませんでした。パッケージステップが競合で中止される可能性があります",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

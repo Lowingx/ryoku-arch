@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "警告：无法禁用 %s",
   "warning: could not hand off to the updated binary: %v": "警告：无法切换到更新的二进制文件：%v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "警告：驱动安装前无法刷新包数据库；陈旧的镜像可能导致下载失败（继续）",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "警告：无法删除 %s（继续）",
   "warning: could not remove %s; the package step may abort on a conflict": "警告：无法删除 %s；包步骤可能因冲突而中止",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

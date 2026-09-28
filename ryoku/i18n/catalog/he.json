@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "אזהרה: לא היה ניתן להשבית %s",
   "warning: could not hand off to the updated binary: %v": "אזהרה: לא היה ניתן להעביר לקובץ מעודכן: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "אזהרה: לא היה ניתן לרענן את db החבילה לפני התקנת driver; mirror ישן עדיין עלול להוביל לכשל בהורדה (ממשיך)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "אזהרה: לא היה ניתן להסיר %s (ממשיך)",
   "warning: could not remove %s; the package step may abort on a conflict": "אזהרה: לא היה ניתן להסיר %s; שלב החבילה עלול להתנתק בעקבות סכסוך",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

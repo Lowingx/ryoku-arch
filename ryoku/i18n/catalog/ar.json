@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "تحذير: لم يتمكن من تعطيل %s",
   "warning: could not hand off to the updated binary: %v": "تحذير: لم يتمكن من التمرير للثنائي المحدّث: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "تحذير: لم يتمكن من تحديث قاعدة الحزم قبل تثبيت المشغل؛ قد يفشل الرآي القديم (مستمر)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "تحذير: لم يتمكن من إزالة %s (مستمر)",
   "warning: could not remove %s; the package step may abort on a conflict": "تحذير: لم يتمكن من إزالة %s؛ قد تتوقف خطوة الحزمة عند التضارب",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

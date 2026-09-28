@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "uyarı: %s devre dışı bırakılamadı",
   "warning: could not hand off to the updated binary: %v": "uyarı: güncellenen ikiliye devredilemiyor: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "uyarı: sürücü kurulumundan önce paket veritabanı yenilenemedi; eski ayna yine de indirmeyi başarısız kılabilir (devam ediliyor)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "uyarı: %s kaldırılamadı (devam ediliyor)",
   "warning: could not remove %s; the package step may abort on a conflict": "uyarı: %s kaldırılamadı; paket adımı bir çakışmada iptal edilebilir",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

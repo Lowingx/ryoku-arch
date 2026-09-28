@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "cảnh báo: không thể vô hiệu hóa %s",
   "warning: could not hand off to the updated binary: %v": "cảnh báo: không thể chuyển sang nhị phân đã cập nhật: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "cảnh báo: không thể làm mới cơ sở dữ liệu gói trước cài đặt driver; mirror cũ có thể vẫn thất bại (tiếp tục)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "cảnh báo: không thể xóa %s (tiếp tục)",
   "warning: could not remove %s; the package step may abort on a conflict": "cảnh báo: không thể xóa %s, bước gói có thể hủy trên xung đột",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

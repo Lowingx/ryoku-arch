@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "هشدار: نتوانست %s را غیرفعال کند",
   "warning: could not hand off to the updated binary: %v": "هشدار: نتوانست به binary به روزرسانی شده انتقال دهد: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "هشدار: نتوانست package db را قبل از نصب driver تازه کند؛ mirror منسوخ شده ممکن است دانلود را ناموفق کند (ادامه)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "اخطار: نتوانست %s را حذف کند (ادامه)",
   "warning: could not remove %s; the package step may abort on a conflict": "اخطار: نتوانست %s را حذف کند؛ مرحله بسته ممکن است در تضاد متوقف شود",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "varoitus: ei voitu poistaa käytöstä %s",
   "warning: could not hand off to the updated binary: %v": "varoitus: ei voitu siirtää päivitettyyn binaariin: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "varoitus: pakettitietokantaa ei päivitetty ennen ohjainasennusta; vanha peili saattaa silti epäonnistua (jatketaan)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "varoitus: ei voitu poistaa %s (jatketaan)",
   "warning: could not remove %s; the package step may abort on a conflict": "varoitus: ei voitu poistaa %s; pakettivaihe saattaa keskeyttyä ristiriidan vuoksi",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

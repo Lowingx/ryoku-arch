@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "คำเตือน: ไม่สามารถปิดใช้งาน %s",
   "warning: could not hand off to the updated binary: %v": "คำเตือน: ไม่สามารถส่งต่อให้กับไบนารีที่อัปเดต: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "คำเตือน: ไม่สามารถรีเฟรช package db ก่อนติดตั้ง driver; mirror เก่าอาจยังล้มเหลวในการดาวน์โหลด (ดำเนินต่อ)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "คำเตือน: ไม่สามารถลบ %s (ดำเนินต่อ)",
   "warning: could not remove %s; the package step may abort on a conflict": "คำเตือน: ไม่สามารถลบ %s; ขั้นตอน package อาจยกเลิกเนื่องจากการขัดแย้ง",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

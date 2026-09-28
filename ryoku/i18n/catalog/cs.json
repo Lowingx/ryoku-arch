@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "varování: nebylo možné vypnout %s",
   "warning: could not hand off to the updated binary: %v": "varování: nebylo možné předat na aktualizovaný binární soubor: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "varování: nebylo možné obnovit db balíčků před instalací ovladače, zastaralé zrcadlo může selhání (pokračuji)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "varování: nebylo možné odstranit %s (pokračuji)",
   "warning: could not remove %s; the package step may abort on a conflict": "varování: nebylo možné odstranit %s, krok balíčku se může zrušit na konfliktu",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "varning: kunde inte inaktivera %s",
   "warning: could not hand off to the updated binary: %v": "varning: kunde inte övergå till uppdaterad binär: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "varning: kunde inte uppdatera paketdb före drivrutinsinstallation; föråldrad spegel kan fortfarande misslyckas (fortsätter)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "varning: kunde inte ta bort %s (fortsätter)",
   "warning: could not remove %s; the package step may abort on a conflict": "varning: kunde inte ta bort %s; paketsteget kan avbrytas vid konflikt",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

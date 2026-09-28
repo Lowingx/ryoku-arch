@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "waarschuwing: %s uitschakelen mislukt",
   "warning: could not hand off to the updated binary: %v": "waarschuwing: overdracht naar bijgewerkt binair bestand mislukt: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "waarschuwing: pakketdb vernieuwen vóór stuurprogramma-installatie mislukt; verouderde mirror kan download nog steeds blokkeren (gaat door)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "waarschuwing: %s verwijderen mislukt (gaat door)",
   "warning: could not remove %s; the package step may abort on a conflict": "waarschuwing: %s verwijderen mislukt; paketstap kan bij conflict afbreken",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "മുന്നറിപ്പ്: %s പ്രവർത്തനരഹിതമാക്കാൻ കഴിയില്ല",
   "warning: could not hand off to the updated binary: %v": "മുന്നറിപ്പ്: അപ്ഡേറ്റ് ചെയ്ത ബൈനറിയിലേക്ക് കൈമാറാൻ കഴിയില്ല: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "മുന്നറിപ്പ്: ഡ്രൈവർ ഇൻസ്റ്റാൾ ചെയ്യുന്നതിന് മുമ്പ് പാക്കേജ് db പരിഷ്കരിക്കാൻ കഴിയില്ല; കെട്ടിപ്പോയ മിറർ ഇപ്പോഴും ഡൗൺലോഡ് ആൾ (തുടരുന്നു)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "മുന്നറിപ്പ്: %s നീക്കം ചെയ്യാൻ കഴിയില്ല (തുടരുന്നു)",
   "warning: could not remove %s; the package step may abort on a conflict": "മുന്നറിപ്പ്: %s നീക്കം ചെയ്യാൻ കഴിയില്ല; പാക്കേജ് ഘട്ടം സംഘർഷത്തിൽ നിർത്തിയേക്കാം",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

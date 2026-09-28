@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "предупреждение: не удалось отключить %s",
   "warning: could not hand off to the updated binary: %v": "предупреждение: не удалось перейти на обновленный бинарник: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "предупреждение: не удалось обновить БД пакетов перед установкой драйвера; устаревшее зеркало может помешать загрузке (продолжение)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "предупреждение: не удалось удалить %s (продолжение)",
   "warning: could not remove %s; the package step may abort on a conflict": "предупреждение: не удалось удалить %s; шаг пакета может прерваться при конфликте",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

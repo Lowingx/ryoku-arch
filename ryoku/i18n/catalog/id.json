@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "peringatan: tidak bisa nonaktifkan %s",
   "warning: could not hand off to the updated binary: %v": "peringatan: tidak bisa serahkan ke binary terbaru: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "peringatan: tidak bisa segarkan db paket sebelum install driver; mirror basi dapat masih gagal unduh (lanjut)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "peringatan: tidak bisa hapus %s (lanjut)",
   "warning: could not remove %s; the package step may abort on a conflict": "peringatan: tidak bisa hapus %s; langkah paket mungkin batal pada konflik",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

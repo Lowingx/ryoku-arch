@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "எச்சரிக்கை: %s முடக்க முடியவில்லை",
   "warning: could not hand off to the updated binary: %v": "எச்சரிக்கை: புதுப்பிக்கப்பட்ட பைனரிக்கு மாற்ற முடியவில்லை: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "எச்சரிக்கை: இயக்கி நிறுவல் முன் பேக்கேஜ் db புதுப்பிக்க முடியவில்லை (தொடரும்)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "எச்சரிக்கை: %s அகற்ற முடியவில்லை (தொடரும்)",
   "warning: could not remove %s; the package step may abort on a conflict": "எச்சரிக்கை: %s அகற்ற முடியவில்லை; சரிசெய்யும் படி நிறுத்தப்படலாம்",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

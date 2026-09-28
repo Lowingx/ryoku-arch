@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "figyelmeztetés: nem lehet letiltani ezt: %s",
   "warning: could not hand off to the updated binary: %v": "figyelmeztetés: nem lehet átadni a frissített binárisnak: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "figyelmeztetés: nem lehet frissíteni a csomag db-t az illesztőprogram telepítése előtt; egy elavult tükör továbbra is sikertelen letöltést okozhat (folytatódik)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "figyelmeztetés: nem lehet eltávolítani ezt: %s (folytatódik)",
   "warning: could not remove %s; the package step may abort on a conflict": "figyelmeztetés: nem lehet eltávolítani ezt: %s; a csomag lépés ütközéskor leállhat",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

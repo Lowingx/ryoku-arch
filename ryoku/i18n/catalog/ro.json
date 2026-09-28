@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "avertisment: nu s-a putut dezactiva %s",
   "warning: could not hand off to the updated binary: %v": "avertisment: nu s-a putut trece la binar actualizat: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "avertisment: nu s-a putut reîmprospăta bd pachete înainte de instalare driver; o oglindă veche poate eșua descărcare (continuând)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "avertisment: nu s-a putut elimina %s (continuând)",
   "warning: could not remove %s; the package step may abort on a conflict": "avertisment: nu s-a putut elimina %s; pasul pachete poate abandona la conflict",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

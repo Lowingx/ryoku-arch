@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "warning: %s ను నిలిపివేయలేకుండా ఉంది",
   "warning: could not hand off to the updated binary: %v": "warning: నవీకరించిన బైనరీకి పంపించలేకుండా ఉంది: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "warning: డ్రైవర్ ఇన్‌స్టాల్ కు ముందు పాకేజ్ db రిఫ్రెష్ చేయలేకుండా ఉంది; పాతది మిర్రర్ ఇప్పటికీ డౌన్‌లోడ్ విఫలం కావచ్చు (కొనసాగుతుంది)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "warning: %s ను తీసివేయలేకుండా ఉంది (కొనసాగుతుంది)",
   "warning: could not remove %s; the package step may abort on a conflict": "warning: %s ను తీసివేయలేకుండా ఉంది; పాకేజ్ స్టెప్ సంఘర్షణపై విరామం కావచ్చు",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",

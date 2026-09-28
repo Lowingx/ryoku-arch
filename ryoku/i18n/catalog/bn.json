@@ -6967,6 +6967,7 @@
   "warning: could not disable %s": "সতর্কতা: %s অক্ষম করতে পারিনি",
   "warning: could not hand off to the updated binary: %v": "সতর্কতা: আপডেট করা বাইনারিতে স্থানান্তর করতে পারেনি: %v",
   "warning: could not refresh the package db before the driver install; a stale mirror may still fail a download (continuing)": "সতর্কতা: ড্রাইভার ইনস্টলের আগে প্যাকেজ ডিবি রিফ্রেশ করতে পারেনি; পুরানো মিরর এখনও ডাউনলোড ব্যর্থ করতে পারে (অব্যাহত)",
+  "warning: could not release the update sleep guard: %v": "warning: could not release the update sleep guard: %v",
   "warning: could not remove %s (continuing)": "সতর্কতা: %s অপসারণ করতে পারেনি (অব্যাহত)",
   "warning: could not remove %s; the package step may abort on a conflict": "সতর্কতা: %s অপসারণ করতে পারেনি; প্যাকেজ ধাপ সংঘর্ষে বাধাগ্রস্ত হতে পারে",
   "warning: could not remove %s; the package step may abort on a dependency conflict": "warning: could not remove %s; the package step may abort on a dependency conflict",
