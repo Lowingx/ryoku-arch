@@ -41,6 +41,13 @@
   now deferred, so it runs on every exit path; the explicit success-path
   release stays authoritative and the deferred one is a no-op after it
   (`internal/updater/update.go`).
+- **`ryoku doctor` reclaims a sleep guard a crashed update leaked.** On a box
+  still holding the durable inhibitor from a failed cutover (the #282/#285
+  class, before the release fix shipped), every suspend is denied until
+  logout. The guard unit is only ever taken while the power-cutover lock is
+  held, so a live guard with a free lock and no deferred-cutover waiter is
+  provably orphaned, and doctor now stops it (`internal/doctor/
+  reconcile_sleep_guard.go`).
 - **`ryoku update` no longer dies where taking a sleep inhibitor is denied.**
   The transaction runs under `systemd-inhibit --mode=block`, which is
   polkit-gated in sessions with no agent (SSH, a headless run): there it exits

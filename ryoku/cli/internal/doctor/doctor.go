@@ -123,6 +123,7 @@ func reconcilers() []reconciler {
 		{i18n.T("multilib repository"), reconcileMultilibRepo},
 		{i18n.T("conflicting Ryoku files"), reconcileConflictingRyokuFiles},
 		{i18n.T("stale update run-state"), reconcileStaleUpdateRun},
+		{i18n.T("leaked update sleep guard"), reconcileLeakedSleepGuard},
 		{i18n.T("stale install crypt mapper"), reconcileStaleCryptMapper},
 		{i18n.T("ryoku package channel"), reconcileRyokuChannel},
 		{i18n.T("ryoku package database"), reconcileRyokuSyncDB},
