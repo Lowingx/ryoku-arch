@@ -526,9 +526,9 @@ and per-monitor visibility from `ShellState`.
   widget's own menu. A drag draws a faint grid and centre guides under the
   widgets, and the release flashes the edges and any centre line it snapped to.
   The desktop's own right-click menu toggles each widget, opens the visualiser
-  placement, and reaches Settings and Reload shell. Configured in Ryoku
-  Settings' Desktop Widgets page, where each widget is a live preview card rather
-  than a name in a list.
+  placement, and reaches Settings and Reload shell. Each widget is configured in
+  place -- select it while arranging to set its size, look and position, or open
+  its own right-click menu for everything else.
 - **the desktop spectrum** the audio visualiser, described in full below.
 
 ### Summoned

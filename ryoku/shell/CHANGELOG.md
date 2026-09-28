@@ -63,6 +63,22 @@
   broken frame (`modules/desktop/iris/IrisCanvasProvider.qml`). Hosting a
   list-based face no longer trips `StyledListView` on a cold iRiS config
   (`inir/modules/common/widgets/StyledListView.qml`).
+- **The face-less iRiS widgets are fully tunable from their right-click menu.**
+  Custom image, editorial, image converter and Japanese typography each grow a
+  full options panel in their desktop menu, in paper and ink: the Japanese
+  poster exposes its editorial text (title, secondary copy, seal, footer, date),
+  layout/palette/font presets, the visible-element toggles, mirror and rotate,
+  every size, weight, column, gap and letter-spacing, the manual palette roles
+  and legibility, and content width and height; custom image its source, folder
+  rotation, shape, fit, size and transition; editorial its copy, composition and
+  size; the converter its output format. Every control writes the widget's own
+  vendored config through the daemon's single settings writer, so the widget
+  re-renders live and the presets apply through the upstream preset logic. The
+  menu resolves each panel by widget key, so a new one is a new file plus a line
+  in a catalog, never an edit to the menu itself. Two shared menu controls fill
+  the gaps this needed -- a keyboard text field and a role-swatch colour picker
+  (`modules/desktop/options/`, `modules/desktop/MenuTextField.qml`,
+  `modules/desktop/MenuInkPicker.qml`, `modules/desktop/WidgetMenu.qml`).
 - **The screen recorder is iNiR's, in the Ryoku look (clean cutover).** The old
   gpu-screen-recorder/wf-recorder backend and its frame-docked record HUD are
   gone; recording now runs iNiR's wf-recorder pipeline -- hardware encode
@@ -91,6 +107,10 @@
   `inir/modules/iris/critical/ShellIrisCriticalPanels.qml`,
   `inir/modules/background/widgets/AbstractBackgroundWidget.qml`,
   `inir/modules/background/widgets/WidgetSurface.qml`).
+- **`ryoku-shell hub open widgets` opens the desktop widget editor.** The Hub's
+  Widgets page is gone, so the deep link -- an old keybind or script -- now
+  enters the on-desktop widget editor rather than a page that no longer exists
+  (`ipc/control.go`).
 - **The Ryoku look keeps its Colour tab.** Accent and highlight follow the
   wallpaper -- Ryoku's native matugen primary, from `~/.cache/ryoku/colors.json`
   -- or a chosen hue, badges pick their source, and the light an open body

@@ -9,6 +9,7 @@ import shell.services as Services
 import "../visualizer/Singletons" as VizCfg
 import "../stage/Singletons" as StageCfg
 import "iris/IrisRoster.js" as IrisRoster
+import "options/OptionsCatalog.js" as OptionsCatalog
 
 // A desktop widget's right-click menu, built on the shared DesktopMenu chrome in
 // the quick-settings sidebar idiom: cycle the widget's design, tune its colour
@@ -180,13 +181,21 @@ Item {
             closeOnTrigger: false
             onTriggered: menu.cycleIrisSize()
         }
-        MenuRow {
+        Text {
             // Canvas widgets carry no iRiS ink token, so the Ryoku skin only
             // wraps them in the slot backing (radius/border below); their own
             // colours stay. State it rather than ship a dead colour picker.
             visible: menu.isCanvas && menu.isRyokuStyle
-            label: I18n.tr("Ryoku style wraps this widget; it keeps its own colours")
-            closeOnTrigger: false
+            width: parent ? parent.width : 0
+            leftPadding: Theme.s3
+            rightPadding: Theme.s3
+            topPadding: Theme.s1
+            bottomPadding: Theme.s1
+            wrapMode: Text.WordWrap
+            text: I18n.tr("Ryoku style wraps this widget; it keeps its own colours")
+            color: Theme.inkDim
+            font.family: Theme.font
+            font.pixelSize: Theme.fSmall
         }
         MenuRow {
             visible: menu.isDayprogress
@@ -333,6 +342,20 @@ Item {
         // Shape: per-widget geometry. Corner radius rounds the Ryoku backing and
         // the iNiR face's own plate; the rest tune the Ryoku-style plate.
         MenuSection { visible: menu.isIris; label: I18n.tr("Shape"); gloss: "形状" }
+        // The Ryoku-style backing: none, a solid card, or glass. Only bites in
+        // Ryoku style (Desktop.qml passes "none" under the iNiR look), and it is
+        // the same <scope>Bg every iRiS widget carries, so it lives in the shared
+        // section rather than each widget's own options.
+        MenuRow {
+            visible: menu.isRyokuStyle
+            label: I18n.tr("Background")
+            value: menu.cap(Config[menu.scope + "Bg"] || "card")
+            closeOnTrigger: false
+            onTriggered: {
+                const d = ["card", "glass", "none"];
+                Config.set(menu.scope + "Bg", d[(d.indexOf(Config[menu.scope + "Bg"] || "card") + 1) % d.length]);
+            }
+        }
         MenuSlider {
             id: radiusSlider
             visible: menu.isIris
@@ -392,6 +415,21 @@ Item {
             valueText: Math.round(backingOpSlider.value * 100) + "%"
             onMoved: (v) => Config.setLive(menu.scope + "BackingOpacity", v)
             onReleased: (v) => Config.set(menu.scope + "BackingOpacity", v)
+        }
+
+        // Each widget with a right-click options panel mounts it here, after the
+        // generic look/geometry sections and before Snap. OptionsCatalog names
+        // the scopes that ship one and the file is resolved by name
+        // (options/<Scope>Options.qml), so a new panel is a new file plus one
+        // catalog line -- never an edit to this menu. The card already scrolls,
+        // so a tall panel scrolls with it and never clips.
+        Loader {
+            id: widgetOptions
+            width: parent.width
+            active: OptionsCatalog.has(menu.scope)
+            visible: active
+            source: active ? "options/" + menu.cap(menu.scope) + "Options.qml" : ""
+            onLoaded: if (item) item.widget = menu.scope
         }
 
         MenuSection { visible: menu.isWidget; label: I18n.tr("Snap"); gloss: "位置" }

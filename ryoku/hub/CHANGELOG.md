@@ -4,11 +4,6 @@
 ### Added
 - **Bar Studio switches iRiS between its Ryoku and iNiR looks.** The iRiS
   card has a Look control that flips the live frame (`pages/BarStudioPage.qml`).
-- **Every iRiS face has a card on the Desktop Widgets page.** The whole roster
-  joins the built-in grid, each with its own settings -- Style (iNiR or Ryoku),
-  size preset, backing, corner radius, size, opacity and placement -- and the
-  page keeps every per-widget key on Save (`pages/WidgetsPage.qml`,
-  `schema/WidgetsPage.js`).
 - **The Visualizer tab edits the new edge field.** The Desktop page's
   Visualizer tab grew an EDGE FIELD section - lit edges, reach, material,
   movement, effect, colour mode, corners and flow up front, the deep drives
@@ -61,6 +56,17 @@
   fields; the Window Rules action picker takes its vocabulary from the actions
   the provider honours (`pages/AnimationsPage.qml`, `pages/LayerRulesPage.qml`,
   `pages/WindowRulesPage.qml`, `SettingsSheet.qml`, `Singletons/Settings.qml`).
+
+### Removed
+- **The Widgets page is gone; desktop widgets are edited on the desktop.** The
+  Hub's Desktop Widgets page -- the clock, calendar, music, all-in-one, stats,
+  weather, notes, day progress and shape editors, plus the vendored iRiS face
+  and canvas cards -- moved onto the wallpaper: right-click the desktop and pick
+  Widgets, then arrange and tune each widget in place. The page, its schema and
+  test, its preview cards and the rail entry are removed, and a stale
+  `ryoku-shell hub open widgets` now opens the desktop widget editor
+  (`quickshell/Hub.qml`; removed `pages/WidgetsPage.qml`, `schema/WidgetsPage.js`,
+  `schema/WidgetsPage.test.mjs` and the widget preview cards).
 
 ### Fixed
 - **The security-key enrolment terminal opens clean in Ghostty.** It launched

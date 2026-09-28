@@ -18,7 +18,6 @@ import "schema/RecordingPage.js" as RecordingSchema
 import "schema/DictationPage.js" as DictationSchema
 import "schema/LauncherPage.js" as LauncherSchema
 import "schema/FastfetchPage.js" as FastfetchSchema
-import "schema/WidgetsPage.js" as WidgetsSchema
 import "schema/LockscreenPage.js" as LockscreenSchema
 import "schema/AnimationsPage.js" as AnimationsSchema
 import "schema/AddonsPage.js" as AddonsSchema
@@ -111,7 +110,7 @@ Rectangle {
             { key: "layerrules", name: "Layer Rules", adv: true, needs: { rows: true } } ] },
         { name: "DESKTOP", items: [
             { key: "bar-studio", name: "Bar Studio", wired: true }, { key: "desktop", name: "Desktop", wired: true },
-            { key: "widgets", name: "Widgets" }, { key: "launcher", name: "App Launcher" } ] },
+            { key: "launcher", name: "App Launcher" } ] },
         { name: "KEYS & APPS", items: [
             { key: "keybinds", name: "Keybinds" }, { key: "appoverrides", name: "App Overrides", adv: true },
             { key: "windowrules", name: "Window Rules", adv: true } ] },
@@ -132,7 +131,7 @@ Rectangle {
         "profile": "横顔", "displays": "画面", "input": "入力", "keybinds": "操作",
         "connections": "接続", "gpu": "演算", "recording": "録画", "dictation": "音声",
         "plugins": "補", "bar-studio": "帯", "desktop": "卓上", "launcher": "起動", "fastfetch": "情報",
-        "widgets": "部品", "lockscreen": "施錠", "animations": "動き",
+        "lockscreen": "施錠", "animations": "動き",
         "addons": "拡張", "windowrules": "規則", "appoverrides": "上書", "layerrules": "階層",
         "session": "起動", "performance": "性能", "rashin": "羅針",
         "updates": "更新", "credits": "謝辞", "global": "全般", "import": "取込", "windowmanager": "合成"
@@ -158,7 +157,6 @@ Rectangle {
         "desktop": "desktop visualizer visualiser spectrum brand logo mark name widget board wallpaper",
         "launcher": "launcher spotlight command palette greeting weather home",
         "fastfetch": "fetch neofetch terminal system info logo ascii emblem readout",
-        "widgets": "desktop widget clock calendar weather face overlay wallpaper",
         "lockscreen": "lock screensaver signin greeter skin theme login",
         "animations": "animation animations motion transition bezier curve speed feel wobbly disable enable toggle",
         "addons": "installed plugin addon extension manage enable remove update widget bundle extras store marketplace browse",
@@ -185,7 +183,7 @@ Rectangle {
         "displays": DisplaysSchema.rows, "gpu": GpuSchema.rows,
         "recording": RecordingSchema.rows, "dictation": DictationSchema.rows,
         "launcher": LauncherSchema.rows, "fastfetch": FastfetchSchema.rows,
-        "widgets": WidgetsSchema.rows, "lockscreen": LockscreenSchema.rows,
+        "lockscreen": LockscreenSchema.rows,
         "animations": AnimationsSchema.rows, "addons": AddonsSchema.rows,
         "windowrules": WindowRulesSchema.rows, "appoverrides": AppOverridesSchema.rows,
         "layerrules": LayerRulesSchema.rows, "session": SessionSchema.rows,
@@ -280,7 +278,7 @@ Rectangle {
         "titlebar": "title bar", "titlebars": "title bar", "plugin": "plugins addon", "plugins": "plugin addon",
         "monitor": "displays screen", "monitors": "displays screen", "resolution": "displays screen", "hidpi": "displays scale", "refresh": "displays",
         "mouse": "input pointer", "pointer": "input", "keyboard": "input", "touchpad": "input trackpad", "trackpad": "input touchpad",
-        "visualizer": "desktop spectrum", "visualiser": "desktop spectrum", "clock": "widgets desktop", "notifications": "layerrules",
+        "visualizer": "desktop spectrum", "visualiser": "desktop spectrum", "notifications": "layerrules",
         "update": "updates upgrade", "upgrade": "updates", "blur": "windows glass", "rounding": "windows corners", "corners": "windows rounding",
         "animation": "animations motion", "motion": "animations", "gpu": "graphics", "graphics": "gpu",
         "voice": "dictation", "speech": "dictation voice", "microphone": "dictation", "mic": "dictation"
@@ -488,7 +486,7 @@ Rectangle {
         return (prov && prov.length) ? base.concat(prov) : base;
     }
     function pageFile(s) {
-        var map = { "plugins": "PluginsPage", "profile": "ProfilePage", "bar-studio": "BarStudioPage", "desktop": "DesktopPage", "session": "SessionPage", "layerrules": "LayerRulesPage", "windowrules": "WindowRulesPage", "appoverrides": "AppOverridesPage", "animations": "AnimationsPage", "input": "InputPage", "keybinds": "KeybindsPage", "dictation": "DictationPage", "displays": "DisplaysPage", "connections": "ConnectionsPage", "gpu": "GpuPage", "updates": "UpdatesPage", "rashin": "RashinPage", "recording": "RecordingPage", "performance": "PerformancePage", "launcher": "LauncherPage", "lockscreen": "LockscreenPage", "fastfetch": "FastfetchPage", "addons": "AddonsPage", "widgets": "WidgetsPage", "credits": "CreditsPage" };
+        var map = { "plugins": "PluginsPage", "profile": "ProfilePage", "bar-studio": "BarStudioPage", "desktop": "DesktopPage", "session": "SessionPage", "layerrules": "LayerRulesPage", "windowrules": "WindowRulesPage", "appoverrides": "AppOverridesPage", "animations": "AnimationsPage", "input": "InputPage", "keybinds": "KeybindsPage", "dictation": "DictationPage", "displays": "DisplaysPage", "connections": "ConnectionsPage", "gpu": "GpuPage", "updates": "UpdatesPage", "rashin": "RashinPage", "recording": "RecordingPage", "performance": "PerformancePage", "launcher": "LauncherPage", "lockscreen": "LockscreenPage", "fastfetch": "FastfetchPage", "addons": "AddonsPage", "credits": "CreditsPage" };
         map.global = "GlobalPage";
         map["import"] = "ImportPage";
         map.windowmanager = "WindowManagerPage";
