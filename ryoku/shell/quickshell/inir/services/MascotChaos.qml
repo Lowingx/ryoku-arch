@@ -25,7 +25,7 @@ Singleton {
         && (Config.options?.mascot?.chaos?.enable ?? false)
     readonly property bool allowRearrange: Config.options?.mascot?.chaos?.allowRearrange ?? false
     readonly property bool suppressed: GameMode.active || GameMode.hasVisibleFullscreenWindow
-        || GlobalStates.screenLocked || GlobalStates.sessionOpen || GlobalStates.regionSelectorOpen
+        || GlobalStates.screenLocked || GlobalStates.sessionOpen
         || GlobalStates.widgetEditMode || RecorderStatus.isRecording || Ryoku.Polkit.active
         || ((Config.options?.mascot?.companion?.respectQuiet ?? true) && Notifications.manualDndActive)
 

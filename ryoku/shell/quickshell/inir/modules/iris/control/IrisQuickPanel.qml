@@ -327,7 +327,7 @@ GridLayout {
                 label: Translation.tr("Capture")
                 onClicked: {
                     GlobalStates.controlPanelOpen = false
-                    GlobalStates.openRegionScreenshot()
+                    GlobalStates.launchRegionCapture("")
                 }
             }
             ShortcutTile {

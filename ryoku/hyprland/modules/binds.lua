@@ -86,7 +86,7 @@ hl.bind(K(mod .. " + ALT + M"),   hl.dsp.global("ryoku:visualizer-place"))   -- 
 hl.bind(K(mod .. " + grave"),     hl.dsp.exec_cmd("ryoku-shell voice"))             -- voice typing: speech-to-text with a mic wave (tap again to stop)
 hl.bind(K(mod .. " + comma"),     hl.dsp.exec_cmd("ryoku-shell hub open"))     -- ryoku settings
 hl.bind(K(mod .. " + S"),         hl.dsp.global("ryoku:stash"))         -- sidebar: screen time and downloads
-hl.bind(K(mod .. " + SHIFT + S"), hl.dsp.exec_cmd("qs -c shell ipc show 2>/dev/null | grep -qx 'target region' && qs -c shell ipc call region menu || flock -n -o /tmp/ryoshot.lock qs -c ryoshot"))  -- screenshot: capture, annotate and beautify (the iRiS region menu while iRiS is the bar style)
+hl.bind(K(mod .. " + SHIFT + S"), hl.dsp.exec_cmd("flock -n -o /tmp/ryoshot.lock qs -c ryoshot"))  -- screenshot: capture, annotate and beautify
 hl.bind(K(mod .. " + SHIFT + C"), hl.dsp.exec_cmd("hyprpicker -a"))                 -- pick a color
 
 -- Move/resize with the mouse

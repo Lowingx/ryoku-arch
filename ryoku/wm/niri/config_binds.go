@@ -164,8 +164,7 @@ func defaultBinds() map[string]niriBind {
 		"shell.voice":             {action: spawnArgs("ryoku-shell", "voice")},
 		"shell.settings":          {action: spawnArgs("ryoku-shell", "hub", "open")},
 		"shell.stash":             {action: spawnArgs("ryoku-shell", "stash")},
-		// While iRiS is the bar style its region menu registers a `region` target.
-		"shell.screenshot": {action: spawnSh("qs -c shell ipc show 2>/dev/null | grep -qx 'target region' && qs -c shell ipc call region menu || " + qmlEnv + " flock -n -o /tmp/ryoshot.lock qs -c ryoshot")},
+		"shell.screenshot":        {action: spawnSh(qmlEnv + " flock -n -o /tmp/ryoshot.lock qs -c ryoshot")},
 		// Hyprland gives ryoshot three entry points, so niri gets the same three:
 		// without Print the key a user reaches for does nothing, and monitor mode
 		// would otherwise only be reachable by cycling inside the tool.

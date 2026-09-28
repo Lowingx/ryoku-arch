@@ -1384,6 +1384,8 @@ func (d *daemon) dispatch(line string) string {
 		}
 		playSound(args[0])
 		return "ok"
+	case "record":
+		return d.record(args)
 
 	default:
 		return "err unknown command: " + cmd

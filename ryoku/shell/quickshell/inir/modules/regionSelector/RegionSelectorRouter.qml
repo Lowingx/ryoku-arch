@@ -4,28 +4,18 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import inir
-import inir.modules.common
 
+// The `region` IPC target. ryoshot owns the region-selector front, so every verb
+// here launches ryoshot (preselecting the matching tool) instead of opening an
+// in-shell overlay. Kept as the stable IPC surface external callers already use.
 Scope {
     id: root
 
-    function open(action, mode): void {
-        GlobalStates.regionSelectorAction = action
-        GlobalStates.regionSelectorMode = mode
-        GlobalStates.regionSelectorOpen = true
-    }
-    // Dedicated screenshot calls are always a rectangular capture. The unified
-    // menu is the only entry point allowed to restore a previous toolbar choice.
-    function screenshot(): void { GlobalStates.openRegionScreenshot() }
-    function search(): void {
-        open(RegionSelection.SnipAction.Search,
-            (Config.options?.search?.imageSearch?.useCircleSelection ?? false)
-                ? RegionSelection.SelectionMode.Circle : RegionSelection.SelectionMode.RectCorners)
-    }
-    function ocr(): void { open(RegionSelection.SnipAction.CharRecognition, RegionSelection.SelectionMode.RectCorners) }
-    function record(): void { open(RegionSelection.SnipAction.Record, RegionSelection.SelectionMode.RectCorners) }
-    function recordWithSound(): void { open(RegionSelection.SnipAction.RecordWithSound, RegionSelection.SelectionMode.RectCorners) }
-    function menu(): void { GlobalStates.openRememberedRegionTool() }
+    function screenshot(): void { GlobalStates.launchRegionCapture("") }
+    function search(): void { GlobalStates.launchRegionCapture("search") }
+    function ocr(): void { GlobalStates.launchRegionCapture("ocr") }
+    function record(): void { GlobalStates.launchRegionCapture("record") }
+    function menu(): void { GlobalStates.launchRegionCapture("") }
 
     IpcHandler {
         target: "region"
@@ -34,15 +24,9 @@ Scope {
         function googleLens(): void { root.search() }
         function ocr(): void { root.ocr() }
         function record(): void { root.record() }
-        function recordWithSound(): void { root.recordWithSound() }
+        function recordWithSound(): void { root.record() }
         function menu(): void { root.menu() }
-        function dismiss(): void { GlobalStates.regionSelectorOpen = false }
-        function current(): string {
-            return JSON.stringify({
-                open: GlobalStates.regionSelectorOpen,
-                action: GlobalStates.regionSelectorAction,
-                mode: GlobalStates.regionSelectorMode
-            })
-        }
+        function dismiss(): void { Quickshell.execDetached(["pkill", "-x", "-f", "qs -c ryoshot"]) }
+        function current(): string { return JSON.stringify({ delegated: "ryoshot" }) }
     }
 }

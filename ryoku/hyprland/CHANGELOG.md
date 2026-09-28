@@ -6,8 +6,12 @@
 - **Super+Q asks first when iRiS is set to.** The close bind reads
   `shell.json` in place and only goes through the shell when the iRiS bar
   style is active with its close confirmation on; every other close stays a
-  native dispatch. Super+Shift+S opens the iRiS region toolbar while iRiS is
-  the bar style and ryoshot otherwise (`modules/binds.lua`).
+  native dispatch (`modules/binds.lua`).
+- **Super+Shift+S and Print open the ryoshot region front on every bar style.**
+  ryoshot now carries the iNiR-style front (Shot, Edit, OCR, Search, Record,
+  colour pick) itself, so the screenshot binds always launch it rather than
+  routing to the iRiS region toolbar when iRiS is the bar style
+  (`modules/binds.lua`, `modules/ryoshot.lua`).
 
 ### Fixed
 - **Ryoku Settings opens inside the work area.** Its full-page float was sized

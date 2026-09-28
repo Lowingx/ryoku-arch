@@ -194,7 +194,7 @@ Everything behind the pill's Super+D, Super+U, and voice tools.
 |---|---|
 | `tesseract`, `tesseract-data-eng` | OCR text grab |
 | `zbar` | QR-code scanning |
-| `gpu-screen-recorder`, `wf-recorder` | Hardware screen recording, with a multi-GPU fallback |
+| `wf-recorder` | Hardware screen recording (NVENC/VAAPI, CPU fallback) on Hyprland and niri |
 | `hyprsunset` | The night-light color-temperature toggle |
 | `wtype` | Types voice-dictation output into the focused app |
 | `libqalculate` | The launcher's calculator backend |

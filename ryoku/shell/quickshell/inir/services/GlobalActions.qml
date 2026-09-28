@@ -383,9 +383,9 @@ Singleton {
             keywords: ["record", "video", "screen"],
             execute: () => {
                 if (RecorderStatus.isRecording)
-                    Quickshell.execDetached(["ryoku-cmd-screenrecord", "--stop"])
+                    Quickshell.execDetached(["ryoku-shell", "record", "stop"])
                 else
-                    Quickshell.execDetached(["ryoku-cmd-screenrecord"])
+                    Quickshell.execDetached(["ryoku-shell", "record", "start"])
             }
         },
         {
