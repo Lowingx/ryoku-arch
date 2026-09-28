@@ -143,7 +143,15 @@ func Track(channel string) error {
 	// if the channel now serves something newer than what is installed.
 	if !source && !install && sys.PackagedChannel() == channel {
 		if serves := channelServes(channel).Release; serves == "" || serves == sys.ReadRelease().Release {
-			fmt.Printf(i18n.T("already on %s\n"), sys.DisplayChannel(channel))
+			// A box moved here by a retired name (unstable-dev, main) is already
+			// on the right channel; record the choice so the doctor treats it as
+			// deliberate, and say so plainly instead of a bare "already on".
+			recordChannelIntent(channel)
+			if channel == sys.ChannelTesting {
+				fmt.Println(i18n.T("already on unstable (the channel `ryoku track unstable-dev` used to select); nothing to move, `ryoku update` keeps it current"))
+			} else {
+				fmt.Printf(i18n.T("already on %s; nothing to move, `ryoku update` keeps it current\n"), sys.DisplayChannel(channel))
+			}
 			return nil
 		}
 		fmt.Printf(i18n.T("==> Already tracking %s; moving the Ryoku set to what it serves\n"), sys.DisplayChannel(channel))
@@ -183,6 +191,10 @@ func Track(channel string) error {
 // choice. Best effort: a box that could not record it just defaults to stable
 // when the doctor later reconciles the pin.
 func recordChannelIntent(channel string) {
+	// Skip the root write (and its sudo prompt) when nothing changes.
+	if sys.ReadChannelIntent() == channel {
+		return
+	}
 	if err := sys.WriteChannelIntent(channel); err != nil {
 		fmt.Fprintf(os.Stderr, i18n.T("note: could not record the tracked channel: %v\n"), err)
 	}

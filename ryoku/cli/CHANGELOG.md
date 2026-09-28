@@ -46,6 +46,10 @@
   `internal/sys/release.go`, `internal/updater/release.go`).
 
 ### Fixed
+- **`ryoku track unstable` explains itself on a box moved by the old name.**
+  A box that ran `ryoku track unstable-dev` is already on the unstable channel,
+  so tracking it again moves nothing; it now says so in those words instead of
+  a bare "already on unstable", and records the choice for the doctor.
 - **The doctor's reverse-PRIME guard (#270) now sees the pin the machine
   actually runs.** The render-pin-vs-panel check resolved the pin through
   `ryoku-gpu order`, the policy's recommendation, which refuses to speak
