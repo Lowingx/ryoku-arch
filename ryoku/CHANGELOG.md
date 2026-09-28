@@ -59,6 +59,16 @@
   honour (`wm/caps.go`, `wm/action.go`, `wm/hyprland/act.go`, `wm/niri/act.go`).
 
 ### Fixed
+- **Clicking SAVE no longer eats the text you just typed.** A TapHandler
+  button never takes focus from a TextInput, so the field's editing-finished
+  (its commit into the draft) did not fire when the user typed and clicked
+  SAVE, REVERT or the list footer's + directly: the Session page's "At Login"
+  commands looked saved, the row count persisted, and the text vanished at
+  logout (#294). `Btn`/`IconBtn` gained a `stealFocus` opt-in that grabs
+  focus on press the way a real toolkit button does; the action bar and the
+  list footers use it. Row minus buttons stay passive (their commit's rebuild
+  would destroy the delegate mid-tap), so the Session page also folds the
+  one live edit into every list mutation.
 - **Fn+F10 locks the touchpad again on laptops that report the key twice.**
   ASUS machines (and others) send the touchpad key from two input devices at
   once, so one press toggled the pad off and straight back on and the key
