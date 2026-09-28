@@ -426,13 +426,16 @@ EOF
     "$pkgdir/usr/share/applications/ryoku-hub.desktop"
   install -Dm644 "$_repo/ryoku/assets/brand/logo.svg" \
     "$pkgdir/usr/share/icons/hicolor/scalable/apps/ryoku-hub.svg"
-  # Default apps: the vendor layer, NOT ~/.config/mimeapps.list. That file is
+  # Default apps: the site layer, NOT ~/.config/mimeapps.list. That file is
   # where "Set as default" (GNOME, Firefox, xdg-mime) writes, and materializing
-  # over it threw a user's choices away on every update. /usr/share/applications
-  # is the lowest layer of the XDG mimeapps chain, so these defaults apply until
-  # the user picks something else, and then their pick wins for good.
+  # over it threw a user's choices away on every update. /usr/local/share is
+  # first in the XDG mimeapps chain below the user's file, so these defaults
+  # apply until the user picks something else, and their pick wins for good.
+  # It is also the one applications layer no distro package owns: shipping to
+  # /usr/share/applications/mimeapps.list collided with omarchy-settings on
+  # Omarchy installs and aborted the whole transaction (#295).
   install -Dm644 "$_repo/ryoku/apps/mimeapps.list" \
-    "$pkgdir/usr/share/applications/mimeapps.list"
+    "$pkgdir/usr/local/share/applications/mimeapps.list"
   # chromium reads ~/.config/chromium-flags.conf and Google Chrome reads
   # ~/.config/chrome-flags.conf; lay the one source to both so each pins the GNOME
   # keyring password store and native Wayland (screen share works, and Chrome does

@@ -39,6 +39,16 @@
   no checkout can rebuild it for a newer Hyprland. `ryoku-desktop` pins it like
   the other plugin packages.
 
+### Fixed
+- **`ryoku-desktop` no longer collides with another desktop's mimeapps map.**
+  The default-app map shipped to `/usr/share/applications/mimeapps.list`, and
+  on Omarchy that file belongs to `omarchy-settings`, so pacman aborted the
+  whole install with "exists in filesystem" (#295). It ships to the site layer
+  `/usr/local/share/applications/mimeapps.list` instead: still below the
+  user's own `~/.config/mimeapps.list` (their "Set as default" picks always
+  win), still above the distro's, and owned by no other package. The old copy
+  leaves with the upgrade; `deploy.sh` retires an unowned one on dev boxes.
+
 ### Removed
 - **The `awww` package is gone from `[ryoku]`.** The wallpaper backend moved to
   Ryogami, which paints and animates its own transitions from the built-in

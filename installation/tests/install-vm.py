@@ -49,9 +49,9 @@ INSTALLED_CHECKS = [
     ("f", "home/{user}/.config/hypr/hyprland.lua"),
     ("f", "home/{user}/.config/pip/pip.conf"),
     ("f", "home/{user}/.config/wireplumber/wireplumber.conf.d/51-ryoku-bluetooth.conf"),
-    # the default-app map ships in the vendor layer, never in ~/.config, which is
+    # the default-app map ships in the site layer, never in ~/.config, which is
     # where the user's own "Set as default" picks live (see the PKGBUILD note).
-    ("f", "usr/share/applications/mimeapps.list"),
+    ("f", "usr/local/share/applications/mimeapps.list"),
     # and materialize must not recreate the user-owned one: that file getting
     # rewritten on every update is what threw away "Set as default" picks.
     ("!", "home/{user}/.config/mimeapps.list"),

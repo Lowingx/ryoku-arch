@@ -19,8 +19,9 @@ truth for the live desktop.
   (LazyVim), `yazi/`, `starship/`, `nautilus/`, `npm/` (`npmrc`), `pip/`
   (`pip.conf`), `hyprland-preview-share-picker/` (the screen-share source
   chooser xdph launches). `mimeapps.list` sets the default apps and ships to
-  `/usr/share/applications/mimeapps.list`, the lowest XDG layer, so a user's own
-  `~/.config/mimeapps.list` (what "Set as default" writes) always wins;
+  `/usr/local/share/applications/mimeapps.list`, the site layer: below a user's
+  own `~/.config/mimeapps.list` (what "Set as default" writes), which always
+  wins, and above the distro's, which no Ryoku package should fight over.
   `chromium-flags.conf` pins Chromium's keyring and Wayland backend.
 - `hyprland/` the Hyprland config, authored in **Lua**. `hyprland.lua` is the
   entry point and `require`s each module. `keyboard.lua`, `gpu.lua`,

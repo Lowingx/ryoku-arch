@@ -204,9 +204,10 @@ file on every update, wiping edits made afterward. Idempotent.
 `reconcileMimeDefaults` clears the default-app map an older release froze into
 `~/.config/mimeapps.list`: entries that only copy Ryoku's shipped values are
 dropped (the file goes if that is all it held), and anything the user chose
-stays. Ryoku's map ships to `/usr/share/applications/mimeapps.list` now, the
-bottom of the XDG mimeapps chain, so it sets the defaults without ever
-outranking a user's pick.
+stays. Ryoku's map ships to `/usr/local/share/applications/mimeapps.list`, the
+site layer of the XDG mimeapps chain, so it sets the defaults without ever
+outranking a user's pick and without colliding with a distro package that
+owns `/usr/share/applications/mimeapps.list` (#295).
 `reconcileShellInstances` clears a desktop that is running twice: a shell surface
 orphaned by a daemon that was killed keeps drawing, and Quickshell allows a second
 instance of one config, so the replacement draws over it. It keeps the instance
@@ -400,7 +401,7 @@ island (when the channel serves the next line) and the Hub's Updates page.
   laying Ryoku's defaults where an app writes the user's choice resets that
   choice on each update: `~/.config/mimeapps.list` did exactly that to default
   apps. Ship such defaults one layer down where the format provides one
-  (`/usr/share/applications/mimeapps.list` for mime defaults), or make the file
+  (`/usr/local/share/applications/mimeapps.list` for mime defaults), or make the file
   a `generatedSeed` if it has no layering. The same rule read the other way:
   a rice used to copy its emblem over the shipped
   `fastfetch/fastfetch-emblem.png`, and every update put the brand mark back.

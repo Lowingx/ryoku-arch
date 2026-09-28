@@ -930,13 +930,21 @@ systemctl --user enable --now ryoku-ai-usage.timer 2>/dev/null || true
 # pip (PEP 668 --user): Ryoku-owned, so a dev box tracks it the way the package
 # materializes it for an installed one.
 mkdir -p "$cfg/pip"; cp -a "$here/../apps/pip/pip.conf" "$cfg/pip/pip.conf"
-# Default apps go to the vendor layer the package uses, never to
+# Default apps go to the site layer the package uses, never to
 # ~/.config/mimeapps.list: that file is the user's own ("Set as default" writes
-# it) and a redeploy must not touch it. Needs root, so it is skipped cleanly in a
-# sudo-less env, and cmp keeps a redeploy a no-op.
+# it) and a redeploy must not touch it. /usr/local/share outranks the distro's
+# /usr/share and owns no fight with any package there (#295). Needs root, so it
+# is skipped cleanly in a sudo-less env, and cmp keeps a redeploy a no-op.
 if command -v sudo >/dev/null 2>&1; then
-  cmp -s "$here/../apps/mimeapps.list" /usr/share/applications/mimeapps.list ||
-    sudo install -Dm644 "$here/../apps/mimeapps.list" /usr/share/applications/mimeapps.list || true
+  cmp -s "$here/../apps/mimeapps.list" /usr/local/share/applications/mimeapps.list ||
+    sudo install -Dm644 "$here/../apps/mimeapps.list" /usr/local/share/applications/mimeapps.list || true
+  # retire the old copy this script seeded before the move; a packaged box
+  # owns that path through ryoku-desktop, whose upgrade removes it, so only
+  # an unowned (dev-seeded) file is touched here.
+  if [[ -e /usr/share/applications/mimeapps.list ]] &&
+     ! pacman -Qoq /usr/share/applications/mimeapps.list >/dev/null 2>&1; then
+    sudo rm -f /usr/share/applications/mimeapps.list
+  fi
 fi
 # chromium reads ~/.config/chromium-flags.conf, Google Chrome reads chrome-flags.conf;
 # lay the one source to both (GNOME keyring password store + native Wayland).

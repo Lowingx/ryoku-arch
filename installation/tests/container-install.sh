@@ -164,8 +164,8 @@ done
 # check the system tree.
 [[ -s /usr/share/applications/ryoku-nvim.desktop ]] \
   || missing+=("/usr/share/applications/ryoku-nvim.desktop")
-[[ -s /usr/share/applications/mimeapps.list ]] \
-  || missing+=("/usr/share/applications/mimeapps.list")
+[[ -s /usr/local/share/applications/mimeapps.list ]] \
+  || missing+=("/usr/local/share/applications/mimeapps.list")
 if [[ -e "$cfg/mimeapps.list" ]]; then
   missing+=("$cfg/mimeapps.list (materialize must not create the user's default-app file)")
 fi
