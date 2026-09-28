@@ -26,8 +26,9 @@
   selector was removed (`ryoku/shell/quickshell/ryoshot/`,
   `inir/modules/regionSelector/`).
 - **The desktop widget editor is the iRiS one, in Ryoku's look.** Edit widgets
-  opens a floating bar -- grid snap, grid step, and a scrolling rail of the whole
-  roster, each widget a tile that inverts to a bone plate when it is placed --
+  opens a floating bar -- grid snap, grid step, Reset/Done, and a Widgets button
+  that grows an attached panel: the whole roster as toggle rows (glyph, name,
+  hint and a switch), grouped by source, searchable and keyboard-navigable --
   drawn in paper and ink and riding every bar style, replacing the old Add
   drop-down toolbar. Two iRiS widgets join the roster, rendered in the Ryoku look
   and stored in `widgets.json` beside the built-ins: **Day Progress** (a ring of
@@ -35,7 +36,8 @@
   base -- placement, size, lock, backing and the Auto / Fixed / Gradient colour
   modes -- from `WidgetSlot`, plus its own options, and `ryoku-shell desktop
   editWidgets` opens the editor from a keybind on niri too
-  (`modules/desktop/WidgetEditBar.qml`, `modules/desktop/dayprogress/`,
+  (`modules/desktop/WidgetEditBar.qml`, `modules/desktop/WidgetPicker.qml`,
+  `modules/desktop/dayprogress/`,
   `modules/desktop/shape/`, `shell.qml`).
 - **The whole iRiS face roster is addable, and skinnable per widget.** Every
   vendored iRiS face -- clock, weather, now playing, controls, calendar, up
@@ -79,8 +81,8 @@
 
 ### Changed
 - **Ryoku's desktop is the one place widgets are drawn.** The vendored iRiS
-  background widget canvas no longer mounts under the iRiS bar style -- the bare
-  wallpaper passthrough takes its place -- so a face is painted once, on Ryoku's
+  background widget canvas no longer mounts under the iRiS bar style, and no iRiS
+  surface sits over the wallpaper, so a face is painted once, on Ryoku's
   desktop, rather than twice. The Ryoku-versus-iNiR widget look is keyed per
   widget now, not by `iris.appearance.frontend`, so flipping the frame's
   frontend leaves the desktop faces alone
@@ -139,6 +141,17 @@
   grazes the frame.
 
 ### Fixed
+- **The desktop menu and widget dragging work under the iRiS bar style.** An
+  always-on iRiS surface sat over Ryoku's desktop on the iris bar style and
+  swallowed every click, so right-clicking bare wallpaper opened the old iNiR
+  menu, widgets could not be dragged, and its Widgets tile opened the retired
+  canvas editor with nothing behind it. That surface is gone, so the bare desktop
+  is Ryoku's again on every bar style: right-click opens Ryoku's context menu and
+  widgets take a left-drag. On the iris style the menu also carries Studio and
+  Edit iRiS, and the iRiS widget gallery's Arrange button now opens Ryoku's editor
+  (`inir/modules/iris/critical/ShellIrisCriticalPanels.qml`,
+  `modules/desktop/DesktopContextMenu.qml`,
+  `inir/modules/iris/widgets/IrisWidgetGallery.qml`).
 - **iRiS no longer rewrites the terminal cava theme.** Its cover-art hook ran
   iNiR's colour pipeline, which is not shipped here and fought Ryoku's
   matugen theming; the in-shell visualizers still take their colours from

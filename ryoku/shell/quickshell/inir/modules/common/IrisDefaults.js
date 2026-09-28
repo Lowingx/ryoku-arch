@@ -2102,7 +2102,6 @@ function config() {
   "irisNotificationPopup",
   "irisOnScreenDisplay",
   "irisSessionScreen",
-  "irisBackground",
   "irisWallpaperSelector",
   "irisPolkit"
  ],

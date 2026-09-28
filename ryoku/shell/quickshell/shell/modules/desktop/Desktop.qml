@@ -22,6 +22,9 @@ import "../stage/Singletons" as StageCfg
 import "../visualizer/Singletons" as VizCfg
 import "../visualizer" as Viz
 import "../wallpaper" as WallpaperMod
+// The iRiS frame singleton reports the dock's edge and its visible vs reserved
+// depth, so the Edit widgets bar can clear a bottom dock that reserves nothing.
+import inir.modules.iris.frame
 
 // desktop widgets layer: WlrLayer.Bottom (below windows), instantiated once per
 // monitor by the main shell, carrying the clock. only clicks on bare wallpaper
@@ -214,6 +217,25 @@ Scope {
         }
         root.pendingPluginMenu = [id, locked, x, y, manifest, placement];
         pluginMenuLoader.active = true;
+    }
+
+    // Any of the desktop right-click menus (bare wallpaper, a widget, a plugin
+    // tile) currently on screen. Drives the dedicated menu surface below so it is
+    // mapped and takes keyboard only while a menu actually shows.
+    readonly property bool menusShowing:
+        (widgetMenuLoader.item && widgetMenuLoader.item.showing === true)
+        || (desktopMenuLoader.item && desktopMenuLoader.item.showing === true)
+        || (pluginMenuLoader.item && pluginMenuLoader.item.showing === true)
+
+    // The Edit widgets bar rides a work-area surface, so a dock that reserves an
+    // exclusive zone already sits outside it. A dock that reserves nothing (the
+    // iRiS dock with reserve-space off) still paints there, so lift the bar by the
+    // visible dock depth the work area does not account for. The Ryoku dock steps
+    // aside entirely while widgets are edited, so it never needs clearing here.
+    readonly property real editBarDockClear: {
+        if (Services.Config.barStyle !== "iris" || IrisFrame.dockEdge !== "bottom")
+            return 0;
+        return Math.max(0, IrisFrame.inset("bottom") - IrisFrame.reserve("bottom", true));
     }
     // Off-surface open of a widget's right-click menu (the `desktop menu` IPC /
     // niri routing). Lands near the top-left of this monitor's canvas.
@@ -1178,106 +1200,6 @@ Scope {
 
         Process { id: paletteProc }
 
-        // Menus sit above the whole stage stack (backdrop z 1, layers up to z 5),
-        // or a Parallax backdrop paints over an open right-click menu.
-        // Built on the first right-click (the sync build hides behind the press)
-        // and kept for the session.
-        Loader {
-            id: widgetMenuLoader
-            anchors.fill: parent
-            z: 90
-            active: false
-            onItemChanged: if (item && root.pendingWidgetMenu) {
-                const p = root.pendingWidgetMenu;
-                root.pendingWidgetMenu = null;
-                root.openWidgetMenu(p[0], p[1], p[2]);
-            }
-            sourceComponent: Component {
-                WidgetMenu {}
-            }
-        }
-
-        // The system desktop right-click menu (bare wallpaper): the shared
-        // iRiS-structured surface, its own loader so it never rides the widget one.
-        Loader {
-            id: desktopMenuLoader
-            anchors.fill: parent
-            z: 90
-            active: false
-            onItemChanged: if (item && root.pendingDesktopMenu) {
-                const p = root.pendingDesktopMenu;
-                root.pendingDesktopMenu = null;
-                root.openDesktopMenu(p[0], p[1]);
-            }
-            sourceComponent: Component {
-                DesktopContextMenu { desktop: root }
-            }
-        }
-
-        // per-tile right-click menu, hoisted to PanelWindow level so the
-        // click-away catcher covers the whole desktop and a tile that
-        // vanishes (Hide) doesn't pull the menu down with it.
-        Loader {
-            id: pluginMenuLoader
-            anchors.fill: parent
-            z: 90
-            active: false
-            onItemChanged: if (item && root.pendingPluginMenu) {
-                const p = root.pendingPluginMenu;
-                root.pendingPluginMenu = null;
-                root.openPluginMenu(p[0], p[1], p[2], p[3], p[4], p[5]);
-            }
-            sourceComponent: Component {
-            PluginWidgetMenu {
-                id: pluginMenu
-                z: 90
-                onHideRequested: (id) => {
-                    hide.command = [root.placeTool, id, "enabled", "false"];
-                    hide.running = true;
-                    pluginMenu.close();
-                }
-                onLockToggled: (id) => {
-                    const dw = win.placementOf(id);
-                    const x = (dw.x !== undefined) ? dw.x : 80;
-                    const y = (dw.y !== undefined) ? dw.y : 80;
-                    const sc = (dw.scale !== undefined) ? dw.scale : 1;
-                    const lk = !(dw.locked === true);
-                    lockProc.command = [root.placeTool, id, "desktopWidget",
-                        "" + x, "" + y, "" + sc, "" + lk];
-                    lockProc.running = true;
-                }
-                onSettingChanged: (id, key, value) => {
-                    var obj = {};
-                    obj[key] = value;
-                    // queue so a two-key change (colour mode: colorAuto + color)
-                    // can't stomp itself on the single settings Process.
-                    root._settingsQueue.push([root.placeTool, id, "settings", JSON.stringify(obj)]);
-                    root._runSettingsQueue();
-                }
-                onSizeChanged: (id, sc) => {
-                    const dw = win.placementOf(id);
-                    const x = (dw.x !== undefined) ? dw.x : 80;
-                    const y = (dw.y !== undefined) ? dw.y : 80;
-                    const lk = (dw.locked === true);
-                    // scale only: opacity arg omitted -> ryoku-plugins-place keeps it.
-                    sizeProc.command = [root.placeTool, id, "desktopWidget",
-                        "" + x, "" + y, "" + sc, "" + lk];
-                    sizeProc.running = true;
-                }
-                onOpacityChanged: (id, op) => {
-                    const dw = win.placementOf(id);
-                    const x = (dw.x !== undefined) ? dw.x : 80;
-                    const y = (dw.y !== undefined) ? dw.y : 80;
-                    const lk = (dw.locked === true);
-                    // opacity only: scale left "" so the tool keeps the current one.
-                    opacityProc.command = [root.placeTool, id, "desktopWidget",
-                        "" + x, "" + y, "", "" + lk, "" + op];
-                    opacityProc.running = true;
-                }
-            }
-            }
-        }
-
         // Shared image viewer for desktop plugin tiles. A tile (e.g. Photo
         // Frame) calls pluginApi.expandImage(url) on a real click; this dims the
         // whole desktop and shows that image large + centered
@@ -1385,11 +1307,131 @@ Scope {
         }
     }
 
+    // The desktop's right-click menus (bare wallpaper, a widget, a plugin tile)
+    // live on their own Overlay layer-shell surface, not inside the Bottom-layer
+    // widget window, so an open menu always draws above every window instead of
+    // being buried under whatever overlaps the click. exclusiveZone 0 keeps the
+    // surface inside the work area (the recording-island idiom), so a card clamped
+    // to it lands clear of the frame band and the dock. It is mapped only while a
+    // menu shows, so it never blocks the desktop's own input otherwise; while
+    // shown the whole surface is live (each menu carries its own click-away
+    // catcher) and takes keyboard on demand so Esc dismisses.
+    PanelWindow {
+        id: menuWin
+        screen: root.screen
+        visible: root.menusShowing
+        color: "transparent"
+        exclusiveZone: 0
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.namespace: "ryoku-desktop-menu"
+        WlrLayershell.keyboardFocus: root.menusShowing ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+        anchors { top: true; left: true; right: true; bottom: true }
+
+        Loader {
+            id: widgetMenuLoader
+            anchors.fill: parent
+            z: 90
+            active: false
+            onItemChanged: if (item && root.pendingWidgetMenu) {
+                const p = root.pendingWidgetMenu;
+                root.pendingWidgetMenu = null;
+                root.openWidgetMenu(p[0], p[1], p[2]);
+            }
+            sourceComponent: Component {
+                WidgetMenu {}
+            }
+        }
+
+        // The system desktop right-click menu (bare wallpaper): the shared
+        // iRiS-structured surface, its own loader so it never rides the widget one.
+        Loader {
+            id: desktopMenuLoader
+            anchors.fill: parent
+            z: 90
+            active: false
+            onItemChanged: if (item && root.pendingDesktopMenu) {
+                const p = root.pendingDesktopMenu;
+                root.pendingDesktopMenu = null;
+                root.openDesktopMenu(p[0], p[1]);
+            }
+            sourceComponent: Component {
+                DesktopContextMenu { desktop: root }
+            }
+        }
+
+        // per-tile right-click menu, hoisted to PanelWindow level so the
+        // click-away catcher covers the whole desktop and a tile that
+        // vanishes (Hide) doesn't pull the menu down with it.
+        Loader {
+            id: pluginMenuLoader
+            anchors.fill: parent
+            z: 90
+            active: false
+            onItemChanged: if (item && root.pendingPluginMenu) {
+                const p = root.pendingPluginMenu;
+                root.pendingPluginMenu = null;
+                root.openPluginMenu(p[0], p[1], p[2], p[3], p[4], p[5]);
+            }
+            sourceComponent: Component {
+            PluginWidgetMenu {
+                id: pluginMenu
+                z: 90
+                onHideRequested: (id) => {
+                    hide.command = [root.placeTool, id, "enabled", "false"];
+                    hide.running = true;
+                    pluginMenu.close();
+                }
+                onLockToggled: (id) => {
+                    const dw = win.placementOf(id);
+                    const x = (dw.x !== undefined) ? dw.x : 80;
+                    const y = (dw.y !== undefined) ? dw.y : 80;
+                    const sc = (dw.scale !== undefined) ? dw.scale : 1;
+                    const lk = !(dw.locked === true);
+                    lockProc.command = [root.placeTool, id, "desktopWidget",
+                        "" + x, "" + y, "" + sc, "" + lk];
+                    lockProc.running = true;
+                }
+                onSettingChanged: (id, key, value) => {
+                    var obj = {};
+                    obj[key] = value;
+                    // queue so a two-key change (colour mode: colorAuto + color)
+                    // can't stomp itself on the single settings Process.
+                    root._settingsQueue.push([root.placeTool, id, "settings", JSON.stringify(obj)]);
+                    root._runSettingsQueue();
+                }
+                onSizeChanged: (id, sc) => {
+                    const dw = win.placementOf(id);
+                    const x = (dw.x !== undefined) ? dw.x : 80;
+                    const y = (dw.y !== undefined) ? dw.y : 80;
+                    const lk = (dw.locked === true);
+                    // scale only: opacity arg omitted -> ryoku-plugins-place keeps it.
+                    sizeProc.command = [root.placeTool, id, "desktopWidget",
+                        "" + x, "" + y, "" + sc, "" + lk];
+                    sizeProc.running = true;
+                }
+                onOpacityChanged: (id, op) => {
+                    const dw = win.placementOf(id);
+                    const x = (dw.x !== undefined) ? dw.x : 80;
+                    const y = (dw.y !== undefined) ? dw.y : 80;
+                    const lk = (dw.locked === true);
+                    // opacity only: scale left "" so the tool keeps the current one.
+                    opacityProc.command = [root.placeTool, id, "desktopWidget",
+                        "" + x, "" + y, "", "" + lk, "" + op];
+                    opacityProc.running = true;
+                }
+            }
+            }
+        }
+    }
+
     // The Edit widgets bar on its own layer-shell surface (docs/stage.md). With
-    // exclusiveZone 0 its geometry already excludes the bars, the dock and the
-    // frame-style island, so the bar rests bottom-centre in the work area on
-    // every bar style (the recording-island idiom). Only the bar takes input; the
-    // rest of the surface is click-through so the widgets under it still drag.
+    // exclusiveZone 0 its geometry already excludes the bars and any dock or
+    // frame-style island that reserves a zone (a dock that reserves nothing is
+    // cleared by editBarDockClear), so the bar rests bottom-centre in the work area on
+    // every bar style (the recording-island idiom). While the picker is closed only
+    // the bar takes input, so the widgets under it still drag; while it is open the
+    // whole surface takes input (a press off the panel closes it) and the surface
+    // takes keyboard on demand for the picker's search field and Up/Down/Space/Esc.
     PanelWindow {
         id: editBarWin
         screen: root.screen
@@ -1398,15 +1440,17 @@ Scope {
         exclusiveZone: 0
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.namespace: "ryoku-widgets-editbar"
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
         anchors { top: true; bottom: true; left: true; right: true }
-        mask: Region { item: editBar.barItem }
+        mask: editBar.pickerOpen ? null : editBarMask
+        Region { id: editBarMask; item: editBar.barItem }
 
         WidgetEditBar {
             id: editBar
             anchors.fill: parent
             monitor: root.screen ? root.screen.name : ""
             items: root.addItems
+            dockClearance: root.editBarDockClear
             onDone: StageCfg.StageSession.leave()
             onAddToggle: id => root.stageAddToggle(id)
         }

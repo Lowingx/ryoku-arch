@@ -89,6 +89,9 @@ AbstractBackgroundWidget {
     resizeMaxHeight: 1000
     needsColText: true
     liveColorTracking: true
+    // Ryoku hosting draws the slot card, so drop this widget's own plate in
+    // Ryoku style — the vertical type sits on the single shared surface.
+    readonly property bool _ryokuBare: root.ryokuHosted && root.ryokuStyle
 
     readonly property string compositionPreset: Config.getNestedValue("background.widgets.japaneseTypography.preset", "exhibition")
     readonly property string palettePreset: Config.getNestedValue("background.widgets.japaneseTypography.palettePreset", "adaptive")
@@ -393,8 +396,8 @@ AbstractBackgroundWidget {
         regionBrightness: root.regionBrightness
         anchors.fill: parent
         surfaceRadius: root.cornerRadiusOverride >= 0 ? root.cornerRadiusOverride : root.widgetCardRadius
-        surfaceOpacity: root.backgroundOpacity
-        surfaceBorderWidth: root.borderWidth
+        surfaceOpacity: root._ryokuBare ? 0 : root.backgroundOpacity
+        surfaceBorderWidth: root._ryokuBare ? 0 : root.borderWidth
         surfaceBorderOpacity: root.borderOpacity
         surfaceColor: root.widgetPlateColor
         colorMode: root.colorMode
@@ -405,7 +408,7 @@ AbstractBackgroundWidget {
         screenY: root.ryokuScreenY
         screenWidth: root.scaledScreenWidth
         screenHeight: root.scaledScreenHeight
-        shown: root.backgroundOpacity > 0 || root.borderWidth > 0 || root.effectiveBlur
+        shown: !root._ryokuBare && (root.backgroundOpacity > 0 || root.borderWidth > 0 || root.effectiveBlur)
     }
 
     Item {

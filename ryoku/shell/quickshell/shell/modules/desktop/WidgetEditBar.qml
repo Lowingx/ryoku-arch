@@ -10,11 +10,10 @@ import Ryoku.Ui.Singletons
 // The Edit widgets bar: one floating instrument placed in the output's work area
 // while the desktop is lifted for editing. Its host window sets exclusiveZone 0,
 // so the bar sits clear of the frame band, the bar-style island and the dock on
-// every bar style; it rests bottom-centre, above the dock. It replaces the old
-// add-drop-down toolbar with the smoother iRiS layout, redrawn in Ryoku's paper
-// and ink: a masthead, the grid controls, a scrolling rail of the whole roster
-// (a tile per widget, bone plate when placed, quiet when not), then Reset/Done.
-//
+// every bar style; it rests bottom-centre, above the dock. Its compact controls
+// -- the grid snap and step, then Reset/Done -- flank one Widgets button that
+// opens WidgetPicker, an attached panel that grows out of the bar and carries the
+// whole roster as toggle rows (searchable, grouped, wheel- and keyboard-driven).
 // The session state (selection, dirty, escape ladder) stays in StageSession;
 // this owns only the bar and reports host actions as signals. Grid snap and
 // step live on stage.json so an unknown key never reaches the Hub's save.
@@ -25,6 +24,9 @@ Item {
     property string monitor: ""
     // The roster: [{ id, label, icon, enabled, group }].
     property var items: []
+    // Extra bottom clearance (px) so the bar clears a dock the work area does not
+    // exclude; the host computes it from the active bar style's dock.
+    property real dockClearance: 0
 
     signal done()
     signal addToggle(string id)
@@ -34,6 +36,12 @@ Item {
     // Exposed so the host window can mask input to just the bar (RecordIsland
     // idiom): clicks off the bar fall through to the widgets for dragging.
     property alias barItem: bar
+
+    // The picker panel is on when the Widgets button opens it. The host window
+    // reads this to widen the input mask to the whole surface while it is up (a
+    // click off the panel closes it) and to let the surface take keyboard focus
+    // for the panel's search field and Up/Down/Space/Esc navigation.
+    property bool pickerOpen: false
 
 
     // A compact tool: a glyph over an optional value, a quiet tile that washes on
@@ -98,55 +106,13 @@ Item {
         color: Theme.line
     }
 
-    // A roster tile: icon + name, bone plate when the widget is placed, a quiet
-    // tile when it is not. Click toggles it on the desktop.
-    component Pill: Item {
-        id: pl
-        required property var entry
-        readonly property bool on: pl.entry.enabled === true
-        implicitWidth: plRow.implicitWidth + Theme.s3 * 2
-        implicitHeight: Theme.ctlH + 8
-        readonly property color content: pl.on ? Theme.inkOnBone
-            : (plMa.containsMouse ? Theme.ink : Theme.inkDim)
-        scale: plMa.pressed ? 0.95 : 1
-        Behavior on scale { NumberAnimation { duration: Theme.quick; easing.type: Theme.ease } }
-        Rectangle {
-            anchors.fill: parent
-            radius: Theme.radiusTile
-            color: pl.on ? Theme.bone
-                : plMa.pressed ? Theme.tilePress
-                : plMa.containsMouse ? Theme.tileHover : Theme.tile
-            border.width: 1
-            border.color: pl.on ? Theme.bone : Theme.line
-            Behavior on color { ColorAnimation { duration: Theme.quick } }
-        }
-        Row {
-            id: plRow
-            anchors.centerIn: parent
-            spacing: Theme.s2
-            MaterialIcon {
-                anchors.verticalCenter: parent.verticalCenter
-                text: pl.entry.icon || "widgets"
-                font.pixelSize: 18
-                fill: pl.on ? 1 : 0
-                color: pl.content
-            }
-            Text {
-                anchors.verticalCenter: parent.verticalCenter
-                text: I18n.tr(pl.entry.label || pl.entry.id)
-                color: pl.content
-                font.family: Theme.font
-                font.pixelSize: Theme.fSmall
-                font.weight: pl.on ? Font.DemiBold : Font.Medium
-            }
-        }
-        MouseArea {
-            id: plMa
-            anchors.fill: parent
-            hoverEnabled: true
-            cursorShape: Qt.PointingHandCursor
-            onClicked: ed.addToggle(pl.entry.id)
-        }
+    // With the picker open the whole surface takes input (docs/stage.md): a press
+    // anywhere off the panel and the bar closes it, and no widget drags mid-pick.
+    MouseArea {
+        anchors.fill: parent
+        visible: ed.pickerOpen
+        acceptedButtons: Qt.AllButtons
+        onPressed: ed.pickerOpen = false
     }
 
     MultiEffect {
@@ -164,8 +130,8 @@ Item {
     Rectangle {
         id: bar
         x: Math.round((ed.width - width) / 2)
-        y: ed.height - height - Theme.s3
-        width: Math.min(ed.width - Theme.s5 * 2, Math.max(560, row.implicitWidth + Theme.s4 * 2))
+        y: ed.height - height - Theme.s3 - (ed.dockClearance > 0 ? ed.dockClearance + Theme.s3 : 0)
+        width: Math.min(ed.width - Theme.s5 * 2, row.implicitWidth + Theme.s4 * 2)
         height: Theme.s7 + Theme.s1
         radius: Theme.menuRadius
         color: Theme.surface
@@ -220,76 +186,54 @@ Item {
 
             Div {}
 
-            // The roster rail: scroll with the wheel/touchpad or a flick/drag,
-            // its edges fading to hint there is more (no arrow buttons to click).
+            // The Widgets button: opens the attached picker panel. It reads as on
+            // -- a bone plate -- while the panel is up, the sidebar inversion idiom.
             Item {
-                id: railBox
-                Layout.fillWidth: true
-                Layout.minimumWidth: Theme.s7 * 2
-                Layout.preferredWidth: Math.min(railRow.implicitWidth, 720)
+                id: widgetsBtn
                 Layout.alignment: Qt.AlignVCenter
-                Layout.preferredHeight: Theme.ctlH + 8
-
-                Flickable {
-                    id: rail
+                implicitWidth: wbRow.implicitWidth + Theme.s4
+                implicitHeight: Theme.ctlH + 8
+                readonly property bool on: ed.pickerOpen
+                readonly property color content: widgetsBtn.on ? Theme.inkOnBone
+                    : (wbMa.containsMouse ? Theme.ink : Theme.inkDim)
+                scale: wbMa.pressed ? 0.95 : 1
+                Behavior on scale { NumberAnimation { duration: Theme.quick; easing.type: Theme.ease } }
+                Rectangle {
                     anchors.fill: parent
-                    contentWidth: railRow.implicitWidth
-                    contentHeight: height
-                    clip: true
-                    interactive: contentWidth > width
-                    boundsBehavior: Flickable.StopAtBounds
-                    flickableDirection: Flickable.HorizontalFlick
-
-                    // Vertical wheel maps to horizontal so a plain mouse scrolls
-                    // the rail; the touchpad's own horizontal axis wins when larger.
-                    WheelHandler {
-                        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad
-                        onWheel: e => {
-                            const d = Math.abs(e.angleDelta.x) > Math.abs(e.angleDelta.y) ? -e.angleDelta.x : -e.angleDelta.y;
-                            const maxX = Math.max(0, rail.contentWidth - rail.width);
-                            rail.contentX = Math.max(0, Math.min(maxX, rail.contentX + (d > 0 ? Theme.s6 : -Theme.s6)));
-                            e.accepted = true;
-                        }
+                    radius: Theme.radiusTile
+                    color: widgetsBtn.on ? Theme.bone
+                        : wbMa.pressed ? Theme.tilePress
+                        : wbMa.containsMouse ? Theme.tileHover : Theme.tile
+                    border.width: 1
+                    border.color: widgetsBtn.on ? Theme.bone : Theme.line
+                    Behavior on color { ColorAnimation { duration: Theme.quick } }
+                }
+                Row {
+                    id: wbRow
+                    anchors.centerIn: parent
+                    spacing: Theme.s2
+                    MaterialIcon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "widgets"
+                        font.pixelSize: 18
+                        fill: widgetsBtn.on ? 1 : 0
+                        color: widgetsBtn.content
                     }
-
-                    Row {
-                        id: railRow
-                        height: rail.height
-                        spacing: Theme.s2
-                        Repeater {
-                            model: ed.items
-                            delegate: Pill {
-                                required property var modelData
-                                entry: modelData
-                            }
-                        }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: I18n.tr("Widgets")
+                        color: widgetsBtn.content
+                        font.family: Theme.font
+                        font.pixelSize: Theme.fSmall
+                        font.weight: Font.DemiBold
                     }
                 }
-
-                // Edge fades: a wash from the bar surface to clear, shown only on
-                // the side that still has roster to scroll to. Input-transparent,
-                // so the flick/wheel underneath is untouched.
-                Rectangle {
-                    anchors { left: parent.left; top: parent.top; bottom: parent.bottom }
-                    width: Theme.s5
-                    opacity: rail.contentX > 1 ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: Theme.quick } }
-                    gradient: Gradient {
-                        orientation: Gradient.Horizontal
-                        GradientStop { position: 0; color: Theme.surface }
-                        GradientStop { position: 1; color: "transparent" }
-                    }
-                }
-                Rectangle {
-                    anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
-                    width: Theme.s5
-                    opacity: rail.contentX < rail.contentWidth - rail.width - 1 ? 1 : 0
-                    Behavior on opacity { NumberAnimation { duration: Theme.quick } }
-                    gradient: Gradient {
-                        orientation: Gradient.Horizontal
-                        GradientStop { position: 0; color: "transparent" }
-                        GradientStop { position: 1; color: Theme.surface }
-                    }
+                MouseArea {
+                    id: wbMa
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: ed.pickerOpen = !ed.pickerOpen
                 }
             }
 
@@ -337,5 +281,32 @@ Item {
                 }
             }
         }
+    }
+
+    // The picker grows out of the bar's top edge into the free work area above it,
+    // sized and capped to what the surface allows so nothing truncates. It floats
+    // over the lifted desktop, so it casts (the popout idiom).
+    MultiEffect {
+        source: picker
+        anchors.fill: picker
+        visible: picker.visible && !Performance.shadowsDisabled
+        shadowEnabled: true
+        shadowColor: Theme.shadow
+        shadowBlur: 1.0
+        shadowVerticalOffset: 10
+        blurMax: 40
+        autoPaddingEnabled: true
+    }
+    WidgetPicker {
+        id: picker
+        visible: ed.pickerOpen
+        items: ed.items
+        anchors.horizontalCenter: bar.horizontalCenter
+        anchors.bottom: bar.top
+        anchors.bottomMargin: Theme.s2
+        maxWidth: ed.width - Theme.s5 * 2
+        maxPanelHeight: bar.y - Theme.s2 - Theme.s5
+        onToggle: id => ed.addToggle(id)
+        onRequestClose: ed.pickerOpen = false
     }
 }

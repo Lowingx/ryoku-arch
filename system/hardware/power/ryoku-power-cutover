@@ -379,13 +379,7 @@ session_environment_path() {
 # than from the shared user manager, whose environment may name another
 # same-UID session after a switch.
 discover_session_environment() {
-  local sid=$1 scope cgroup session_type desktop provider provider_bin
-  local pid entry key value tmp path
-  local -a keys=(
-    XDG_SESSION_ID XDG_SESSION_TYPE XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP
-    XDG_SEAT XDG_VTNR WAYLAND_DISPLAY DISPLAY
-  )
-  local -A found=()
+  local sid=$1 scope cgroup session_type desktop provider provider_bin pid path
   scope="$(session_property "$sid" Scope)" || return 1
   session_type="$(session_property "$sid" Type)" || return 1
   desktop="$(session_property "$sid" Desktop)" || return 1
@@ -393,42 +387,107 @@ discover_session_environment() {
   [[ $provider =~ ^[a-z0-9-]+$ ]] || return 1
   provider_bin="$provider_root/ryoku-wm-$provider"
   [[ -x $provider_bin ]] || return 1
-  cgroup="$(systemctl show "$scope" -p ControlGroup --value 2>/dev/null)" || return 1
-  [[ $cgroup == /* && $cgroup != *..* &&
-     -r "$cgroup_root$cgroup/cgroup.procs" ]] || return 1
   path="$(session_environment_path "$sid")"
-  for pid in $(< "$cgroup_root$cgroup/cgroup.procs"); do
+  cgroup="$(systemctl show "$scope" -p ControlGroup --value 2>/dev/null)" || return 1
+  if [[ $cgroup == /* && $cgroup != *..* &&
+        -r "$cgroup_root$cgroup/cgroup.procs" ]]; then
+    for pid in $(< "$cgroup_root$cgroup/cgroup.procs"); do
+      write_session_environment_from_pid \
+        "$sid" "$session_type" "$provider" "$provider_bin" "$pid" "$path" &&
+        return 0
+    done
+  fi
+  # An SDDM-started niri-session runs the compositor and its shell clients in
+  # the user manager (niri.service, ryoku-shell.service), so the login1 scope
+  # holds only sddm-helper, the login shell, niri-session and the
+  # `systemctl --user start` that launched it -- none carrying WAYLAND_DISPLAY.
+  # When the scope yields no Wayland client, resolve from the user's own
+  # processes instead. Hyprland keeps its compositor in the scope, matches
+  # above, and never reaches this fallback.
+  discover_session_environment_from_user \
+    "$sid" "$session_type" "$provider" "$provider_bin" "$path"
+}
+
+# Inspect one process and, when it is a Wayland client of the requested login1
+# session, write its compositor environment file: the XDG/display keys, the
+# window-manager tag, and the provider's own IPC socket read from the process.
+# Returns 0 only on a written file, so a scan can stop at the first match.
+write_session_environment_from_pid() {
+  local sid=$1 session_type=$2 provider=$3 provider_bin=$4 pid=$5 path=$6
+  local entry key value tmp
+  local -a keys=(
+    XDG_SESSION_ID XDG_SESSION_TYPE XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP
+    XDG_SEAT XDG_VTNR WAYLAND_DISPLAY DISPLAY
+  )
+  local -A found=()
+  [[ $pid =~ ^[0-9]+$ ]] || return 1
+  [[ -r /proc/$pid/environ ]] || return 1
+  while IFS= read -r -d '' entry; do
+    key=${entry%%=*}
+    value=${entry#*=}
+    case "$key" in
+      XDG_SESSION_ID|XDG_SESSION_TYPE|XDG_CURRENT_DESKTOP|XDG_SESSION_DESKTOP|\
+      XDG_SEAT|XDG_VTNR|WAYLAND_DISPLAY|DISPLAY)
+        found[$key]=$value
+        ;;
+    esac
+  done < <(cat "/proc/$pid/environ" 2>/dev/null || true)
+  [[ ${found[XDG_SESSION_ID]:-} == "$sid" ]] || return 1
+  [[ $session_type == wayland && -n ${found[WAYLAND_DISPLAY]:-} ]] || return 1
+  tmp="$path.$$"
+  if ! (
+    umask 077
+    for key in "${keys[@]}"; do
+      [[ -v found[$key] ]] && printf '%s=%s\0' "$key" "${found[$key]}"
+    done
+    printf 'RYOKU_WM=%s\0' "$provider"
+    "$provider_bin" environment "$pid"
+  ) >"$tmp"; then
+    rm -f "$tmp"
+    return 1
+  fi
+  mv -f "$tmp" "$path"
+}
+
+# Fallback resolver for a compositor whose clients live in the user manager
+# rather than the login1 scope: scan the calling user's own processes for one
+# that names this exact session and a Wayland display, preferring a process
+# that also carries the window manager's IPC socket (the shell and the other
+# compositor clients) so `$provider_bin environment` resolves NIRI_SOCKET /
+# HYPRLAND_INSTANCE_SIGNATURE. A process from any other session id is skipped.
+discover_session_environment_from_user() {
+  local sid=$1 session_type=$2 provider=$3 provider_bin=$4 path=$5
+  local proc_root=${RYOKU_PROC_ROOT:-/proc}
+  local self_uid proc pid proc_uid entry key proc_sid
+  local preferred_pid="" plain_pid="" has_wayland has_socket
+  [[ $session_type == wayland ]] || return 1
+  self_uid="$(id -u)"
+  for proc in "$proc_root"/[0-9]*; do
+    pid=${proc##*/}
     [[ $pid =~ ^[0-9]+$ ]] || continue
-    found=()
+    [[ -r $proc/status && -r $proc/environ ]] || continue
+    proc_uid="$(awk '/^Uid:/ { print $2; exit }' "$proc/status" 2>/dev/null || true)"
+    [[ $proc_uid == "$self_uid" ]] || continue
+    proc_sid="" has_wayland=0 has_socket=0
     while IFS= read -r -d '' entry; do
       key=${entry%%=*}
-      value=${entry#*=}
       case "$key" in
-        XDG_SESSION_ID|XDG_SESSION_TYPE|XDG_CURRENT_DESKTOP|XDG_SESSION_DESKTOP|\
-        XDG_SEAT|XDG_VTNR|WAYLAND_DISPLAY|DISPLAY)
-          found[$key]=$value
-          ;;
+        XDG_SESSION_ID) proc_sid=${entry#*=} ;;
+        WAYLAND_DISPLAY) [[ -n ${entry#*=} ]] && has_wayland=1 ;;
+        NIRI_SOCKET|HYPRLAND_INSTANCE_SIGNATURE) [[ -n ${entry#*=} ]] && has_socket=1 ;;
       esac
-    done < <(cat "/proc/$pid/environ" 2>/dev/null || true)
-    [[ ${found[XDG_SESSION_ID]:-} == "$sid" ]] || continue
-    [[ $session_type == wayland &&
-       -n ${found[WAYLAND_DISPLAY]:-} ]] || continue
-    tmp="$path.$$"
-    if ! (
-      umask 077
-      for key in "${keys[@]}"; do
-        [[ -v found[$key] ]] && printf '%s=%s\0' "$key" "${found[$key]}"
-      done
-      printf 'RYOKU_WM=%s\0' "$provider"
-      "$provider_bin" environment "$pid"
-    ) >"$tmp"; then
-      rm -f "$tmp"
-      continue
+    done < <(cat "$proc/environ" 2>/dev/null || true)
+    [[ $proc_sid == "$sid" && $has_wayland == 1 ]] || continue
+    if (( has_socket )); then
+      preferred_pid=$pid
+      break
     fi
-    mv -f "$tmp" "$path"
-    return 0
+    [[ -n $plain_pid ]] || plain_pid=$pid
   done
-  return 1
+  pid=${preferred_pid:-$plain_pid}
+  [[ -n $pid ]] || return 1
+  write_session_environment_from_pid \
+    "$sid" "$session_type" "$provider" "$provider_bin" "$pid" "$path"
 }
 
 bind_session_environment() {

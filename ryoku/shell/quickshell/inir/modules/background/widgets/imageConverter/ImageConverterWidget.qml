@@ -47,6 +47,9 @@ AbstractBackgroundWidget {
     readonly property var acceptedExtensions: [
         "png", "jpg", "jpeg", "webp", "avif", "bmp", "gif", "tiff", "tif"
     ]
+    // Ryoku hosting draws the slot card, so drop this widget's own plate in
+    // Ryoku style — the drop zone and labels sit on the single shared surface.
+    readonly property bool _ryokuBare: root.ryokuHosted && root.ryokuStyle
 
     property string selectedFormat: String(root._readConfigKey("selectedFormat") ?? "webp")
     property string conversionState: "idle"
@@ -208,8 +211,8 @@ AbstractBackgroundWidget {
         regionBrightness: root.regionBrightness
         surfaceRadius: root.cornerRadiusOverride >= 0
             ? root.cornerRadiusOverride : root.widgetCardRadius
-        surfaceOpacity: root.backgroundOpacity
-        surfaceBorderWidth: root.borderWidth
+        surfaceOpacity: root._ryokuBare ? 0 : root.backgroundOpacity
+        surfaceBorderWidth: root._ryokuBare ? 0 : root.borderWidth
         surfaceBorderOpacity: root.borderOpacity
         surfaceColor: root.widgetInk
         colorMode: root.colorMode
@@ -220,7 +223,7 @@ AbstractBackgroundWidget {
         screenY: root.ryokuScreenY
         screenWidth: root.scaledScreenWidth
         screenHeight: root.scaledScreenHeight
-        shown: root.backgroundOpacity > 0 || root.borderWidth > 0 || root.effectiveBlur
+        shown: !root._ryokuBare && (root.backgroundOpacity > 0 || root.borderWidth > 0 || root.effectiveBlur)
     }
 
     ColumnLayout {

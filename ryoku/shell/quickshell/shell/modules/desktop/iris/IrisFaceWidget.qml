@@ -106,6 +106,9 @@ Item {
             accentOverride: adapter._override
             scaleOverride: Config[adapter.prefix + "Scale"]
             radiusOverride: Config[adapter.prefix + "Radius"]
+            // Match the slot card's resolved rounding so the Ryoku custom-image
+            // surface clips its media to the same shape (Theme.radius = square).
+            slotRadius: Config[adapter.prefix + "Radius"] >= 0 ? Config[adapter.prefix + "Radius"] : Theme.radius
             optionOverrides: adapter._opts
         }
     }

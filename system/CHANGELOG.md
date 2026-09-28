@@ -104,6 +104,11 @@
   package.
 
 ### Fixed
+- **Deploys and updates no longer strand a niri desktop.** On a niri login
+  started through niri-session the compositor runs outside the login scope, so
+  the power cutover found no session environment, stopped the shell and never
+  restarted it; it now falls back to the session's own Wayland clients
+  (`hardware/power/ryoku-power-cutover`).
 - `hardware/power/ryoku-power-cutover`: a killed generation guard releases
   its locks. The hold's keep-alive coprocess inherited the launch and
   generation flock fds, so a holder killed mid-swap left the locks pinned by

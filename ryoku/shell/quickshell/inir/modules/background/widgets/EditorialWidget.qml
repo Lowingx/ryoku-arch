@@ -27,14 +27,17 @@ AbstractBackgroundWidget {
     readonly property bool _ornaments: !root._globalEditorial || Appearance.editorial.ornaments
     readonly property bool centered: composition === "quote"
     readonly property real inset: (root._globalEditorial ? Appearance.editorial.inset : 20) * scaleFactor
+    // Ryoku hosting draws the slot card, so drop this widget's own plate in
+    // Ryoku style — the content then sits on the single shared surface.
+    readonly property bool _ryokuBare: root.ryokuHosted && root.ryokuStyle
 
     WidgetSurface {
         irisPresentation: root.widgetIris
         anchors.fill: parent
         regionBrightness: root.regionBrightness
         surfaceRadius: root.cornerRadiusOverride >= 0 ? root.cornerRadiusOverride : root.widgetCardRadius
-        surfaceOpacity: root.backgroundOpacity
-        surfaceBorderWidth: root.borderWidth
+        surfaceOpacity: root._ryokuBare ? 0 : root.backgroundOpacity
+        surfaceBorderWidth: root._ryokuBare ? 0 : root.borderWidth
         surfaceBorderOpacity: root.borderOpacity
         surfaceColor: root.widgetInk
         colorMode: root.colorMode

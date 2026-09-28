@@ -22,6 +22,9 @@ Item {
 
     anchors.fill: parent
 
+    // Exposed so the host menu surface maps only while this menu is on screen.
+    readonly property alias showing: shell.showing
+
     property string scope: ""
     property bool locked: false
     property var manifest: ({})

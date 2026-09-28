@@ -28,6 +28,9 @@ Item {
     property color accentOverride: "transparent"
     property real scaleOverride: -1
     property real radiusOverride: -1
+    // Resolved slot corner radius (the WidgetSlot's card rounding), so the Ryoku
+    // custom-image surface can clip its media to the same rounded square.
+    property real slotRadius: -1
     property var optionOverrides: ({})
 
     readonly property var widget: host.item
@@ -51,7 +54,7 @@ Item {
         sourceComponent: prov._componentFor(prov.faceId)
     }
 
-    Component { id: cCustom; CustomImageWidget { anchors.fill: parent; configEntryName: "customImage"; visible: true; ryokuHosted: true; ryokuStyle: prov.ryokuStyle; outputName: prov.outputName; screenWidth: prov.screenW; screenHeight: prov.screenH; scaledScreenWidth: prov.screenW; scaledScreenHeight: prov.screenH; wallpaperScale: 1; ryokuHostX: prov.hostX; ryokuHostY: prov.hostY; ryokuInkOverride: prov.inkOverride; ryokuAccentOverride: prov.accentOverride; ryokuScaleOverride: prov.scaleOverride; ryokuRadiusOverride: prov.radiusOverride; ryokuOptionOverrides: prov.optionOverrides } }
+    Component { id: cCustom; CustomImageWidget { anchors.fill: parent; configEntryName: "customImage"; visible: true; ryokuHosted: true; ryokuStyle: prov.ryokuStyle; outputName: prov.outputName; screenWidth: prov.screenW; screenHeight: prov.screenH; scaledScreenWidth: prov.screenW; scaledScreenHeight: prov.screenH; wallpaperScale: 1; ryokuHostX: prov.hostX; ryokuHostY: prov.hostY; ryokuInkOverride: prov.inkOverride; ryokuAccentOverride: prov.accentOverride; ryokuScaleOverride: prov.scaleOverride; ryokuRadiusOverride: prov.radiusOverride; ryokuSlotRadius: prov.slotRadius; ryokuOptionOverrides: prov.optionOverrides } }
     Component { id: cEditorial; EditorialWidget { anchors.fill: parent; configEntryName: "editorial"; visible: true; ryokuHosted: true; ryokuStyle: prov.ryokuStyle; outputName: prov.outputName; screenWidth: prov.screenW; screenHeight: prov.screenH; scaledScreenWidth: prov.screenW; scaledScreenHeight: prov.screenH; wallpaperScale: 1; ryokuHostX: prov.hostX; ryokuHostY: prov.hostY; ryokuInkOverride: prov.inkOverride; ryokuAccentOverride: prov.accentOverride; ryokuScaleOverride: prov.scaleOverride; ryokuRadiusOverride: prov.radiusOverride; ryokuOptionOverrides: prov.optionOverrides } }
     Component { id: cImage; ImageConverterWidget { anchors.fill: parent; configEntryName: "imageConverter"; visible: true; ryokuHosted: true; ryokuStyle: prov.ryokuStyle; outputName: prov.outputName; screenWidth: prov.screenW; screenHeight: prov.screenH; scaledScreenWidth: prov.screenW; scaledScreenHeight: prov.screenH; wallpaperScale: 1; ryokuHostX: prov.hostX; ryokuHostY: prov.hostY; ryokuInkOverride: prov.inkOverride; ryokuAccentOverride: prov.accentOverride; ryokuScaleOverride: prov.scaleOverride; ryokuRadiusOverride: prov.radiusOverride; ryokuOptionOverrides: prov.optionOverrides } }
     Component { id: cJp; JapaneseTypographyWidget { anchors.fill: parent; configEntryName: "japaneseTypography"; visible: true; ryokuHosted: true; ryokuStyle: prov.ryokuStyle; outputName: prov.outputName; screenWidth: prov.screenW; screenHeight: prov.screenH; scaledScreenWidth: prov.screenW; scaledScreenHeight: prov.screenH; wallpaperScale: 1; ryokuHostX: prov.hostX; ryokuHostY: prov.hostY; ryokuInkOverride: prov.inkOverride; ryokuAccentOverride: prov.accentOverride; ryokuScaleOverride: prov.scaleOverride; ryokuRadiusOverride: prov.radiusOverride; ryokuOptionOverrides: prov.optionOverrides } }

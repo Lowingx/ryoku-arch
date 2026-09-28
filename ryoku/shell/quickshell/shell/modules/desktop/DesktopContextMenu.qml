@@ -5,6 +5,7 @@ import Ryoku.Ui.Singletons
 import shell.services as Services
 import "../visualizer/Singletons" as VizCfg
 import "../stage/Singletons" as StageCfg
+import inir
 
 // The system desktop right-click menu: right-clicking bare wallpaper on any bar
 // style opens this. It carries the iRiS desktop menu's structure -- a quick row
@@ -17,6 +18,9 @@ Item {
     id: menu
 
     anchors.fill: parent
+
+    // Exposed so the host menu surface maps only while this menu is on screen.
+    readonly property alias showing: shell.showing
 
     // The owning Desktop surface: its screen slice is where the editors and the
     // launcher open, and its wallpaper feeds the Wallpaper tile's thumbnail.
@@ -80,6 +84,19 @@ Item {
         menu.close();
     }
 
+    // iRiS-only conveniences, reachable from the desktop menu on the iris bar
+    // style. Studio is the live appearance editor; Edit iRiS arranges the bar in
+    // place. Both drive inir's GlobalStates in-process, the way the iris bar
+    // scene and the launcher already reach it.
+    function openIrisStudio() {
+        GlobalStates.irisStudioOpen = true;
+        menu.close();
+    }
+    function editIris() {
+        GlobalStates.irisEdit = true;
+        menu.close();
+    }
+
     // The Stage depth/parallax effect, named for the Depth row (which opens the
     // full Stage controls rather than juggling two chips inside the menu).
     readonly property string stageEffect: StageCfg.StageBackend.effect
@@ -92,6 +109,9 @@ Item {
     // The wallpaper thumbnail for the Wallpaper tile: the still the desktop paints
     // (a poster for a video wall), so the tile shows what is on screen.
     readonly property string wallpaperThumb: menu.desktop ? (menu.desktop.wallpaperPath || "") : ""
+
+    // The iRiS conveniences below show only while its bar style is on screen.
+    readonly property bool iris: Services.Config.barStyle === "iris"
 
     DesktopMenu {
         id: shell
@@ -120,6 +140,10 @@ Item {
             onTriggered: menu.depthSettings()
         }
         MenuRow { icon: "tune"; label: I18n.tr("Quick controls"); onTriggered: menu.quickControls() }
+        // iRiS conveniences: Studio and Edit iRiS on the iris bar style only. On
+        // every other style they hide, and the Column skips them with no gap.
+        MenuRow { visible: menu.iris; icon: "palette"; label: I18n.tr("Studio"); onTriggered: menu.openIrisStudio() }
+        MenuRow { visible: menu.iris; icon: "edit"; label: I18n.tr("Edit iRiS"); onTriggered: menu.editIris() }
 
         MenuSection {}
         MenuRow { icon: "settings"; label: I18n.tr("Settings"); accent: true; closeOnTrigger: false; onTriggered: menu.openSettings() }

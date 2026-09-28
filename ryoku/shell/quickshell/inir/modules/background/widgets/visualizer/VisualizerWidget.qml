@@ -42,6 +42,10 @@ AbstractBackgroundWidget {
     resizeMinWidth: 120
     resizeMinHeight: 48
 
+    // Ryoku hosting draws the slot card, so drop this widget's own card in Ryoku
+    // style — the bars/organic art sit on the single shared surface.
+    readonly property bool _ryokuBare: root.ryokuHosted && root.ryokuStyle
+
     readonly property string vizType: Config.getNestedValue("background.widgets.visualizer.vizType", "bars")
     readonly property int waveOpacity: Config.getNestedValue("background.widgets.visualizer.waveOpacity", -1)
     readonly property string paletteMode: Config.getNestedValue(
@@ -460,8 +464,8 @@ AbstractBackgroundWidget {
         width: parent.width
         height: parent.height
         surfaceRadius: root.cornerRadiusOverride >= 0 ? root.cornerRadiusOverride : root.cardRadius
-        surfaceOpacity: root.backgroundOpacity
-        surfaceBorderWidth: root.borderWidth
+        surfaceOpacity: root._ryokuBare ? 0 : root.backgroundOpacity
+        surfaceBorderWidth: root._ryokuBare ? 0 : root.borderWidth
         surfaceBorderOpacity: root.borderOpacity
         surfaceColor: root.widgetSurfaceInk
         colorMode: root.colorMode
@@ -472,7 +476,7 @@ AbstractBackgroundWidget {
         screenY: root.ryokuScreenY
         screenWidth: root.scaledScreenWidth
         screenHeight: root.scaledScreenHeight
-        shown: root.backgroundOpacity > 0 || root.borderWidth > 0 || root.effectiveBlur
+        shown: !root._ryokuBare && (root.backgroundOpacity > 0 || root.borderWidth > 0 || root.effectiveBlur)
     }
 
     // ── Visualizer rendering ─────────────────────────────────────

@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import inir
 import inir.services
 import inir.modules.common
@@ -136,7 +137,9 @@ ColumnLayout {
             implicitWidth: arrangeRow.implicitWidth + Math.round(24 * root.d)
             onClicked: {
                 GlobalStates.settingsOverlayOpen = false
-                GlobalStates.setWidgetEditMode(true)
+                // The desktop-widget editor lives in the Ryoku shell now; enter it
+                // over IPC (this tree has no in-process handle to the stage session).
+                Quickshell.execDetached(["qs", "-c", "shell", "ipc", "call", "desktop", "editWidgets", root.outputName])
             }
             Accessible.name: Translation.tr("Arrange on the desktop")
             RowLayout {

@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Dialogs
 import QtMultimedia
 import Qt.labs.folderlistmodel
 import Qt5Compat.GraphicalEffects as GE
@@ -96,6 +97,16 @@ AbstractBackgroundWidget {
         root.sourceMode === "file" ? "file" : root.mediaFilter
 
     property bool dropHover: false
+    // ── Ryoku one-surface skin (additive; inert unless a WidgetSlot hosts this
+    // widget in Ryoku style) ───────────────────────────────────────────────
+    // In Ryoku style the slot already draws the paper card, so the widget must
+    // read as a single coherent surface: the media (or the empty state) is
+    // clipped to the slot's own rounded-square shape rather than the iNiR blob,
+    // and the widget paints no plate or shadow of its own. Everything below is
+    // gated on _ryokuSurface, so iNiR rendering stays byte-identical.
+    property real ryokuSlotRadius: -1
+    readonly property bool _ryokuSurface: root.ryokuHosted && root.ryokuStyle
+    readonly property real _ryokuClipRadius: root.ryokuSlotRadius >= 0 ? root.ryokuSlotRadius : 0
 
     implicitWidth: root.renderedWidth
     implicitHeight: root.renderedHeight
@@ -701,7 +712,7 @@ AbstractBackgroundWidget {
 
     StyledDropShadow {
         target: shadowShape
-        visible: root.currentPath.length > 0
+        visible: root.currentPath.length > 0 && !root._ryokuSurface
     }
 
     Item {
@@ -709,15 +720,28 @@ AbstractBackgroundWidget {
         anchors.fill: parent
         layer.enabled: true
         layer.effect: GE.OpacityMask {
-            maskSource: MaterialShape {
+            // iNiR: the widget's own MaterialShape blob. Ryoku: a rounded square
+            // matching the slot card, so media + card read as one surface.
+            maskSource: Item {
                 width: maskedContent.width
                 height: maskedContent.height
-                shape: root.shapeEnum
+                MaterialShape {
+                    anchors.fill: parent
+                    shape: root.shapeEnum
+                    visible: !root._ryokuSurface
+                }
+                Rectangle {
+                    anchors.fill: parent
+                    radius: root._ryokuClipRadius
+                    visible: root._ryokuSurface
+                }
             }
         }
 
         Rectangle {
             anchors.fill: parent
+            // Ryoku style leaves the slot card as the only backing.
+            visible: !root._ryokuSurface
             color: root.widgetSemanticContainer(root.widgetPrimaryRole)
         }
 
@@ -753,7 +777,7 @@ AbstractBackgroundWidget {
 
         MaterialSymbol {
             anchors.centerIn: parent
-            visible: root.currentPath.length === 0 || root.activeFailed
+            visible: (root.currentPath.length === 0 || root.activeFailed) && !root._ryokuSurface
             text: root.activeFailed ? "broken_image" : (root.dropHover ? "download" : "perm_media")
             fill: root.dropHover ? 1 : 0
             iconSize: Math.max(28, Math.round(Math.min(root.renderedWidth, root.renderedHeight) * 0.24))
@@ -762,9 +786,17 @@ AbstractBackgroundWidget {
 
         MaterialShape {
             anchors.fill: parent
-            visible: root.dropHover
+            visible: root.dropHover && !root._ryokuSurface
             shape: root.shapeEnum
             color: ColorUtils.applyAlpha(root.widgetAccentVisible, 0.22)
+        }
+
+        // Ryoku drop-hover wash, in the slot's rounded-square shape.
+        Rectangle {
+            anchors.fill: parent
+            visible: root.dropHover && root._ryokuSurface
+            radius: root._ryokuClipRadius
+            color: ColorUtils.applyAlpha(root.irisAccent, 0.20)
         }
     }
 
@@ -794,5 +826,65 @@ AbstractBackgroundWidget {
             root.setMediaPath(path);
             drop.accept(Qt.CopyAction);
         }
+    }
+
+    // Ryoku empty-state placeholder: a calm line glyph on the slot card with a
+    // "Choose image" affordance that feeds the widget's own setMediaPath. Present
+    // only when Ryoku-hosted with no media; iNiR keeps its own centred glyph.
+    Column {
+        anchors.centerIn: parent
+        spacing: Math.round(10 * root.scaleFactor)
+        visible: root._ryokuSurface && (root.currentPath.length === 0 || root.activeFailed)
+        MaterialSymbol {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: root.activeFailed ? "broken_image" : "image"
+            fill: 0
+            iconSize: Math.max(26, Math.round(Math.min(root.renderedWidth, root.renderedHeight) * 0.22))
+            color: ColorUtils.applyAlpha(root.irisAccent, 0.72)
+        }
+        Rectangle {
+            anchors.horizontalCenter: parent.horizontalCenter
+            radius: Math.round(9 * root.scaleFactor)
+            color: chooseArea.containsMouse ? ColorUtils.applyAlpha(root.irisAccent, 0.10) : "transparent"
+            border.width: 1
+            border.color: ColorUtils.applyAlpha(root.irisAccent, chooseArea.containsMouse ? 0.5 : 0.28)
+            implicitWidth: chooseRow.implicitWidth + Math.round(20 * root.scaleFactor)
+            implicitHeight: chooseRow.implicitHeight + Math.round(10 * root.scaleFactor)
+            Row {
+                id: chooseRow
+                anchors.centerIn: parent
+                spacing: Math.round(6 * root.scaleFactor)
+                MaterialSymbol {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "add_photo_alternate"
+                    fill: 0
+                    iconSize: Math.round(Appearance.font.pixelSize.normal * root.scaleFactor)
+                    color: root.irisAccent
+                }
+                StyledText {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: Translation.tr("Choose image")
+                    color: root.irisAccent
+                    font.pixelSize: Math.round(Appearance.font.pixelSize.small * root.scaleFactor)
+                    font.weight: Font.DemiBold
+                }
+            }
+            MouseArea {
+                id: chooseArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: imagePickDialog.open()
+            }
+        }
+    }
+
+    FileDialog {
+        id: imagePickDialog
+        title: Translation.tr("Choose image")
+        fileMode: FileDialog.OpenFile
+        nameFilters: [Translation.tr("Media") + " (" + Images.validImageExtensions
+            .concat(Images.validVideoExtensions).map(ext => "*." + ext).join(" ") + ")"]
+        onAccepted: root.setMediaPath(FileUtils.trimFileProtocol(String(selectedFile)))
     }
 }

@@ -19,7 +19,14 @@ Item {
     readonly property bool ryoMenu: true
 
     anchors.fill: parent
-    visible: menu.open || panel.opacity > 0.01
+    // Live while the card is on screen (open, or still morphing shut) so the host
+    // surface stays mapped through the fade-out and unmaps only once it settles.
+    readonly property bool showing: menu.open || panel.opacity > 0.01
+    visible: menu.showing
+    // The host surface takes keyboard on demand; take focus while shown so Esc
+    // reaches the card and dismisses it, the same as a press outside it.
+    onShowingChanged: if (menu.showing) menu.forceActiveFocus()
+    Keys.onEscapePressed: menu.close()
 
     property bool open: false
     property string title: ""

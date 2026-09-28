@@ -544,7 +544,10 @@ AbstractWidget {
 
     // In edit mode, allow dragging regardless of strategy (user can reposition freely)
     readonly property bool _isZonePlacement: root._snapZones.indexOf(root.placementStrategy) >= 0
-    draggable: (placementStrategy === "free" || GlobalStates.widgetEditMode) && !GlobalStates.screenLocked && !root.locked
+    // When Ryoku hosts this widget inside its own WidgetSlot, the slot owns
+    // drag/placement, so this base drag MouseArea must stay passive and let the
+    // slot's grip take the press (upstream/unhosted iNiR keeps its own drag).
+    draggable: (placementStrategy === "free" || GlobalStates.widgetEditMode) && !GlobalStates.screenLocked && !root.locked && !root.ryokuHosted
     function syncFreePositionFromConfig(): void {
         if (root.ryokuHosted || !Config.ready || root.containsPress || root._isResizing) return;
         if (root.placementStrategy !== "free") return;
