@@ -72,6 +72,12 @@
   (`system/hardware/gpu/ryoku-gpu`, `tests/gpu-pin-policy.sh`).
 
 ### Added
+- `hardware/gpu/ryoku-gpu`: `order --effective [PATH]` prints the AQ_DRM_DEVICES
+  value the compositor would actually read, straight from the pin file, while
+  the plain `order` keeps reporting the policy's recommendation (and keeps
+  exiting 1 under a stored hybrid/passthrough choice). doctor's reverse-PRIME
+  guard (#270) audits the machine as it is, and previously went blind exactly
+  when a forced or drifted pin coexisted with an opt-out mode stamp.
 - `ttf-maple-mono-nf` (release/packages + base.packages): Maple Mono, Nerd Font
   variant, shipped from [ryoku] as the upstream prebuilt NF release so it
   pacstraps on install and updates with `ryoku update`. Offered as the monospace

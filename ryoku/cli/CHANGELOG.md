@@ -33,6 +33,13 @@
   (`internal/doctor/reconcile_boot_rw.go`).
 
 ### Fixed
+- **The doctor's reverse-PRIME guard (#270) now sees the pin the machine
+  actually runs.** The render-pin-vs-panel check resolved the pin through
+  `ryoku-gpu order`, the policy's recommendation, which refuses to speak
+  whenever a stored hybrid or passthrough choice opts out: a RYOKU_GPU_FORCE
+  pin kept under a hybrid stamp, or one drifted in by an older release, hid
+  from the guard while the panel sat on the iGPU under a NVIDIA-first pin.
+  The check now reads `order --effective`, the pin file's own value.
 - **The boot guard's revert no longer strands the channel pin.** A failed
   update's auto-revert rewrote the `[ryoku]` pin to the previous release and
   then ran a narrower pacman transaction that could not move the compositor
