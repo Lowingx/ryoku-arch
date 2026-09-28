@@ -561,12 +561,13 @@ ShellRoot {
         if (!globalSel || globalSel.w < 1 || globalSel.h < 1) { globalSel = null; return; }
         // The choice was persisted when it was picked; saving here would race the
         // quit and drop the write.
+        // Shot keeps ryoshot's own flow: the markup bar, whose logo opens
+        // Beautify; Edit skips straight to Beautify.
         switch (frontAction) {
-            case "edit":   phase = "editing"; break;
+            case "edit":   phase = "editing"; openBeautify(); break;
             case "ocr":    runOcrRegion(); break;
             case "search": doSearchRegion(); break;
             case "record": doRecordRegion(); break;
-            case "shot":   doCopyAndSave(); break;
             default:       phase = "editing";
         }
     }

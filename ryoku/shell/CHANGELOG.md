@@ -17,8 +17,9 @@
 - **ryoshot gains the region-selector front.** The screenshot tool now opens an
   iNiR-style floating bar -- Shot, Edit, OCR, Search, Record and a colour
   picker -- with crosshair guides that follow the cursor and rectangle, window
-  or whole-monitor selection. Shot copies and saves with a thumbnail; Edit
-  drops the grab into ryoshot's annotate/beautify editor; OCR and Search reuse
+  or whole-monitor selection. Shot opens ryoshot's markup bar as before (its
+  logo still opens Beautify, Enter still copies and saves); Edit goes straight
+  to Beautify; OCR and Search reuse
   the shell's tools; the colour pick samples the frozen capture so it works on
   Hyprland and niri alike; Record hands the region to the shell recorder.
   Super+Shift+S and Print open it on every bar style, and the iRiS region IPC
@@ -141,6 +142,11 @@
   grazes the frame.
 
 ### Fixed
+- **The iRiS dock hides over windows and shows on an empty workspace on niri.**
+  niri names a workspace apart from its id, and the frame matched windows to
+  workspaces by name, so it read an occupied workspace as empty and the other
+  way round; workspaces now carry the compositor's id (`ryoku/ui/Singletons/Wm.qml`,
+  `inir/services/CompositorService.qml`).
 - **The desktop menu and widget dragging work under the iRiS bar style.** An
   always-on iRiS surface sat over Ryoku's desktop on the iris bar style and
   swallowed every click, so right-clicking bare wallpaper opened the old iNiR

@@ -67,7 +67,7 @@ Singleton {
             if (w.special)
                 continue;
             out.push({
-                id: w.name,
+                id: w.id,
                 name: w.name,
                 idx: Number(w.name) || 0,
                 output: w.output || "",
@@ -93,7 +93,7 @@ Singleton {
             return 0;
         return Number(fw.name) || 0;
     }
-    readonly property string focusedWorkspaceId: Wm.focusedWorkspace ? Wm.focusedWorkspace.name : ""
+    readonly property string focusedWorkspaceId: Wm.focusedWorkspace ? Wm.focusedWorkspace.id : ""
     readonly property var currentOutputWorkspaces: root.allWorkspaces.filter(w => w.output === Wm.focusedOutput)
 
     function switchToWorkspaceById(id) {
@@ -158,7 +158,7 @@ Singleton {
             const w = list[i];
             if (!w.toplevel)
                 continue;
-            const ws = Wm.workspaceByName(w.workspace);
+            const ws = Wm.workspaceById(w.workspace);
             out.push({
                 id: w.id,
                 app_id: w.appId || "",
