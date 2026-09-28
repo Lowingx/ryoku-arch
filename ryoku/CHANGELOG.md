@@ -59,6 +59,12 @@
   honour (`wm/caps.go`, `wm/action.go`, `wm/hyprland/act.go`, `wm/niri/act.go`).
 
 ### Fixed
+- **Fn+F10 locks the touchpad again on laptops that report the key twice.**
+  ASUS machines (and others) send the touchpad key from two input devices at
+  once, so one press toggled the pad off and straight back on and the key
+  looked dead. A second toggle within 0.7 s is now treated as the same press,
+  on Hyprland and niri. A pad left locked off is also named with a toast at
+  login, since the lock survives reboots by design.
 - **Rashin's chat no longer stalls on harmless commands or leaves tool calls
   pending.** Tool updates carry their output as a list of blocks, which the
   daemon could not parse, so every row froze at PENDING with nothing to show;
