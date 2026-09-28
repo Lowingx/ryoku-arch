@@ -179,6 +179,10 @@
   the block live, denying every suspend until a reboot (#282). An EXIT trap
   now stops the guard on every failure path; the success-path stop is
   idempotent (`deploy.sh`).
+- **The bar's update button opens its log where it stays visible.** The
+  launch names the `dev.ryoku.update` window class so the desktop floats and
+  centres the terminal, instead of tiling it under a full-page window like
+  Ryoku Settings (#288) (`modules/bar/barstyles/qsbar/modules/UpdateWidget.qml`).
 - **The iRiS dock hides over windows and shows on an empty workspace on niri.**
   niri names a workspace apart from its id, and the frame matched windows to
   workspaces by name, so it read an occupied workspace as empty and the other

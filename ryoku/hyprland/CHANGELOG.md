@@ -18,6 +18,12 @@
   from the whole monitor, so it slid under whatever the shell reserves (the
   iRiS frame's edges, a bar). It now fits the work area with the same gaps and
   border a tiled window gets (`modules/window_rules.lua`).
+- **The update and rollback log floats above Ryoku Settings.** Both are
+  launched from the Settings window itself, and a tiled terminal always
+  renders under a float, so the run's output hid behind the 99% page until
+  it finished (#288). The launches name the `dev.ryoku.update` window class and
+  a rule floats, sizes and centres it like every other tool terminal
+  (`modules/window_rules.lua`).
 
 ### Changed
 - **`binds.lua` carries the shared catalogue's new shortcuts.** Page Up/Down

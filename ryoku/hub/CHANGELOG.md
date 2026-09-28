@@ -69,6 +69,11 @@
   `schema/WidgetsPage.test.mjs` and the widget preview cards).
 
 ### Fixed
+- **The update and rollback log opens where you can see it.** Both launch a
+  terminal from inside Ryoku Settings, and a tiled window always sits under a
+  float, so the run's output hid behind the settings page until it finished
+  (#288). The launches name the `dev.ryoku.update` window class, which the
+  desktop's float-and-centre rule matches (`pages/UpdatesPage.qml`).
 - **The security-key enrolment terminal opens clean in Ghostty.** It launched
   with `--class ryoku-passkey`; Ghostty wants `--class=NAME` and validates the
   value as a GTK application id (a dot is required), so the old form raised its

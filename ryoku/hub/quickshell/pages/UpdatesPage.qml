@@ -278,7 +278,7 @@ Item {
     function rollback() {
         if (pg.snapshot === "")
             return;
-        Spawn.run(["kitty", "-e", "sh", "-c", "ryoku rollback \"$1\"; printf '\\npress enter to close '; read -r _", "sh", pg.snapshot]);
+        Spawn.run(["kitty", "--class=dev.ryoku.update", "-e", "sh", "-c", "ryoku rollback \"$1\"; printf '\\npress enter to close '; read -r _", "sh", pg.snapshot]);
         pg.dismiss();
     }
 
@@ -293,7 +293,12 @@ Item {
     }
 
     function startUpdate() {
-        Spawn.run(["kitty", "-e", "sh", "-c", "exec ryoku update"]);
+        // The update log is the point of the run, so it must not hide behind
+        // this very window: a tiled terminal always sits under a float in
+        // Hyprland, and Ryoku Settings floats at 99%. The class matches the
+        // desktop's float-and-centre rule (modules/window_rules.lua), so the
+        // log lands on top and stays visible while the run goes.
+        Spawn.run(["kitty", "--class=dev.ryoku.update", "-e", "sh", "-c", "exec ryoku update"]);
     }
 
     // one calm row under a settled run: a short line plus the Rashin handoff. The
