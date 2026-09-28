@@ -2,7 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
-import QtQuick.Dialogs
+import Quickshell.Io
 import QtMultimedia
 import Qt.labs.folderlistmodel
 import Qt5Compat.GraphicalEffects as GE
@@ -874,17 +874,24 @@ AbstractBackgroundWidget {
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
-                onClicked: imagePickDialog.open()
+                onClicked: if (!imagePick.running) imagePick.running = true
             }
         }
     }
 
-    FileDialog {
-        id: imagePickDialog
-        title: Translation.tr("Choose image")
-        fileMode: FileDialog.OpenFile
-        nameFilters: [Translation.tr("Media") + " (" + Images.validImageExtensions
-            .concat(Images.validVideoExtensions).map(ext => "*." + ext).join(" ") + ")"]
-        onAccepted: root.setMediaPath(FileUtils.trimFileProtocol(String(selectedFile)))
+    // The desktop's own GTK chooser (the same one Nautilus and the rest of Ryoku
+    // use), rather than Qt's generic QML dialog.
+    Process {
+        id: imagePick
+        command: ["zenity", "--file-selection", "--title=" + Translation.tr("Choose image"),
+            "--filename=" + Directories.picturesPath + "/",
+            "--file-filter=" + Translation.tr("Media") + " | " + Images.validImageExtensions
+                .concat(Images.validVideoExtensions).map(ext => "*." + ext).join(" ")]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const path = text.trim()
+                if (path.length > 0) root.setMediaPath(path)
+            }
+        }
     }
 }
