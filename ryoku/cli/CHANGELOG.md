@@ -33,6 +33,14 @@
   (`internal/doctor/reconcile_boot_rw.go`).
 
 ### Fixed
+- **`ryoku update` releases its sleep guard even when the cutover fails.**
+  Every failure between acquiring the durable update inhibitor and the final
+  release (a failed session-bind, a reload that errored) returned with the
+  block still live, and logind then denied every suspend with "Operation
+  denied due to active block inhibitor" until logout (#282). The release is
+  now deferred, so it runs on every exit path; the explicit success-path
+  release stays authoritative and the deferred one is a no-op after it
+  (`internal/updater/update.go`).
 - **`ryoku update` no longer dies where taking a sleep inhibitor is denied.**
   The transaction runs under `systemd-inhibit --mode=block`, which is
   polkit-gated in sessions with no agent (SSH, a headless run): there it exits
