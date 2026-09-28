@@ -9,7 +9,7 @@ import "options/OptionsCatalog.js" as OptionsCatalog
 // The widget inspector: the Customize sheet a widget's right-click menu opens. A
 // paper-and-ink card that docks beside the widget (never over it) and gathers
 // every setting the short menu no longer carries onto a horizontal tab strip --
-// Look (design, size, colour, shape), Placement (snap and lock), then one tab
+// Look (design, size, colour, shape), then one tab
 // per group of the widget's own options panel. The generic controls are built
 // here; the per-widget panel is hosted once and sliced by its MenuSection
 // headers, so the 24 options panels are never rewritten. Every control writes
@@ -88,8 +88,6 @@ Item {
     readonly property bool isRyokuStyle: insp.isIris && Config[insp.scope + "Style"] === "ryoku"
     readonly property bool isCanvas: insp.isIris && insp.irisFace.kind === "canvas"
     readonly property string curIrisSize: insp.isIris ? (Config[insp.scope + "Size"] || insp.irisFace.sizes[0]) : ""
-    readonly property bool locked: Config[insp.scope + "Locked"] === true
-    readonly property string curAnchor: Config[insp.scope + "Anchor"] || ""
 
     readonly property var designLists: ({
         clock: ["digital", "minimal", "grand", "column", "outline", "banner", "analog", "flip", "rings", "bighour", "metal", "goodnight"],
@@ -108,12 +106,6 @@ Item {
     readonly property string curColor: Config[insp.scope + "Color"] || ""
     readonly property bool curGradient: Config[insp.scope + "Gradient"] === true
     readonly property string colorMode: insp.curColor === "" ? "auto" : (insp.curGradient ? "gradient" : "solid")
-
-    readonly property var zones: [
-        { "zone": "top-left", "glyph": "\u2196" }, { "zone": "top", "glyph": "\u2191" }, { "zone": "top-right", "glyph": "\u2197" },
-        { "zone": "left", "glyph": "\u2190" }, { "zone": "center", "glyph": "\u2299" }, { "zone": "right", "glyph": "\u2192" },
-        { "zone": "bottom-left", "glyph": "\u2199" }, { "zone": "bottom", "glyph": "\u2193" }, { "zone": "bottom-right", "glyph": "\u2198" }
-    ]
 
     function cycleDesign() {
         const d = insp.designLists[insp.scope];
@@ -161,7 +153,7 @@ Item {
         Config.set("musicVideo", d[(d.indexOf(Config.musicVideo) + 1) % d.length]);
     }
 
-    // ── tabs: Look, Placement, then one per MenuSection of the hosted panel ──
+    // ── tabs: Look, then one per MenuSection of the hosted panel ──
     readonly property bool hasOptions: OptionsCatalog.has(insp.scope)
     // The section header items discovered in the hosted panel, in document order.
     property var sections: []
@@ -179,8 +171,7 @@ Item {
     }
 
     readonly property var tabs: {
-        var t = [{ kind: "look", label: I18n.tr("Look"), gloss: "見た目" },
-                 { kind: "place", label: I18n.tr("Placement"), gloss: "配置" }];
+        var t = [{ kind: "look", label: I18n.tr("Look"), gloss: "見た目" }];
         if (insp.hasOptions) {
             var s = insp.sections;
             if (s.length <= 1) {
@@ -199,19 +190,9 @@ Item {
     onCurTabChanged: {
         insp.lastTab[insp.scope] = insp.curTab;
         insp.optScroll = 0;
-        insp.ensureTabVisible();
     }
     function _clampTab(i) { const n = insp.tabs.length; return Math.max(0, Math.min(i, Math.max(0, n - 1))); }
     readonly property var curTabObj: insp.tabs[Math.max(0, Math.min(insp.curTab, insp.tabs.length - 1))] || insp.tabs[0]
-    function ensureTabVisible() {
-        const it = tabRep.itemAt(insp.curTab);
-        if (!it)
-            return;
-        if (it.x < tabFlick.contentX)
-            tabFlick.contentX = it.x;
-        else if (it.x + it.width > tabFlick.contentX + tabFlick.width)
-            tabFlick.contentX = it.x + it.width - tabFlick.width;
-    }
 
     // ── the band of the hosted panel shown by the selected option tab ─────
     property real optScroll: 0
@@ -268,7 +249,6 @@ Item {
 
         readonly property real chrome: insp.pad + titleRow.height + insp.gap + tabStrip.height + insp.gap + insp.pad
         readonly property real bodyDesired: (insp.curTabObj && insp.curTabObj.kind === "look") ? lookCol.implicitHeight
-            : (insp.curTabObj && insp.curTabObj.kind === "place") ? placeCol.implicitHeight
             : insp.optBand
 
         width: insp.sheetW
@@ -362,45 +342,23 @@ Item {
             }
         }
 
-        // ── tab strip: chips, wheel-scrolled sideways when they overflow ──
-        Item {
+        // ── tab strip: chips wrap onto a second line rather than scroll, so every
+        // tab stays visible and nothing is cut at the sheet's edge ──
+        Flow {
             id: tabStrip
             anchors { top: titleRow.bottom; topMargin: insp.gap; left: parent.left; right: parent.right; leftMargin: insp.pad; rightMargin: insp.pad }
-            height: Theme.ctlH
-
-            Flickable {
-                id: tabFlick
-                anchors.fill: parent
-                contentWidth: tabRow.width
-                contentHeight: height
-                clip: true
-                interactive: false
-                boundsBehavior: Flickable.StopAtBounds
-
-                WheelHandler {
-                    onWheel: (e) => {
-                        const maxX = Math.max(0, tabFlick.contentWidth - tabFlick.width);
-                        tabFlick.contentX = Math.max(0, Math.min(maxX, tabFlick.contentX - e.angleDelta.y));
-                    }
-                }
-
-                Row {
-                    id: tabRow
-                    height: parent.height
-                    spacing: Theme.s1
-                    Repeater {
-                        id: tabRep
-                        model: insp.tabs
-                        delegate: MenuChip {
-                            id: tabChip
-                            required property var modelData
-                            required property int index
-                            height: Theme.ctlH
-                            label: tabChip.modelData.label
-                            selected: tabChip.index === insp.curTab
-                            onClicked: insp.curTab = tabChip.index
-                        }
-                    }
+            spacing: Theme.s1
+            Repeater {
+                id: tabRep
+                model: insp.tabs
+                delegate: MenuChip {
+                    id: tabChip
+                    required property var modelData
+                    required property int index
+                    height: Theme.ctlH
+                    label: tabChip.modelData.label
+                    selected: tabChip.index === insp.curTab
+                    onClicked: insp.curTab = tabChip.index
                 }
             }
         }
@@ -656,83 +614,6 @@ Item {
                                 gradient: insp.colorMode === "gradient"
                             }
                         }
-                    }
-                }
-            }
-
-            // ── Placement ──
-            Flickable {
-                id: placeFlick
-                anchors.fill: parent
-                visible: insp.curTabObj && insp.curTabObj.kind === "place"
-                contentWidth: width
-                contentHeight: placeCol.implicitHeight
-                clip: true
-                interactive: false
-                boundsBehavior: Flickable.StopAtBounds
-                WheelHandler {
-                    onWheel: (e) => {
-                        const m = Math.max(0, placeFlick.contentHeight - placeFlick.height);
-                        placeFlick.contentY = Math.max(0, Math.min(m, placeFlick.contentY - e.angleDelta.y));
-                    }
-                }
-
-                Column {
-                    id: placeCol
-                    width: placeFlick.width
-                    spacing: Theme.s1
-
-                    MenuSection { label: I18n.tr("Snap"); gloss: "位置" }
-                    // An Auto lane over a square 3x3 compass; the centre cell is the
-                    // centre zone. Auto lands on the wallpaper's calmest region.
-                    Item {
-                        width: parent.width
-                        implicitHeight: placer.implicitHeight
-                        Column {
-                            id: placer
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            spacing: Theme.s1
-                            readonly property real cellSize: Theme.s6
-                            readonly property real span: placer.cellSize * 3 + Theme.s1 * 2
-                            MenuChip {
-                                label: I18n.tr("Auto")
-                                width: placer.span
-                                height: Theme.ctlH
-                                selected: insp.curAnchor === "auto"
-                                onClicked: Config.setAnchor(insp.scope, "auto")
-                            }
-                            Grid {
-                                columns: 3
-                                spacing: Theme.s1
-                                Repeater {
-                                    model: insp.zones
-                                    delegate: MenuChip {
-                                        id: zoneCell
-                                        required property var modelData
-                                        width: placer.cellSize
-                                        height: placer.cellSize
-                                        selected: insp.curAnchor === zoneCell.modelData.zone
-                                        onClicked: Config.setAnchor(insp.scope, zoneCell.modelData.zone)
-                                        Text {
-                                            anchors.centerIn: parent
-                                            text: zoneCell.modelData.glyph
-                                            color: zoneCell.contentColor
-                                            font.family: Theme.font
-                                            font.pixelSize: Theme.fSmall
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    MenuSection { label: I18n.tr("Lock"); gloss: "施錠" }
-                    MenuRow {
-                        label: I18n.tr("Lock in place")
-                        value: insp.locked ? "On" : "Off"
-                        on: insp.locked
-                        closeOnTrigger: false
-                        onTriggered: Config.toggle(insp.scope + "Locked")
                     }
                 }
             }
