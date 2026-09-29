@@ -862,7 +862,8 @@ void CardField::resolveTexture(CardRenderNode *node, const LayoutContext &ctx,
     const QString key = m_source->cardKey(row);
     m_wanted.insert(key);
     const bool wantNear = visual.wantNear || std::abs(row - ctx.current) <= 2;
-    const bool preview = (row == ctx.current) && m_previewActive && node->hasPreview();
+    // The preview texture still holds the last clip's frame until this clip delivers one.
+    const bool preview = (row == ctx.current) && m_previewActive && m_previewHasFrame && node->hasPreview();
     uint32_t src = CardTex::None;
 
     if (preview) {
