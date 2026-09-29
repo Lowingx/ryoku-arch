@@ -16,7 +16,6 @@ func init() {
 	registerAction("RecomputeColors", actionRecomputeColors)
 	registerAction("CaptureWeThumbnails", actionCaptureWeThumbnails)
 	registerAction("ConvertVideos", actionConvertVideos)
-	registerAvailability("skwdPaper", func(d *daemon) bool { return skwdStillBinary() != "" })
 }
 
 func actionClearCache(d *daemon, _ map[string]interface{}) (interface{}, error) {

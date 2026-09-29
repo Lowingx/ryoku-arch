@@ -16,8 +16,8 @@ repo. Packages publish only from `main` release tags, never from `unstable-dev`.
   to `/usr/bin/ryoku`.
 - `ryoku-blobs` -- the `Ryoku.Blobs` QML plugin, to
   `/usr/lib/qt6/qml/Ryoku/Blobs`.
-- `skwd-paper-bin` -- the pinned upstream skwd-paper renderer (still, video, and
-  Wallpaper Engine wallpapers), a hard dependency of `ryogami`, into `/usr/bin`
+- `skwd-paper-bin` -- the pinned upstream skwd-paper scene renderer (Wallpaper
+  Engine wallpapers), a hard dependency of `ryogami`, into `/usr/bin`
   and `/usr/lib/skwd-paper`. A fixed-version binary rebuild like `ryoku-cursors`:
   bumped by `pkgver` + `sha256sums` when upstream cuts a release.
 - `hypr-dynamic-cursors`, `ryoku-hypr-plugins` (hyprbars + hyprfocus),

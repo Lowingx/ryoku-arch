@@ -51,13 +51,6 @@ func (d *daemon) applyWallpaperReason(reason, wpType, path, mode string, outputs
 		d.runAfterApply(applyEvent{applyRequest: *req, Name: name, Key: key})
 		return nil
 	}
-	if handled, err := d.routeAltEngine(wpType, path, mode, outputs, mute, volume); handled {
-		if err == nil && reason != "reload" {
-			name := filepath.Base(path)
-			d.runAfterApply(applyEvent{applyRequest: *req, Name: name, Key: strings.TrimSuffix(name, filepath.Ext(name))})
-		}
-		return err
-	}
 	fit := contentFit()
 	isVideo := wpType == "video"
 	paint := path
@@ -432,17 +425,11 @@ func (d *daemon) restoreOutputs() (want, applied int) {
 		if !fileExists(p) {
 			return
 		}
-		wpType, _ := e["type"].(string)
 		var outs []string
 		if out != "*" {
 			outs = []string{out}
 		}
 		m, vol := entryAudio(e, wallAudioDefaults())
-		if handled, _ := d.routeAltEngine(wpType, p, "init", outs, map[string]bool{out: m}, map[string]int{out: vol}); handled {
-			restored = filepath.Base(p)
-			applied++
-			return
-		}
 		live := e["type"] == "video"
 		paint := p
 		prefs := wallPrefs()

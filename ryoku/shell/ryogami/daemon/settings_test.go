@@ -56,7 +56,6 @@ func TestValidateSetting(t *testing.T) {
 		{"transition.durationMs", 40.0, false},
 		{"transition.durationMs", 20000.0, false},
 		{"display.fillMode", "fit", true},
-		{"display.fillMode", "span", true},
 		{"display.fillMode", "bogus", false},
 		{"display.fillMode", 5, false},
 		{"general.language", "de", true},
@@ -151,33 +150,23 @@ func TestResetSetting(t *testing.T) {
 	}
 }
 
-// The video engine watcher mirrors the choice into shell.json by writing another
-// setting; that nested write once deadlocked every later settings change and
-// stalled the picker's events, so the picker stopped opening.
-func TestWatcherMayWriteAnotherSetting(t *testing.T) {
+// The video engine is a shell-owned key the picker writes directly. A settings
+// change must return promptly (a nested store write once deadlocked every later
+// change and stalled the picker) and the apply path must read the new engine.
+func TestVideoEngineWritesThrough(t *testing.T) {
 	d := newSettingsDaemon(t)
 	done := make(chan error, 1)
-	go func() { done <- d.setSetting("paper.videoEngine", "in_shell") }()
+	go func() { done <- d.setSetting("wallpaper.video_engine", "in_shell") }()
 	select {
 	case err := <-done:
 		if err != nil {
 			t.Fatal(err)
 		}
 	case <-time.After(5 * time.Second):
-		t.Fatal("setSetting never returned: the watcher's nested write deadlocked")
+		t.Fatal("setSetting never returned: a store write deadlocked")
 	}
-	if got := d.settingString("wallpaper.video_engine"); got != "in_shell" {
-		t.Fatalf("shell video engine = %q, want in_shell", got)
-	}
-	again := make(chan error, 1)
-	go func() { again <- d.setSetting("paper.videoEngine", "ryogami") }()
-	select {
-	case <-again:
-	case <-time.After(5 * time.Second):
-		t.Fatal("a later settings change hung behind the first one")
-	}
-	if got := d.settingString("wallpaper.video_engine"); got != "ryogami" {
-		t.Fatalf("shell video engine = %q, want ryogami", got)
+	if got := wallPrefs().Engine; got != "in_shell" {
+		t.Fatalf("apply reads video engine %q, want in_shell", got)
 	}
 }
 
