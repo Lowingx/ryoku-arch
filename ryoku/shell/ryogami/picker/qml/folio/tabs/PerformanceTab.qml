@@ -14,8 +14,18 @@ FolioTabData {
                   key: null,
                   kind: "static",
                   label: I18n.tr("Current power source"),
-                  help: I18n.tr("[dynamic] 'Battery (automatic limits are active)' | 'Battery (automatic limits are disabled)' | 'External power, desktop, or unavailable (automatic limits are inactive)'"),
-                  search: ["current", "power", "source", "static"] },
+                  help: "%1",
+                  args: ["state"],
+                  status: "power.status",
+                  format: function (s, err) {
+                      if (err || !s)
+                          return { state: I18n.tr("Power state unavailable.") }
+                      if (!s.onBattery)
+                          return { state: I18n.tr("External power, desktop, or unavailable (automatic limits are inactive)") }
+                      return { state: s.saverActive ? I18n.tr("Battery (automatic limits are active)")
+                                                    : I18n.tr("Battery (automatic limits are disabled)") }
+                  },
+                  search: ["current", "power", "source", "battery", "static"] },
                 { id: "performance.gpuDevice",
                   key: "performance.gpuDevice",
                   kind: "dropdown",

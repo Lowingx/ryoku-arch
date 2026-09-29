@@ -67,6 +67,18 @@ QVariant Settings::value(const QString &key) const
     const auto it = m_user.constFind(key);
     if (it != m_user.constEnd())
         return it.value();
+    return effectiveDefault(key);
+}
+
+// A reset made elsewhere arrives as the default value, which is no override.
+bool Settings::isDefault(const QString &key) const
+{
+    const auto it = m_user.constFind(key);
+    return it == m_user.constEnd() || it.value() == effectiveDefault(key);
+}
+
+QVariant Settings::effectiveDefault(const QString &key) const
+{
     const auto spec = m_schema.constFind(key);
     if (spec == m_schema.constEnd())
         return QVariant();

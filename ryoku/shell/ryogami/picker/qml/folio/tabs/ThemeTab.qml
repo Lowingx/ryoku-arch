@@ -13,7 +13,7 @@ FolioTabData {
                 { id: "app-theme.{appId}",
                   key: null,
                   kind: "appTheme",
-                  label: I18n.tr("%1 (dynamic per detected app)"),
+                  label: I18n.tr("Apps that follow your colours"),
                   help: I18n.tr("Choose which apps follow your colours. Turning an app off restores its previous theme setup."),
                   args: ["app.name"],
                   action: "SetAppTheme(index, enabled)",

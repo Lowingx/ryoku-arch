@@ -22,6 +22,8 @@ func (d *daemon) dispatchExtended(req *request, p map[string]interface{}) (respo
 		return d.dispatchLibrary(req, p)
 	case strings.HasPrefix(req.Method, "task."):
 		return d.dispatchTasks(req, p)
+	case req.Method == "power.status":
+		return ok(req.ID, d.powerStatus(powerOnBattery())), true
 	}
 	return response{}, false
 }
