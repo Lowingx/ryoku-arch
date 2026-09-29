@@ -583,9 +583,10 @@ Item {
             if (panel.previewOpen) { panel.closePreview(); event.accepted = true; return }
             panel.closeRequested()
             event.accepted = true
-        } else if (event.key >= Qt.Key_1 && event.key <= Qt.Key_6
+        } else if (event.key >= Qt.Key_0 && event.key <= Qt.Key_9
                    && !(event.modifiers & Qt.ControlModifier)) {
-            var idx = event.key - Qt.Key_1
+            // 1-9 then 0, left to right along the tabs.
+            var idx = event.key === Qt.Key_0 ? 9 : event.key - Qt.Key_1
             if (idx < sourceData.providers.length) {
                 var id = sourceData.providers[idx].id
                 if (panel._tabEnabled(id) && id !== panel.provider)

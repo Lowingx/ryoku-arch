@@ -4,25 +4,26 @@ import Ryoku.Ui.Singletons
 QtObject {
     id: sources
 
-    // apply is the kind a downloaded result becomes; searchable false turns the search box into a label.
+    // Every source the daemon offers, in its order, so a tab exists before source.providers
+    // answers; searchable false turns the search box into a label.
     readonly property var providers: [
-        { id: "wallhaven", label: I18n.tr("Wallhaven"),      searchable: true,  apply: "static" },
-        { id: "steam",     label: I18n.tr("Steam Workshop"), searchable: true,  apply: "we" },
-        { id: "unsplash",  label: I18n.tr("Unsplash"),       searchable: true,  apply: "static" },
-        { id: "pexels",    label: I18n.tr("Pexels"),         searchable: true,  apply: "static" },
-        { id: "youtube",   label: I18n.tr("YouTube"),        searchable: true,  apply: "video" },
-        { id: "bing",      label: I18n.tr("Bing Daily"),     searchable: false, apply: "static" }
+        { id: "wallhaven", label: I18n.tr("Wallhaven"),      searchable: true },
+        { id: "steam",     label: I18n.tr("Steam Workshop"), searchable: true },
+        { id: "unsplash",  label: I18n.tr("Unsplash"),       searchable: true },
+        { id: "pexels",    label: I18n.tr("Pexels"),         searchable: true },
+        { id: "youtube",   label: I18n.tr("YouTube"),        searchable: true },
+        { id: "bing",      label: I18n.tr("Bing Daily"),     searchable: false },
+        { id: "moewalls",  label: I18n.tr("MoeWalls"),       searchable: true },
+        { id: "motionbgs", label: I18n.tr("MotionBGs"),      searchable: true },
+        { id: "ryostore",  label: I18n.tr("Ryostore"),       searchable: true },
+        { id: "repos",     label: I18n.tr("Repos"),          searchable: true }
     ]
-
-    readonly property var canonicalOrder: ({
-        wallhaven: 0, steam: 1, unsplash: 2, pexels: 3, youtube: 4, bing: 5
-    })
 
     function descriptor(id) {
         for (var i = 0; i < sources.providers.length; ++i)
             if (sources.providers[i].id === id)
                 return sources.providers[i]
-        return { id: id, label: id, searchable: true, apply: "static" }
+        return { id: id, label: id, searchable: true }
     }
 
     function searchPlaceholder(id) {
