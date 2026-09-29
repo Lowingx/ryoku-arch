@@ -64,6 +64,15 @@
   (`ui/Singletons/Wm.qml`).
 
 ### Fixed
+- **A category-folded Hermes skill reads as wired.** Hermes keeps skills under
+  category folders, so `~/.hermes/skills/ryoku` can be a real directory with
+  the skill link nested inside it. `ryoku-rashin status` only ever checked
+  for the link itself, so it reported `skillWired: false` (and setup re-ran
+  without fixing it) while the skill loaded fine (#297). Wire, status and
+  unwire now follow that layout: a real dir with no SKILL.md of its own is a
+  category, the link lives inside it, and unwire removes the link and leaves
+  the folder. A foreign skill dir (one carrying its own SKILL.md) is still
+  never clobbered (`rashin/backend/agents.go`).
 - **Clicking SAVE no longer eats the text you just typed.** A TapHandler
   button never takes focus from a TextInput, so the field's editing-finished
   (its commit into the draft) did not fire when the user typed and clicked
