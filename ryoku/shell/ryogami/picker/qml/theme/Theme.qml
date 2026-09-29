@@ -9,7 +9,8 @@ QtObject {
 
     property var wall: ({})
     property FileView colorFile: FileView {
-        path: Quickshell.env("HOME") + "/.cache/ryoku/colors.json"
+        // The daemon creates this directory before starting the picker: a missing parent cannot be watched.
+        path: (Quickshell.env("XDG_CACHE_HOME") || (Quickshell.env("HOME") + "/.cache")) + "/ryoku/colors.json"
         watchChanges: true
         onFileChanged: reload()
         onLoaded: theme._parseWall()
