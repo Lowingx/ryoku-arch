@@ -283,6 +283,7 @@ FolioTabData {
                   key: null,
                   kind: "static",
                   label: I18n.tr("%1 grains/frame  ·  %2"),
+                  searchTitle: I18n.tr("Sand load meter"),
                   help: I18n.tr("Grain %1 at a typical centre image · %2 (%3) · %4"),
                   args: ["count", "load", "grain", "card", "tier", "note"],
                   visibleWhen: "components.wallpaperSelector.displayMode == sandy",

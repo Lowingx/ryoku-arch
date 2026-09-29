@@ -17,7 +17,23 @@ FocusScope {
     // A request for another tab can arrive while the folio is already open.
     onArgsChanged: if (folio.shown) folio._applyArgs()
 
-    Keys.onEscapePressed: (e) => { folio.closeRequested(); e.accepted = true; }
+    // Escape leaves an open search before it closes the sheet.
+    Keys.onEscapePressed: (e) => {
+        if (folio.searchOpen) {
+            folio.searchOpen = false
+            folio.query = ""
+            folio.forceActiveFocus()
+        } else {
+            folio.closeRequested()
+        }
+        e.accepted = true
+    }
+    Keys.onPressed: (e) => {
+        if (e.key === Qt.Key_F && (e.modifiers & Qt.ControlModifier)) {
+            folio.searchOpen = true
+            e.accepted = true
+        }
+    }
 
     // Pure data, so all thirteen tabs can live at once.
     PickerTab { id: tPicker }
