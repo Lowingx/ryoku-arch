@@ -212,6 +212,12 @@
   offered, so it could no longer be selected (#299). The dropdown lists it
   again and the daemon accepts it (`folio/tabs/ThemeTab.qml`,
   `ryogami/daemon/settings_schema_table.go`).
+- **Wallpaper slices dissolve at the screen edge.** In the picker's slices
+  mode the edge fade was calibrated to the strip, not the screen, so on
+  wide displays the outermost cards were cut off at the panel edge at
+  partial opacity instead of fading out (#301). Each card's fade now
+  completes before its outer edge reaches the viewport
+  (`ryogami/picker/src/layouts/geometry.cpp`).
 - **Chrome keeps its size when the display scale grows.** The launcher, the
   needle panel and popouts, the overview and the clipboard sized themselves
   by the monitor's logical height, so raising the display scale shrank them
