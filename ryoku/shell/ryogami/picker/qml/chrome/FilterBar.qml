@@ -41,6 +41,16 @@ Item {
     readonly property real gap: 8 * Theme.scale
     readonly property real offX: Number(root.val("filterBar.offsetX", 0))
     readonly property real offY: Number(root.val("filterBar.offsetY", 0))
+    readonly property bool muted: root.val("wallpaperMute", true) === true
+    readonly property bool audioActive: {
+        var outs = Library.outputs || []
+        for (var i = 0; i < outs.length; ++i) {
+            var t = outs[i].current ? outs[i].current.type : ""
+            if (t === "video" || t === "we")
+                return true
+        }
+        return false
+    }
 
     readonly property bool revealed: (root.state ? root.state.filterBarShown : false)
         && !(root.field && root.field.flippedIndex >= 0)
@@ -442,6 +452,26 @@ Item {
             onTriggered: if (root.state) root.state.openSheet("playlists", undefined)
         }
 
+        // Shown while a display plays a video or scene, the only wallpapers with sound.
+        BarButton {
+            visible: root.audioActive
+            barStyle: root.barStyle
+            railWidth: root.rail
+            glyph: root.muted ? "\u{f075f}" : "\u{f057e}"
+            tooltip: root.muted ? I18n.tr("Unmute wallpapers") : I18n.tr("Mute wallpapers")
+            active: !root.muted
+            onTriggered: Settings.set("wallpaperMute", !root.muted)
+        }
+        BarButton {
+            visible: root.audioActive
+            barStyle: root.barStyle
+            railWidth: root.rail
+            glyph: "\u{f062e}"
+            tooltip: I18n.tr("Audio mixer")
+            active: root.state && root.state.sheet === "audio"
+            onTriggered: if (root.state) root.state.openSheet("audio", undefined)
+        }
+
         DownloadMenu {
             visible: root.show("filterBar.show.download")
             state: root.state
@@ -457,6 +487,16 @@ Item {
             tooltip: I18n.tr("Settings")
             active: root.state && root.state.sheet === "settings"
             onTriggered: if (root.state) root.state.openSheet("settings", undefined)
+        }
+
+        Repeater {
+            model: Tasks.bar
+            delegate: TaskChip {
+                required property var modelData
+                task: modelData
+                barStyle: root.barStyle
+                railWidth: root.rail
+            }
         }
     }
 }

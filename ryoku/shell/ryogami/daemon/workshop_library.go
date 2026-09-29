@@ -548,6 +548,17 @@ func (d *daemon) emitWorkshopDownload(id, status string, progress float64, messa
 		data["path"] = path
 	}
 	d.broadcast("ryogami.workshop.download", data)
+	// Steam and steamcmd own the transfer, so the chip reports it but cannot stop it.
+	task := "download:we-" + id
+	switch status {
+	case "downloading":
+		d.tasks.startOnce(task, "download", "Download", 100)
+		d.tasks.progress(task, int(progress*100), 100, message)
+	case "done":
+		d.tasks.finish(task, taskCompleted, 0, "")
+	default:
+		d.tasks.finish(task, taskFailed, 0, message)
+	}
 }
 
 // open_in_steam hands the user a steam:// URL when no backend can fetch the item.

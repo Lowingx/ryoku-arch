@@ -48,6 +48,7 @@ type daemon struct {
 	scanning bool
 
 	sources *sources
+	tasks   *taskRegistry
 
 	workshop *workshopLib
 	paper    *paperClient
@@ -125,6 +126,7 @@ func runDaemon() error {
 		video:          newVideoPlayer(),
 	}
 	d.ui = newPickerProcess(d.pickerGpuEnv)
+	d.tasks = newTaskRegistry(d)
 	d.playlists = newPlaylistManager(cfg.cacheDir(), d)
 	d.sources = newSources(d)
 	d.paper = newPaperClient(d)
@@ -405,13 +407,22 @@ func (d *daemon) rescan(force bool) {
 
 	cfg := d.config()
 	prior := d.store.snapshotEntries()
+	// The chip appears only once a thumbnail is actually built, so warm rescans never flash one.
+	built := 0
 	fresh, err := ScanDirs(cfg.wallpaperDir(), cfg.videoDir(), cfg.cacheDir(), prior, func(e Entry) {
+		if built == 0 {
+			d.tasks.start("scan", "scan", "Scan", 0, nil)
+		}
+		built++
+		d.tasks.progress("scan", built, 0, e.Name)
 		d.broadcast("ryogami.wall.cached", e)
 	})
 	if err != nil {
+		d.tasks.finish("scan", taskFailed, built, err.Error())
 		fmt.Fprintf(os.Stderr, "ryogami: scan: %v\n", err)
 		return
 	}
+	d.tasks.finish("scan", taskCompleted, built, "")
 	d.store.replaceAll(fresh)
 	d.runAfterScan(prior, fresh)
 	d.broadcast("ryogami.wall.cache", map[string]interface{}{"status": "ready", "count": len(fresh)})

@@ -23,6 +23,8 @@
   on the bar opens the online browser: Wallhaven, the Steam Workshop (searchable
   without a key), Unsplash, Pexels, YouTube, Bing, MoeWalls, MotionBGs, Ryostore
   and repos, each with its own filters, previews and one-click save or apply.
+  The bar also shows running downloads, scans and index builds with a Stop
+  control, and a mute toggle and audio mixer whenever a video or scene plays.
   Wallpaper Engine scenes from the Workshop play through skwd-paper, with their
   user properties editable per scene. Playlists, a rule-based schedule (time,
   sun, weather, power), per-display placement, locks and audio, a theme designer

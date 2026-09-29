@@ -20,6 +20,8 @@ func (d *daemon) dispatchExtended(req *request, p map[string]interface{}) (respo
 		return d.dispatchSemantic(req, p)
 	case req.Method == "library.status":
 		return d.dispatchLibrary(req, p)
+	case strings.HasPrefix(req.Method, "task."):
+		return d.dispatchTasks(req, p)
 	}
 	return response{}, false
 }
