@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func resetSettingsState() {
@@ -147,6 +148,36 @@ func TestResetSetting(t *testing.T) {
 	m := readJSONFile(t, configPath())
 	if _, ok := m["selector"]; ok {
 		t.Fatalf("reset left the key behind: %v", m["selector"])
+	}
+}
+
+// The video engine watcher mirrors the choice into shell.json by writing another
+// setting; that nested write once deadlocked every later settings change and
+// stalled the picker's events, so the picker stopped opening.
+func TestWatcherMayWriteAnotherSetting(t *testing.T) {
+	d := newSettingsDaemon(t)
+	done := make(chan error, 1)
+	go func() { done <- d.setSetting("paper.videoEngine", "in_shell") }()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("setSetting never returned: the watcher's nested write deadlocked")
+	}
+	if got := d.settingString("wallpaper.video_engine"); got != "in_shell" {
+		t.Fatalf("shell video engine = %q, want in_shell", got)
+	}
+	again := make(chan error, 1)
+	go func() { again <- d.setSetting("paper.videoEngine", "ryogami") }()
+	select {
+	case <-again:
+	case <-time.After(5 * time.Second):
+		t.Fatal("a later settings change hung behind the first one")
+	}
+	if got := d.settingString("wallpaper.video_engine"); got != "ryogami" {
+		t.Fatalf("shell video engine = %q, want ryogami", got)
 	}
 }
 
