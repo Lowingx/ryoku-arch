@@ -11,6 +11,24 @@
   tab's own layer rows
   (`modules/desktop/WidgetMenu.qml`, `modules/desktop/PluginWidgetMenu.qml`,
   `modules/visualizer/EditBar.qml`, `modules/stage/Singletons/Config.qml`).
+- **Ryogami has a new picker.** The wallpaper picker is rebuilt on skwd-wall v2:
+  a C++ card scene drawn in one GPU pass, with the seven skwd styles (slices,
+  depth, geometric, wall, sandy, card hand, collection), springs for every
+  motion, and nothing running while it sits idle. It stays resident, so Super+W
+  opens it within a frame or two, and Themes, Rices and Workshop switch in place
+  instead of reloading. The settings folio carries every skwd setting plus
+  Ryogami's own, with search, per-mode shape presets that preview live behind
+  the page, and an index you can open straight to with `ryogami wallpaper
+  settings <tab>` or the launcher's Wallpaper Settings action. A Download button
+  on the bar opens the online browser: Wallhaven, the Steam Workshop (searchable
+  without a key), Unsplash, Pexels, YouTube, Bing, MoeWalls, MotionBGs, Ryostore
+  and repos, each with its own filters, previews and one-click save or apply.
+  Wallpaper Engine scenes from the Workshop play through skwd-paper, with their
+  user properties editable per scene. Playlists, a rule-based schedule (time,
+  sun, weather, power), per-display placement, locks and audio, a theme designer
+  and a theme audition come across too. Settings move to
+  `~/.config/ryoku/ryogami.json`, owned by the daemon; the old picker's config
+  is folded in once on first start (`ryogami/picker/`, `ryogami/daemon/`).
 - **iRiS has a Ryoku look.** A toggle at the foot of the iRiS Settings rail
   (also in Studio and in Ryoku Hub's Bar Studio) switches the whole frame
   between the Ryoku look, paper and ink with kanji-sealed navigation,
@@ -105,6 +123,12 @@
   `modules/bar/RecordIsland.qml`, `modules/bar/popouts/CapturePopout.qml`).
 
 ### Changed
+- **Optimising images keeps the originals.** As in skwd, each image the optimiser
+  re-encodes leaves its original in Ryogami's trash
+  (`~/.local/share/ryogami/trash`), which the Library tab's retention settings
+  empty; before, the originals were deleted outright. Deleting a wallpaper
+  from its card still removes it for good, and now removes the file itself for
+  animated images too, not only their cached clip (`ryogami/daemon/`).
 - **A widget's Customize sheet replaces its screen-tall menu.** A desktop
   widget's right-click menu is short again -- Style, Size, Lock, a primary
   Customize row, Hide, and Settings/Reload -- and Customize opens a paper-and-ink
@@ -181,6 +205,11 @@
   grazes the frame.
 
 ### Fixed
+- **A moved wallpaper folder keeps working.** Ryogami kept the path it first saw
+  for each wallpaper, so moving the folder or the home directory left the
+  catalogue pointing at the old place and applies failed until the files
+  themselves changed; a rescan now follows each file to where it is
+  (`ryogami/daemon/scan.go`).
 - **The QS Bar Quotes stream rotates through its bundled quotes again.** The
   mode only read `~/.config/quickshell/bar/quotes.txt`, which nothing ships,
   so every install showed the one inline fallback quote forever. It now falls
@@ -293,6 +322,11 @@
   merge writer as the rest of the picker and the Hub
   (`ryoku-hub desktop matugen set`), so the FileView reload flips the switch
   the click moved (issue #276).
+
+### Removed
+- **The old wall-ui picker.** Replaced by the new picker; its day/night
+  rotation lives on as two schedule rules, migrated automatically
+  (`ryogami/wall-ui/`).
 
 ### Added
 - **The iRiS frame's Spotlight is now a launcher style.** Settings -> App

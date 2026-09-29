@@ -314,29 +314,21 @@ else
 fi
 
 # Build ryogami, the Go wallpaper daemon (catalog, thumbs, applies, depth
-# surface) the shell and the wall-ui picker drive over ryogami.sock. Same Go
+# surface) the shell and the picker drive over ryogami.sock. Same Go
 # toolchain the rest of the desktop builds with, so no extra gate.
 say "building ryogami"
 (cd "$here/ryogami/daemon" && go build -o ryogami .)
 install -m755 "$here/ryogami/daemon/ryogami" "$bindir/ryogami"
 say "installed $bindir/ryogami"
 
-# Stage the wall-ui, the vendored skwd-wall picker the daemon spawns through
-# quickshell over ryogami.sock. Pure QML; the unit rewrite below points the
-# daemon at this copy (the package resolver default is /usr/share/ryogami).
+# The picker entry the daemon spawns; the unit rewrite points RYOGAMI_SHELL_QML here.
 datadir="${XDG_DATA_HOME:-$HOME/.local/share}"
+install -Dm644 "$here/ryogami/picker/shell.qml" "$datadir/ryogami/shell.qml"
+say "installed ryogami picker entry -> $datadir/ryogami/shell.qml"
+# The retired wall-ui picker ran from its own tree; the daemon restart below keeps
+# children (KillMode=process), so stop it here or it answers the next Super+W too.
+pkill -f "quickshell -p $datadir/ryogami/wall-ui/shell.qml" >/dev/null 2>&1 || true
 rm -rf "$datadir/ryogami/wall-ui"
-mkdir -p "$datadir/ryogami/wall-ui"
-cp -a "$here/ryogami/wall-ui/." "$datadir/ryogami/wall-ui/"
-say "installed wall-ui -> $datadir/ryogami/wall-ui"
-# Seed the picker's own config once; user edits persist across deploys. The
-# empty object takes every built-in default (wallpapers in ~/Pictures/Wallpapers)
-# and the marker skips the first-run onboarding on a box that already has walls.
-if [[ ! -f "$cfg/ryogami-wall/config.json" ]]; then
-  mkdir -p "$cfg/ryogami-wall"
-  printf '{}\n' > "$cfg/ryogami-wall/config.json"
-fi
-[[ -e "$cfg/ryogami-wall/.bootstrapped" ]] || : > "$cfg/ryogami-wall/.bootstrapped"
 
 # Build the Ryoku Hub backend (a separate Go binary; the hub's quickshell config
 # shells out to it for the keybind legend and its TOML config).
@@ -485,6 +477,17 @@ if command -v cmake >/dev/null 2>&1 && command -v ninja >/dev/null 2>&1; then
   fi
 else
   say "skipping Ryoku.Blobs plugin (cmake/ninja not found)"
+fi
+
+# Built beside Ryoku.Blobs; the daemon adds this dir to the picker's import path.
+# Always rebuilt: the picker changes with the checkout and ninja makes an
+# unchanged tree a no-op.
+if command -v cmake >/dev/null 2>&1 && command -v ninja >/dev/null 2>&1; then
+  say "building Ryoku.Ryogami plugin"
+  "$here/ryogami/picker/build.sh" "$qmldir"
+  say "installed Ryoku.Ryogami -> $qmldir/Ryoku/Ryogami"
+else
+  say "skipping Ryoku.Ryogami plugin (cmake/ninja not found)"
 fi
 
 # Build the optional Hyprland compositor plugins (dynamic-cursors, hyprbars,
@@ -908,10 +911,10 @@ sed -i "s|^ExecStart=.*|ExecStart=$bindir/ryoku-clamshell daemon|" \
   "$cfg/systemd/user/ryoku-clamshell.service"
 # ryogami.service ships ExecStart=/usr/bin/ryogami (the package path); point the
 # dev-deployed unit at ~/.local/bin, mirroring the ryoku-shell rewrite above,
-# and at the staged wall-ui QML (the unit file is re-copied every deploy, so the
+# and at the staged picker QML (the unit file is re-copied every deploy, so the
 # injected line never stacks).
 sed -i -e "s|^ExecStart=.*|ExecStart=$bindir/ryogami|" \
-  -e "/^\[Service\]/a Environment=RYOGAMI_SHELL_QML=$datadir/ryogami/wall-ui/shell.qml" \
+  -e "/^\[Service\]/a Environment=RYOGAMI_SHELL_QML=$datadir/ryogami/shell.qml" \
   "$cfg/systemd/user/ryogami.service"
 systemctl --user daemon-reload 2>/dev/null || true
 # daemon-reload only re-reads the unit; it never restarts a running service, so
@@ -919,7 +922,7 @@ systemctl --user daemon-reload 2>/dev/null || true
 # daemon keeps running until the next logout ("ran ryoku update, nothing
 # changed"). try-restart cycles it only when it is already up, so a pre-session
 # install deploy does not start it early; the restart relaunches the resident
-# wall-ui picker too.
+# picker too.
 systemctl --user try-restart ryogami.service 2>/dev/null || true
 # ryoku-ai-usage.service ships three ExecStart=-/usr/bin/<collector> lines (the
 # package path); rewrite them to ~/.local/bin so the dev-deployed collectors
