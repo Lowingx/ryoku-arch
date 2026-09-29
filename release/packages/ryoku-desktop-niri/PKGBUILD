@@ -32,9 +32,10 @@ depends=(
   # screencast/screenshot portal: ryoku-wm-niri caps reports portalBackend "gnome",
   # and doctor's portal reconciler routes xdg-desktop-portal to this backend.
   'xdg-desktop-portal-gnome'
-  # night-light backend: warms the screen over wlr-gamma-control, niri's route,
-  # so it is niri's variant to ship and reclaim (ryoku-cmd-nightlight, pill Super+U).
-  'gammastep'
+  # night-light backend: wlsunset warms the screen over wlr-gamma-control,
+  # niri's route, so it is niri's variant to ship and reclaim
+  # (ryoku-cmd-nightlight, pill Super+U, quick tile, Hub Displays).
+  'wlsunset'
 )
 provides=('ryoku-desktop-compositor')
 # deliberately not exclusive: both variants may be installed, so a switch is a

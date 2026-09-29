@@ -64,6 +64,13 @@
   (`ui/Singletons/Wm.qml`).
 
 ### Fixed
+- **The night light warms the screen on niri.** Users reported it doing
+  nothing there. The niri backend is now wlsunset, the small day/night gamma
+  daemon in extra, which speaks the gamma protocol niri serves and holds the
+  screen at the chosen temperature; the shipped niri variant depends on it, so
+  every install has the backend and the old gammastep drops out as an orphan
+  on the next update (`wm/niri/act.go`, `wm/niri/caps.go`,
+  `../release/packages/ryoku-desktop-niri/PKGBUILD`).
 - **A category-folded Hermes skill reads as wired.** Hermes keeps skills under
   category folders, so `~/.hermes/skills/ryoku` can be a real directory with
   the skill link nested inside it. `ryoku-rashin status` only ever checked

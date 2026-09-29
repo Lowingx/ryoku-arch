@@ -250,6 +250,12 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **Docking no longer freezes the night light.** A connector change (dock,
+  undock, lid, resume) can take the warm gamma away from the running backend
+  without telling it, so the bar kept reading on over a cold screen. While the
+  light is on, the daemon now watches the output set and re-claims the gamma
+  once it settles, keeping the chosen temperature; a light left off is never
+  turned on by a hotplug (`ipc/nightlight.go`, `ipc/wmclient.go`).
 - **The Sun theme mode is back.** The new picker's Variant dropdown and the
   settings schema dropped the sunrise/sunset-following mode the old picker
   offered, so it could no longer be selected (#299). The dropdown lists it
