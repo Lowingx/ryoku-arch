@@ -214,6 +214,7 @@ FocusScope {
             host: folio
             condCtx: folio.condCtx
             rev: folio.rev
+            jumpControlId: folio.jumpControlId
             onCloseRequested: folio.closeRequested()
         }
     }
