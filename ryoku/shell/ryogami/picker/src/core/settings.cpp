@@ -5,6 +5,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonValue>
+#include <QJSValue>
 #include <QQmlEngine>
 #include <QTimer>
 
@@ -100,8 +101,12 @@ QVariant Settings::defaultOf(const QString &key) const
     return m_schema.value(key).value(QStringLiteral("default"));
 }
 
-void Settings::set(const QString &key, const QVariant &value)
+void Settings::set(const QString &key, const QVariant &raw)
 {
+    // Arrays and objects from QML arrive wrapped as QJSValue, which JSON drops; the daemon needs plain lists and maps.
+    const QVariant value = raw.metaType() == QMetaType::fromType<QJSValue>()
+        ? raw.value<QJSValue>().toVariant(QJSValue::ConvertJSObjects)
+        : raw;
     if (m_user.value(key) == value && m_user.contains(key))
         return;
     m_user.insert(key, value);
