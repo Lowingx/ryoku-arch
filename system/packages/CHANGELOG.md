@@ -3,6 +3,11 @@
 ## Unreleased
 
 ### Added
+- `base.packages`: **the screen recorder is now GPU Screen Recorder.** `wf-recorder`
+  is replaced by `gpu-screen-recorder` (GPU-only capture and encode on both
+  Hyprland and niri, behind `ryoku-cmd-record` / `ryoku-shell record`). It is also
+  a hard depend of `ryoku-desktop`, so the ISO and `ryoku update` carry it either
+  way.
 - `aur.packages`: **fingerprint unlock at the lock and login screens.** The
   qylock lock and the SDDM greeter authenticate through a PAM stack that loads
   `pam_fprintd_grosshack.so` (scans the sensor while the password field is live),

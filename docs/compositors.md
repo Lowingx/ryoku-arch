@@ -238,7 +238,7 @@ fill in by hand if you ever need to.
 
 What a variant package ships is the same rule seen from the packaging side: a
 compositor's payload dir holds only what speaks that compositor's own IPC
-(`ryoku-monitor`, `ryoku-workspace`, `ryoku-cursor-track` under
+(`ryoku-monitor`, `ryoku-workspace` under
 `ryoku/hyprland/scripts/`). Anything the shell, the Hub, the launcher or a
 keybind calls by bare name on every compositor lives in `ryoku/shell/scripts/`
 or `system/hardware/` and ships with the shell or the base package, and it

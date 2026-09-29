@@ -180,8 +180,7 @@ depends=(
   'tesseract'            # OCR text grab (pill Super+D)
   'tesseract-data-eng'   # English OCR language data
   'zbar'                 # QR-code scanning (pill Super+D)
-  'gpu-screen-recorder'  # hardware-encoded screen recording (pill Super+U, ryomotion)
-  'wf-recorder'          # multi-GPU capture fallback (pill Super+U)
+  'gpu-screen-recorder'  # the screen recorder behind the capture card and `ryoku-shell record`
   'wtype'                # voice-dictation typing on Wayland (Voxtype)
   'libqalculate'         # calculator backend (launcher Super+Space)
   'upower'               # battery + power status (pill/bar battery indicator)
@@ -221,7 +220,6 @@ optdepends=(
   'nautilus: graphical file manager'
   'nautilus-python: Ryoku stash actions in the Nautilus right-click menu'
   'ryotunes: the Ryoku music app the now-playing widget follows'
-  'ryomotion: screen-demo recorder and editor'
   'waifu2x-ncnn-vulkan: AI upscale for ryoshot Beautify HD and ryowalls Enhance'
   'pavucontrol: GUI mixer behind the bar Open audio button'
   'songrec: Recognize Music in the launcher'

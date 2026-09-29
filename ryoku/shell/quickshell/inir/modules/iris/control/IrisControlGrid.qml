@@ -398,9 +398,9 @@ Item {
             if (!ctl.ready || root.editing) return
             if (ctl.moduleId === "devices") { root.picker = root.picker === "devices" ? "" : "devices"; return }
             if (ctl.moduleId === "record") {
-                const args = ["/usr/bin/bash", Directories.recordScriptPath]
-                args.push(...(ctl.recording ? ["--stop"] : ["--fullscreen", "--sound"]))
-                Quickshell.execDetached(args)
+                Quickshell.execDetached(ctl.recording
+                    ? ["ryoku-shell", "record", "stop"]
+                    : ["ryoku-shell", "record", "start", "--fullscreen"])
                 RecorderStatus.scheduleQuickCheck()
                 if (!ctl.recording) GlobalStates.controlPanelOpen = false
                 return

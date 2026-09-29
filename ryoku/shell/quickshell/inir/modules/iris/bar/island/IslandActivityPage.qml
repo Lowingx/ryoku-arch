@@ -66,7 +66,7 @@ ColumnLayout {
             danger: true
             Accessible.name: Translation.tr("Stop recording")
             onClicked: {
-                Quickshell.execDetached([Directories.recordScriptPath, "--stop"])
+                Quickshell.execDetached(["ryoku-shell", "record", "stop"])
                 RecorderStatus.scheduleQuickCheck()
             }
         }

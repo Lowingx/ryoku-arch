@@ -167,6 +167,7 @@ func reconcilers() []reconciler {
 		{i18n.T("retired system sidebar"), reconcileLegacySystemSidebar},
 		{i18n.T("stash features sidebar anchor"), reconcileStashSidebar},
 		{i18n.T("shipped app packages"), reconcileShippedApps},
+		{i18n.T("retired app packages"), reconcileRetiredApps},
 		{i18n.T("release control manifest"), reconcileManifest},
 		{i18n.T("ghostty theme include"), reconcileGhostty},
 		{i18n.T("obsidian palette snippet"), reconcileObsidianSnippet},

@@ -364,7 +364,7 @@ bake_aur_set || log "AUR bake: stopped early; the repo check below will catch an
 # Integrity: every cached package must be a complete, readable archive before it
 # goes into the repo. `pacman -Sw --needed` skips a file that already exists by
 # name, and $CACHE is persistent, so a download truncated by one network hiccup
-# (most likely on a big package like the ryomotion Electron app) sits corrupt in
+# (most likely on a big package) sits corrupt in
 # the cache forever and ships in every ISO -- the "truncated <pkg>" error that
 # bricks the offline pacstrap. bsdtar -tf reads the whole archive, so a short
 # file fails here; delete it and re-fetch, bounded. A still-broken package fails

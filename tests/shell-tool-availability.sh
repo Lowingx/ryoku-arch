@@ -77,7 +77,6 @@ declare -A need=(
   [ocr]=tesseract
   [qr-scan]=zbar
   [screen-record]=gpu-screen-recorder
-  [screen-record-fallback]=wf-recorder
   [screen-share-picker]=hyprland-preview-share-picker
   [night-light]=hyprsunset
   [voice-type]=wtype

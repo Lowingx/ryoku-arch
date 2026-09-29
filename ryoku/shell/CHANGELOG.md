@@ -145,6 +145,23 @@
   Ryoku's seams (`../inir/`).
 
 ### Changed
+- **The screen recorder is GPU Screen Recorder.** The wf-recorder pipeline is
+  gone: capture and encode now run entirely on the GPU through
+  `gpu-screen-recorder` (the Arch package, not the flatpak), which handles the
+  hybrid-GPU dispatch, the desktop+microphone mix, and the CPU fallback
+  itself. Control runs over GSR's IPC socket, so stop always finalizes the
+  file cleanly, and the record island gains a pause/resume button. The
+  capture card's record zone now carries the recorder's own settings as
+  tap-to-cycle chips (codec, quality, framerate, container) plus a
+  Record-cursor switch and a link to Hub > Recording, which grew the full GSR
+  surface (bitrate mode, container, audio codec, color range, keyframe
+  interval, output resolution). Studio and Edit-in-Ryoku-Motion are gone with
+  the Ryoku Motion removal; the Discord-sized copy stays. Region geometry is
+  sent in physical pixels so a crop lands exactly where it was drawn on a
+  scaled display, on Hyprland and niri alike
+  (`scripts/ryoku-cmd-record`, `ipc/record.go`, `services/Recorder.qml`,
+  `services/Capture.qml`, `modules/bar/popouts/CapturePopout.qml`,
+  `modules/bar/RecordIsland.qml`, `../inir/services/RecorderStatus.qml`).
 - **Optimising images keeps the originals.** As in skwd, each image the optimiser
   re-encodes leaves its original in Ryogami's trash
   (`~/.local/share/ryogami/trash`), which the Library tab's retention settings

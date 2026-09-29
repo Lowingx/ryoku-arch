@@ -2173,7 +2173,7 @@ Item {
     property string _screenRecordingElapsedProbePid: ""
     property int _screenRecordingBaseElapsed: 0
     property real _screenRecordingBaseMs: 0
-    readonly property string screenRecordingStatePath: "/tmp/ryoku-screenrecord-filename"
+    readonly property string screenRecordingStatePath: (Quickshell.env("RYOKU_STATE_PATH") || (Quickshell.env("HOME") + "/.local/state/ryoku")) + "/recorder-status.json"
     property bool _recordingRefreshPending: false
     property string voxState: "idle"          // idle/recording/transcribing
     property string voxHint: ""
@@ -2419,9 +2419,14 @@ Item {
         }
     }
 
+    // Detection rides GSR's IPC socket, the Ryoku-scoped liveness check: a foreign
+    // gpu-screen-recorder is invisible to it. When it is up, the recorder-status.json
+    // the backend writes carries the pid the elapsed clock probes.
     Process {
         id: recordingPidProc
-        command: ["pgrep", "-xo", "wf-recorder"]
+        command: ["sh", "-c",
+            "gsr-cli -ipc \"${XDG_RUNTIME_DIR:-/tmp}/ryoku-gsr.sock\" status >/dev/null 2>&1 || exit 1; "
+            + "cat \"${RYOKU_STATE_PATH:-$HOME/.local/state/ryoku}/recorder-status.json\" 2>/dev/null"]
         running: false
         onExited: (exitCode) => {
             if (exitCode !== 0) theme.setScreenRecordingPid("")
@@ -2432,8 +2437,9 @@ Item {
         }
         stdout: StdioCollector {
             onStreamFinished: {
-                var parts = this.text.trim().split(/\s+/)
-                theme.setScreenRecordingPid(parts[0] || "")
+                var pid = ""
+                try { pid = String(JSON.parse(this.text || "{}").recorderPid || "") } catch (e) { pid = "" }
+                theme.setScreenRecordingPid(pid)
             }
         }
     }

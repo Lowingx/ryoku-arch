@@ -96,7 +96,7 @@
   it shares whatever ESP the disk has, and the partition log says so.
 - **The offline install lays the base system even when a desktop package is bad.**
   `lib/offline.sh` folded the whole desktop set (`ryoku-desktop`, whose umbrella
-  pulls the large `ryomotion`) into the base pacstrap, so one corrupt or
+  pulls large packages) into the base pacstrap, so one corrupt or
   conflicting desktop package aborted the entire transaction as "could not lay the
   base system" and bricked the install. The desktop is now staged the way omarchy
   stages its install: pacstrap lays the base, then `lib/deploy.sh` installs the
@@ -106,6 +106,9 @@
   `ryoku update`. `tests/install-offline.sh` now pins the staged behavior.
 
 ### Added
+- Screen recording ships as GPU Screen Recorder. `base.packages` swaps
+  `wf-recorder` for `gpu-screen-recorder`, so a fresh install lays the GPU-only
+  recorder and Ryoku Motion (`ryomotion`) is no longer installed.
 - `lib/network.sh` seeds the Wi-Fi regulatory domain (`ryoku_network_regdom`, the
   third step of `ryoku_network`). World domain `00` disables or no-IRs most 5 GHz
   channels, so an installed machine only ever saw the 2.4 GHz half of a dual-band

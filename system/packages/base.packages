@@ -292,9 +292,10 @@ tesseract
 tesseract-data-eng
 zbar
 
-# Screen recorder (ryoku-cmd-record / ryoku-shell record): wf-recorder captures
-# through wlr-screencopy on both Hyprland and niri; ffmpeg does the GPU encode.
-wf-recorder
+# Screen recorder (ryoku-cmd-record / ryoku-shell record): gpu-screen-recorder
+# captures and encodes on the GPU on both Hyprland and niri. Also a hard depend
+# of ryoku-desktop, so the ISO carries it either way.
+gpu-screen-recorder
 
 # Voice dictation (pill Super+`, Voxtype from voxtype-bin): wtype types the
 # transcription into the focused app on Wayland.

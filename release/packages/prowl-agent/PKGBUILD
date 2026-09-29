@@ -12,8 +12,8 @@
 #
 # Go build with cgo: the indexer links SQLite's FTS5 (CGO_ENABLED=1,
 # -tags sqlite_fts5), so gcc/gcc-libs are in play and the module cache is fetched
-# at build time (upstream carries no vendored tree). Like ryomotion, the source
-# is a pinned git commit. Bump _commit (and pkgrel, or pkgver when
+# at build time (upstream carries no vendored tree). The source is a pinned git
+# commit. Bump _commit (and pkgrel, or pkgver when
 # cmd/prowl-agent/main.go's `var version` moves) to ship a new build to users.
 pkgname=prowl-agent
 pkgver=0.15.6

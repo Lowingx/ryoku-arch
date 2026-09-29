@@ -63,6 +63,12 @@
   leaves with the upgrade; `deploy.sh` retires an unowned one on dev boxes.
 
 ### Removed
+- **Ryoku Motion (`ryomotion`) is gone from `[ryoku]`.** The screen-demo recorder
+  and editor is retired: `release/packages/ryomotion/` is deleted, and
+  `ryoku-desktop` drops both its `ryomotion` optdepend and the `wf-recorder`
+  fallback depend. Screen recording is GPU Screen Recorder now
+  (`ryoku-desktop`'s `gpu-screen-recorder` depend); `ryoku doctor` removes
+  `ryomotion` from boxes that still carry it.
 - **The `awww` package is gone from `[ryoku]`.** The wallpaper backend moved to
   Ryogami, which paints and animates its own transitions from the built-in
   engine, so nothing on the box drives `awww` any more: the shell talks to

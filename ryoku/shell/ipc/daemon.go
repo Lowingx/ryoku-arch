@@ -430,6 +430,7 @@ func setupQmlImportPath() {
 func (d *daemon) bootstrap() {
 	d.startSettings()
 	d.startKeypress()
+	d.startRecord()
 	d.startMouseMap()
 	d.startClipboard()
 	d.startTray()

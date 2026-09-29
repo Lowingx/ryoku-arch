@@ -3,8 +3,8 @@
 # before baking it into the [offline] repo. `pacman -Sw --needed` never re-fetches
 # a file that already exists by name, and the cache is persistent, so a download
 # truncated by one network hiccup sat corrupt in the cache and shipped in every
-# ISO -- the offline pacstrap then died with a "truncated <pkg>" error (reported
-# on ryomotion, the large Electron package ryoku-desktop depends on). See the
+# ISO -- the offline pacstrap then died with a "truncated <pkg>" error, most
+# likely on a large package. See the
 # integrity loop in installation/iso/offline-repo.sh.
 set -euo pipefail
 

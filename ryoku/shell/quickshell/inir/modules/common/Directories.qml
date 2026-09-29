@@ -98,7 +98,6 @@ Singleton {
     property string screenshotTemp: "/tmp/ryoku-inir/media/screenshot"
     // Ryoku-owned surfaces; the family routes through its services, not scripts.
     property string wallpaperSwitchScriptPath: ""
-    property string recordScriptPath: ""
     property string userActions: FileUtils.trimFileProtocol(`${root.shellConfig}/actions`)
 
     function shortHomePath(path: string): string {

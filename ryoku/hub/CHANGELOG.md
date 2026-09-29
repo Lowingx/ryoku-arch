@@ -2,6 +2,13 @@
 
 
 ### Added
+- **Recording settings follow GPU Screen Recorder.** The Recording page now
+  writes through the shell daemon (`ryoku-shell record settings`) instead of
+  owning the file, and carries the recorder's full surface: bitrate mode and
+  target, container, audio codec and bitrate, color range, keyframe interval,
+  and an output resolution cap. The under-the-hood readout names GPU Screen
+  Recorder with its version; the dead pick-each-time switch is gone
+  (`quickshell/pages/RecordingPage.qml`, `quickshell/schema/RecordingPage.js`).
 - **The Displays page saves resolution presets.** A hand-typed custom
   resolution is typed once: SAVE stores the selected display's mode and
   scale under a name, and the Resolution list offers it as a first-class

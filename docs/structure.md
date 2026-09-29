@@ -221,9 +221,9 @@ raw.githubusercontent.com serves them with no release infrastructure.
 ## `release/` packaging
 
 - `packages/` one directory per pacman package in the `[ryoku]` repo, each a
-  `PKGBUILD`. 31 in all, in four groups by why they exist:
+  `PKGBUILD`. 30 in all, in four groups by why they exist:
   - built from the checked-out monorepo: the components (`ryoku-shell`,
-    `ryoku-hub`, `ryoku-rashin`, `ryoku`, `ryoku-blobs`, `ryomotion`,
+    `ryoku-hub`, `ryoku-rashin`, `ryoku`, `ryoku-blobs`,
     `ryotunes`, `ryogami` the wallpaper daemon), the `ryoku-desktop` umbrella,
     `ryoku-keyring`, and the `gpk` package manager.
   - Hyprland plugins: `hypr-dynamic-cursors`, `ryoku-hypr-plugins`, `hyprglass`,

@@ -49,7 +49,6 @@ upgrade never leaves the shell QML running against a stale plugin.
 | `ryoku-blobs` | The shared `Ryoku.Blobs` QML plugin |
 | `gpk` | GlazePKG, the RyokuArch package manager |
 | `ryogami` | The wallpaper daemon the shell drives: static, live, and shader transitions |
-| `ryomotion` | The screen-demo recorder and editor |
 | `ryostore` | RyoStore: the catalogue of rices, bundles, and bar styles |
 | `ryowalls` | The wallpaper browser, preview, and AI enhancer |
 | `ryovm` | The virtual-machine manager |
@@ -194,7 +193,7 @@ Everything behind the pill's Super+D, Super+U, and voice tools.
 |---|---|
 | `tesseract`, `tesseract-data-eng` | OCR text grab |
 | `zbar` | QR-code scanning |
-| `wf-recorder` | Hardware screen recording (NVENC/VAAPI, CPU fallback) on Hyprland and niri |
+| `gpu-screen-recorder` | GPU-only screen capture and encode, replay-capable, on Hyprland and niri |
 | `hyprsunset` | The night-light color-temperature toggle |
 | `wtype` | Types voice-dictation output into the focused app |
 | `libqalculate` | The launcher's calculator backend |
