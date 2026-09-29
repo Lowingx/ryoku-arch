@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -142,6 +143,8 @@ func (d *daemon) watchOtherAudio() {
 	d.evaluateDuck()
 	for {
 		cmd := exec.Command(pactlBin(), "subscribe")
+		// The unit stops only the daemon, so the watcher must end with it rather than outlive it.
+		cmd.SysProcAttr = &syscall.SysProcAttr{Pdeathsig: syscall.SIGTERM}
 		stdout, err := cmd.StdoutPipe()
 		if err != nil || cmd.Start() != nil {
 			time.Sleep(2 * time.Second)
