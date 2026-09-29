@@ -187,10 +187,10 @@ QtObject {
         }
     }
 
-    // Prefers the daemon's own reason from source.providers, else derives one from settings.
+    // Prefers the daemon's own verdict from source.providers, else derives one from settings.
     function availability(id, settings, rpc) {
         if (rpc && rpc.available === false)
-            return { enabled: false, reason: rpc.unavailableReason || I18n.tr("Enable in settings") }
+            return { enabled: false, reason: sources.reasonText(id, rpc.unavailableReason), code: rpc.unavailableReason || "Disabled" }
         if (rpc && rpc.available === true)
             return { enabled: true, reason: I18n.tr("Available") }
 
@@ -205,16 +205,16 @@ QtObject {
                 : { enabled: false, reason: I18n.tr("Enable in settings") }
         case "unsplash":
             if (!_bool(settings, "sources.unsplash.enabled", false))
-                return { enabled: false, reason: I18n.tr("Enable in settings") }
+                return { enabled: false, reason: I18n.tr("Enable in settings"), code: "Disabled" }
             return _str(settings, "sources.unsplash.accessKey", "").length > 0
                 ? { enabled: true, reason: I18n.tr("Available") }
-                : { enabled: false, reason: I18n.tr("Credentials required") }
+                : { enabled: false, reason: I18n.tr("Credentials required"), code: "MissingCredentials" }
         case "pexels":
             if (!_bool(settings, "sources.pexels.enabled", false))
-                return { enabled: false, reason: I18n.tr("Enable in settings") }
+                return { enabled: false, reason: I18n.tr("Enable in settings"), code: "Disabled" }
             return _str(settings, "sources.pexels.apiKey", "").length > 0
                 ? { enabled: true, reason: I18n.tr("Available") }
-                : { enabled: false, reason: I18n.tr("Credentials required") }
+                : { enabled: false, reason: I18n.tr("Credentials required"), code: "MissingCredentials" }
         case "youtube":
             return _bool(settings, "sources.youtube.enabled", false)
                 ? { enabled: true, reason: I18n.tr("Available") }
@@ -225,6 +225,26 @@ QtObject {
                 : { enabled: false, reason: I18n.tr("Enable in settings") }
         default:
             return { enabled: true, reason: I18n.tr("Available") }
+        }
+    }
+
+    // The daemon reports why a source is off as a code; people read skwd's wording.
+    function reasonText(id, code) {
+        switch (code) {
+        case "MissingCredentials": return I18n.tr("Credentials required")
+        case "MissingTool": return id === "youtube" ? I18n.tr("Install yt-dlp") : I18n.tr("Helper not installed")
+        default: return I18n.tr("Enable in settings")
+        }
+    }
+
+    // The Sources setting that turns a source on, or takes its missing key.
+    function settingsControl(id, code) {
+        switch (id) {
+        case "wallhaven": return "features.wallhaven"
+        case "steam": return "features.steam"
+        case "unsplash": return code === "MissingCredentials" ? "sources.unsplash.accessKey" : "sources.unsplash.enabled"
+        case "pexels": return code === "MissingCredentials" ? "sources.pexels.apiKey" : "sources.pexels.enabled"
+        default: return "sources." + id + ".enabled"
         }
     }
 

@@ -148,7 +148,17 @@ Item {
         if (panel.args && panel.args.query !== undefined)
             panel.query = String(panel.args.query)
         panel.refreshProviders()
-        panel.switchTo(p, true)
+        panel.switchTo(panel._firstAvailable(p), true)
+    }
+
+    // Like skwd's tabs, a source that is switched off is never the one shown.
+    function _firstAvailable(preferred) {
+        if (panel._tabEnabled(preferred))
+            return preferred
+        for (var i = 0; i < panel.providerTabs.length; ++i)
+            if (panel.providerTabs[i].enabled === true)
+                return panel.providerTabs[i].id
+        return preferred
     }
 
     function switchTo(id, doSearch) {
