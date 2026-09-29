@@ -150,12 +150,21 @@ FocusScope {
     Behavior on reveal { NumberAnimation { duration: Theme.standard; easing.type: Theme.revealEasing } }
     visible: folio.reveal > 0.001
 
+    // One glyph per settings tab, painted faint behind the page.
+    readonly property var _glyphs: ({
+        picker: "\u9078", filter: "\u6fff", position: "\u4f4d", displays: "\u5e55",
+        motion: "\u52d5", playback: "\u653e", performance: "\u901f", library: "\u5eab",
+        sources: "\u6e90", automation: "\u81ea", theme: "\u8272", integrations: "\u7d50",
+        language: "\u8a00"
+    })
+
     FolioSheet {
         id: sheet
         reveal: folio.reveal
         showMasthead: false
         pageOpacity: folio.isDesign ? 0.14 : 0.965
         scrimAlpha: folio.isDesign ? 0.2 : 0.68
+        watermark: folio.activeTab ? (folio._glyphs[folio.activeTab.tabKey] || "") : ""
         onDismissed: folio.closeRequested()
 
         FolioIndex {

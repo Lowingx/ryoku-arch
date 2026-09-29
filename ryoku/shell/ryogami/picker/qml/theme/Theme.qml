@@ -164,8 +164,7 @@ QtObject {
     readonly property real spaceXl: space(20)
     readonly property real spaceXxl: space(28)
 
-    // Chrome is square: corners come from a horizontal skew, never a radius.
-    readonly property real radius: 0
+    readonly property real radius: 6 * theme.scale
     readonly property real panelSkew: 14 * theme.scale
 
     // Folio sheet geometry (base px; components clamp to the viewport).
