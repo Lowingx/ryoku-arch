@@ -92,4 +92,5 @@ Item {
         }
         Btn { text: I18n.tr("REVERT"); armed: bar.dirty > 0; stealFocus: true; onAct: bar.reverted() }
         Btn { text: I18n.tr("SAVE"); primary: true; armed: bar.dirty > 0; stealFocus: true; onAct: bar.saved() }
+    }
 }
