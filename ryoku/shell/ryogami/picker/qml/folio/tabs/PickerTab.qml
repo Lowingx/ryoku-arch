@@ -917,7 +917,7 @@ FolioTabData {
         },
         {
             title: I18n.tr("Tag panel"),
-            subtitle: I18n.tr("Search panel / tag cloud"),
+            subtitle: I18n.tr("The tag and description search panel that drops below the picker."),
             controls: [
                 { id: "components.wallpaperSelector.tagCloudWidth",
                   key: "components.wallpaperSelector.tagCloudWidth",

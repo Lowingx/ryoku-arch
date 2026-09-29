@@ -8,7 +8,7 @@ FolioTabData {
     sections: [
         {
             title: I18n.tr("App themes"),
-            subtitle: I18n.tr("Recolour supported desktop apps from the wallpaper palette (issue #84)."),
+            subtitle: I18n.tr("Recolour supported desktop apps from the wallpaper palette."),
             controls: [
                 { id: "app-theme.{appId}",
                   key: null,

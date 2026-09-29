@@ -14,6 +14,8 @@ FocusScope {
     anchors.fill: parent
     focus: folio.shown
     onShownChanged: if (folio.shown) { folio._applyArgs(); folio.forceActiveFocus(); }
+    // A request for another tab can arrive while the folio is already open.
+    onArgsChanged: if (folio.shown) folio._applyArgs()
 
     Keys.onEscapePressed: (e) => { folio.closeRequested(); e.accepted = true; }
 
