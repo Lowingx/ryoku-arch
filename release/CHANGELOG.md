@@ -3,6 +3,19 @@
 ## Unreleased
 
 ### Added
+- **`skwd-paper-bin` ships from [ryoku].** The skwd-paper renderer Ryogami
+  drives for Wallpaper Engine scenes, repackaged from the prebuilt Arch package
+  of a pinned upstream release (version and checksum in its PKGBUILD).
+  `ryogami` depends on it.
+- **`ryogami` builds and ships its picker.** The package now builds the
+  `Ryoku.Ryogami` QML module (C++ scene, shaders and QML) into
+  `/usr/lib/qt6/qml/Ryoku/Ryogami` beside the daemon, with its entry point at
+  `/usr/share/ryogami/shell.qml`. The picker ports GPL skwd-wall v2, so the
+  package is now GPL-3.0-or-later and ships its LICENSE and NOTICE. It no
+  longer needs `curl` or `inotify-tools`; `yt-dlp` and `steamcmd` are optional
+  extras for the YouTube source and Workshop downloads without the Steam client.
+  The build toolchain gains `vulkan-headers`, which the picker compiles against
+  to list GPUs.
 - **`ttf-rubik-vf` and `ttf-readex-pro` ship from [ryoku].** The iRiS frame
   hardcodes Rubik for every numeral and Readex Pro for its titles; neither face
   shipped, so boxes silently fell back to Noto Sans and the frame's tight card

@@ -132,9 +132,9 @@ depends=(
   # live (video) wallpapers: the daemon grabs one frame with ffmpeg to derive the
   # wallpaper palette. official repo, so a hard depend reaches existing boxes.
   'ffmpeg'
-  # ryogami's wall-ui source browser fetches remote wallpapers (Wallhaven,
-  # MoeWalls, MotionBGs, GitHub, Steam) with curl; a hard depend so the browser
-  # works out of the box on the ISO and on existing boxes after `ryoku update`.
+  # the shell's weather, calendar and screenshot upload, the Hub's location
+  # search and the CLI's recovery helpers fetch with curl; a hard depend so they
+  # work out of the box on the ISO and on existing boxes after `ryoku update`.
   'curl'
   # qt6-multimedia + qt6-declarative back the QML video surfaces: the wallpaper
   # picker's live previews, the shell's video-wallpaper preview, and qylock.

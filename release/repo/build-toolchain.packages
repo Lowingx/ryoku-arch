@@ -33,10 +33,12 @@ gradle
 libusb
 
 # Qt: Blobs plays video, so qt6-multimedia joins the QML plugin's own modules.
+# The Ryogami picker also compiles against the Vulkan headers to list GPUs.
 qt6-base
 qt6-declarative
 qt6-shadertools
 qt6-multimedia
+vulkan-headers
 
 # Compositor plugin packages (hypr-dynamic-cursors, ryoku-hypr-plugins,
 # hyprglass, imgborders, ryoku-keysounds) plus their makedepends: keysounds

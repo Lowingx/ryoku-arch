@@ -1,33 +1,38 @@
 # Maintainer: Ryoku <releases@ryoku.dev>
 #
-# Ryogami: the Ryoku wallpaper daemon (Go). One process owns the wallpaper
-# catalog (thumbnails, colours, favourites), applies through the in-shell
-# surface topic, the matugen palette, and the depth surface, behind ryoku's
-# line pub/sub on $XDG_RUNTIME_DIR/ryogami.sock. The vendored skwd-wall picker
-# (wall-ui) is its front end.
+# Ryogami: the Ryoku wallpaper daemon (Go) and its picker. One process owns the
+# wallpaper catalog (thumbnails, colours, favourites), applies through the
+# in-shell surface topic, the matugen palette, and the depth surface, behind
+# ryoku's line pub/sub on $XDG_RUNTIME_DIR/ryogami.sock. Its front end is the
+# Ryoku.Ryogami picker: a Qt Quick surface with a C++ GPU card renderer, built
+# here and installed onto the QML import path; the daemon spawns it through
+# quickshell. Wallpaper Engine scenes render through skwd-paper.
 #
-# built from the in-repo Go module at ryoku/shell/ryogami/daemon, no tarball
-# fetched. publish CI runs makepkg inside this dir against a full checkout, so
-# the repo root is three levels up; go builds into $srcdir so the source tree
-# stays untouched.
+# built from the in-repo Go module at ryoku/shell/ryogami/daemon and the picker
+# module at ryoku/shell/ryogami/picker, no tarball fetched. publish CI runs
+# makepkg inside this dir against a full checkout, so the repo root is three
+# levels up; go and the picker build into $srcdir so the source tree stays
+# untouched.
 pkgname=ryogami
 pkgver=${RYOKU_PKGVER:-0.2.0}
 pkgrel=1
-pkgdesc="Ryogami: the Ryoku wallpaper daemon (catalog, thumbnails, applies, depth)"
+pkgdesc="Ryogami: the Ryoku wallpaper daemon and Qt Quick picker (catalog, thumbnails, applies, depth)"
 arch=('x86_64')
 url="https://ryoku.dev"
-license=('MIT')
+# GPL-3.0-or-later: the picker ports skwd-wall v2; its LICENSE and NOTICE ship below.
+license=('GPL-3.0-or-later')
 # runtime tools the daemon shells out to: imagemagick + ffmpeg (thumbnails,
-# colour extraction, the livewall transcode), matugen (palette on apply),
-# quickshell (the wall-ui). Video wallpapers play through the bundled
-# ryogami-live, built here from ryoku/shell/livewall. The wall-ui source
-# browser fetches remote wallpapers (Wallhaven, MoeWalls, MotionBGs, GitHub,
-# Steam) with curl, so it is a hard runtime need too. The wall-ui's wallpaper
-# folder watcher execs inotifywait (inotify-tools); without it a wallpaper that
-# lands while the picker is open (a store install, a download) never shows
-# until the picker is reopened.
-depends=('imagemagick' 'ffmpeg' 'quickshell' 'curl' 'inotify-tools')
-makedepends=('go' 'wayland' 'wayland-protocols')
+# colour extraction, the livewall transcode) and quickshell (spawns the picker).
+# Video wallpapers play through the bundled ryogami-live, built here from
+# ryoku/shell/livewall. qt6-multimedia backs the picker's video previews,
+# qt6-imageformats decodes WebP/AVIF thumbnails, and Wallpaper Engine scenes
+# render through skwd-paper.
+depends=('imagemagick' 'ffmpeg' 'quickshell'
+         'qt6-multimedia' 'qt6-imageformats' 'skwd-paper-bin')
+makedepends=('go' 'wayland' 'wayland-protocols' 'cmake' 'ninja' 'qt6-shadertools'
+             'qt6-declarative' 'qt6-multimedia' 'vulkan-headers')
+optdepends=('yt-dlp: YouTube wallpaper source'
+            'steamcmd: Steam Workshop downloads without the Steam client')
 source=()
 
 _repo="$startdir/../../.."
@@ -39,6 +44,8 @@ build() {
   # is no vendor/ tree to carry). Matches every other [ryoku] Go package.
   CGO_ENABLED=0 go build -trimpath -mod=vendor -o "$srcdir/ryogami" .
   "$_repo/ryoku/shell/livewall/build.sh" "$srcdir/ryogami-live"
+  RYOGAMI_PICKER_BUILD="$srcdir/picker-build" \
+    "$_repo/ryoku/shell/ryogami/picker/build.sh" "$srcdir/qml"
 }
 
 package() {
@@ -48,13 +55,19 @@ package() {
   # exactly where ExecStart already points (/usr/bin/ryogami).
   install -Dm644 "$_repo/ryoku/shell/systemd/user/ryogami.service" \
     "$pkgdir/usr/lib/systemd/user/ryogami.service"
-  # the wall-ui picker (vendored skwd-wall, MIT): the quickshell config the
-  # daemon spawns; /usr/share/ryogami/shell.qml is the resolver's packaged
-  # default, so no env override is needed on an installed box.
-  install -d "$pkgdir/usr/share/ryogami"
-  cp -a "$_repo/ryoku/shell/ryogami/wall-ui/." "$pkgdir/usr/share/ryogami/"
-  install -Dm644 "$_repo/ryoku/shell/ryogami/wall-ui/data/ryogami-wall.desktop" \
-    "$pkgdir/usr/share/applications/ryogami-wall.desktop"
-  install -Dm644 "$_repo/ryoku/shell/ryogami/wall-ui/LICENSE" \
+  install -dm755 "$pkgdir/usr/lib/qt6/qml/Ryoku/Ryogami"
+  cp -a "$srcdir/qml/Ryoku/Ryogami/." "$pkgdir/usr/lib/qt6/qml/Ryoku/Ryogami/"
+  # cp -a keeps build-tree modes: the plugin stays executable, data world-readable.
+  chmod -R u=rwX,go=rX "$pkgdir/usr/lib/qt6"
+  # The daemon's default entry point, so an installed box needs no env override.
+  install -Dm644 "$_repo/ryoku/shell/ryogami/picker/shell.qml" \
+    "$pkgdir/usr/share/ryogami/shell.qml"
+  install -Dm644 "$_repo/ryoku/shell/ryogami/picker/data/ryogami.desktop" \
+    "$pkgdir/usr/share/applications/ryogami.desktop"
+  install -Dm644 "$_repo/ryoku/shell/ryogami/picker/LICENSE" \
     "$pkgdir/usr/share/licenses/ryogami/LICENSE"
+  install -Dm644 "$_repo/ryoku/shell/ryogami/picker/NOTICE" \
+    "$pkgdir/usr/share/licenses/ryogami/NOTICE"
+  install -Dm644 -t "$pkgdir/usr/share/licenses/ryogami/" \
+    "$_repo/ryoku/shell/ryogami/picker/qml/theme/fonts/"*.txt
 }

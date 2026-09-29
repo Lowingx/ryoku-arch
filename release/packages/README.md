@@ -16,6 +16,10 @@ repo. Packages publish only from `main` release tags, never from `unstable-dev`.
   to `/usr/bin/ryoku`.
 - `ryoku-blobs` -- the `Ryoku.Blobs` QML plugin, to
   `/usr/lib/qt6/qml/Ryoku/Blobs`.
+- `skwd-paper-bin` -- the pinned upstream skwd-paper renderer (still, video, and
+  Wallpaper Engine wallpapers), a hard dependency of `ryogami`, into `/usr/bin`
+  and `/usr/lib/skwd-paper`. A fixed-version binary rebuild like `ryoku-cursors`:
+  bumped by `pkgver` + `sha256sums` when upstream cuts a release.
 - `hypr-dynamic-cursors`, `ryoku-hypr-plugins` (hyprbars + hyprfocus),
   `hyprglass`, `imgborders` -- the optional Hyprland compositor plugins the Hub
   can toggle, into `/usr/lib/hyprland/plugins/`. Each builds from source
@@ -42,9 +46,9 @@ full checkout. The Go binaries and the QML plugin are built into `$srcdir`, so
 the source tree is never modified, and `makepkg --clean` removes `$srcdir` and
 `$pkgdir` afterward.
 
-The `gpk` and `ryoku-keyring` PKGBUILDs are the exceptions: they fetch a pinned
-upstream artifact (a release binary and the release key material, respectively)
-rather than building from the checkout.
+The `gpk`, `skwd-paper-bin`, and `ryoku-keyring` PKGBUILDs are the exceptions:
+they fetch a pinned upstream artifact (release binaries and the release key
+material) rather than building from the checkout.
 
 makedepends across the set: `go` (ryoku-shell, ryoku-hub, ryoku),
 `cmake ninja qt6-shadertools qt6-declarative` (ryoku-blobs), and `rust` + `git`
