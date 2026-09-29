@@ -3,12 +3,49 @@ package main
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+func TestVesktopThemeCategoryLoadsFromStore(t *testing.T) {
+	setTransactionXDG(t)
+	entry := ProductEntry{
+		ID: "ryoku-discord", Name: "Ryoku Discord", Version: "1.22.2",
+		Path: "vesktop-themes/ryoku-discord", Author: "Ron",
+		Summary: "Vesktop theme", Description: "Vesktop theme with palette colors.",
+		Tags: []string{"vesktop"}, Accent: "#e2342a", Surface: "#2a2a2a",
+		Preview: "assets/preview.png", Screenshots: []string{}, Manifest: "manifest.json",
+		ManifestSHA256: strings.Repeat("0", 64), Upstream: "https://github.com/Sipper1236/ryoku-discord",
+	}
+	registry, err := json.Marshal(map[string]any{"schema": 1, vesktopThemesCategory: []ProductEntry{entry}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/vesktop-themes/registry.json" {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write(registry)
+	}))
+	t.Cleanup(server.Close)
+	cache := &Cache{client: server.Client(), base: server.URL, dir: t.TempDir(), memo: map[string]memoEntry{}}
+	provider := newVesktopThemesProvider(cache)
+	items, _, err := provider.Load(context.Background(), false)
+	if err != nil || len(items) != 1 || items[0].ID != entry.ID {
+		t.Fatalf("catalogue items = %+v, %v", items, err)
+	}
+	if !storeSection(vesktopThemesCategory) {
+		t.Fatal("Vesktop theme category cannot open in Store")
+	}
+}
 
 func installLocalVesktopTheme(t *testing.T, version, name, css string) error {
 	t.Helper()
