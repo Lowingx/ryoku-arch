@@ -49,6 +49,7 @@ Scope {
     // backdrop's player: muted by default, volume 0-100.
     property bool videoMuted: true
     property int videoVolume: 100
+    property bool videoPaused: false
     // The ryogami-live yield flag (default "ryogami" engine): hide the painter
     // while the C player owns the background layer.
     property bool wallpaperLive: false
@@ -568,6 +569,7 @@ Scope {
             live: root.wallpaperLive
             videoMuted: root.videoMuted
             videoVolume: root.videoVolume
+            videoPaused: root.videoPaused
         }
 
         // The Parallax backdrop: the inpainted background.png drifting just
