@@ -32,3 +32,11 @@ and Bar Studio workflow are adapted from OkShell by John Oberhauser:
 
 OkShell is released under the GNU General Public License version 3. The adapted
 frame-bar areas remain GPL-3.0-compatible with Ryoku's GPL-3 distribution.
+
+The Shima bar style (ryoku/shell/quickshell/inir/) is based on iNiR by snowarch
+(https://github.com/snowarch/inir). It is a modified version: Ryoku renamed it,
+gave it its own mark, dropped the Kira mascot, and runs it through Ryoku's
+window-manager layer. It is not iNiR or iRiS, and those names, logos and the Kira
+mascot belong to snowarch. iNiR is released under the GNU General Public License
+version 3 with additional section 7 terms; its NOTICE and LICENSE ship unchanged
+beside the code in ryoku/shell/quickshell/inir/.

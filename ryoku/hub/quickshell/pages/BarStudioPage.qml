@@ -146,9 +146,10 @@ Item {
         { id: "tray", label: I18n.tr("Tray"), desc: I18n.tr("System tray icons.") },
         { id: "weather", label: I18n.tr("Weather"), desc: I18n.tr("Current conditions.") }
     ]
-    // The running bar style, default the built-in frame style. The frame, rails
-    // and zone editors below are Sumi's; a folder style owns its own layout.
-    readonly property string activeStyle: page.fval("barStyle", "sumi")
+    // The running bar style; an absent key renders the shipped QS Bar, the
+    // shell's own default. The frame, rails and zone editors below are Sumi's;
+    // a folder style owns its own layout.
+    readonly property string activeStyle: page.fval("barStyle", "qsbar")
     readonly property bool sumiActive: page.activeStyle === "sumi"
     readonly property string activeName: {
         for (let i = 0; i < page.barStyles.length; i++)
@@ -537,8 +538,8 @@ Item {
                 id: irisSect
                 width: col.colWidth
                 visible: page.activeStyle === "iris"
-                title: I18n.tr("IRIS")
-                kana: "虹"
+                title: I18n.tr("SHIMA")
+                kana: "島"
 
                 Item {
                     width: parent.width
@@ -550,7 +551,7 @@ Item {
                         spacing: Tokens.s3
                         Text {
                             width: parent.width
-                            text: I18n.tr("iRiS arranges its own island, bubbles, dock and look in its settings overlay: hover the island and press the gear, or use the button below.")
+                            text: I18n.tr("Shima arranges its own island, bubbles, dock and look in its settings overlay: hover the island and press the gear, or use the button below.")
                             color: Tokens.inkMuted
                             font.family: Tokens.ui
                             font.pixelSize: Tokens.fBody
@@ -570,13 +571,13 @@ Item {
                             Seg {
                                 anchors.right: parent.right
                                 anchors.verticalCenter: parent.verticalCenter
-                                options: ["RYOKU", "INIR"]
-                                current: page.irisFrontend === "inir" ? "INIR" : "RYOKU"
-                                onChose: key => page.setIrisFrontend(key === "INIR" ? "inir" : "ryoku")
+                                options: ["RYOKU", "ORIGINAL"]
+                                current: page.irisFrontend === "inir" ? "ORIGINAL" : "RYOKU"
+                                onChose: key => page.setIrisFrontend(key === "ORIGINAL" ? "inir" : "ryoku")
                             }
                         }
                         Btn {
-                            text: I18n.tr("OPEN IRIS SETTINGS")
+                            text: I18n.tr("OPEN SHIMA SETTINGS")
                             onAct: page.openIrisSettings()
                         }
                     }

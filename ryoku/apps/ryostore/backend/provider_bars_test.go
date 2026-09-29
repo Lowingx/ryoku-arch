@@ -455,3 +455,35 @@ func TestBarStyleViewRebuildsCorruptSnapshot(t *testing.T) {
 		t.Fatalf("corrupt view was not rebuilt: %q, err=%v", raw, err)
 	}
 }
+
+// The catalogue snapshot is only rebuilt on demand, so a built-in style renamed
+// by an update must invalidate it or the store keeps the old name.
+func TestSnapshotStaleBuiltins(t *testing.T) {
+	encode := func(items []Item) []byte {
+		data, err := json.Marshal(Catalog{Items: items})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return data
+	}
+	current := builtinBarStyles()
+	if snapshotStaleBuiltins(encode(current)) {
+		t.Error("a snapshot of the shipped built-ins reads as stale")
+	}
+	renamed := builtinBarStyles()
+	for i := range renamed {
+		if renamed[i].ID == "iris" {
+			renamed[i].Name = "iRiS"
+		}
+	}
+	if !snapshotStaleBuiltins(encode(renamed)) {
+		t.Error("a snapshot naming a built-in differently must be rebuilt")
+	}
+	store := []Item{{ID: "nacre", Category: "barstyles", Name: "Nacre"}}
+	if snapshotStaleBuiltins(encode(append(current, store...))) {
+		t.Error("store styles must not make a snapshot stale")
+	}
+	if snapshotStaleBuiltins([]byte(`not json`)) {
+		t.Error("an unreadable snapshot must not be treated as stale")
+	}
+}

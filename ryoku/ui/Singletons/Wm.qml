@@ -27,6 +27,7 @@ Singleton {
     property bool _ready: false
     property var _caps: ({})
     property string _workspaceModel: "fixed"
+    property string _provider: ""
     property var _configFiles: []
     property string _focusedOutput: ""
     property var _outputs: []
@@ -42,6 +43,9 @@ Singleton {
     // directly with no undefined guard.
     readonly property var caps: root._caps
     readonly property string workspaceModel: root._workspaceModel
+    // The running window manager as the provider names itself, for display
+    // only: behaviour asks caps, never this.
+    readonly property string provider: root._provider
 
     readonly property string focusedOutput: root._focusedOutput
     readonly property var outputs: root._outputs
@@ -275,6 +279,7 @@ Singleton {
                 root._ready = frame.ready === true;
                 root._caps = frame.caps || ({});
                 root._workspaceModel = frame.workspaceModel || "fixed";
+                root._provider = frame.provider || "";
                 root._configFiles = frame.configFiles || [];
                 root._focusedOutput = frame.focusedOutput || "";
                 root._outputs = frame.outputs || [];
@@ -290,6 +295,7 @@ Singleton {
                 root._ready = frame.ready === true;
                 root._caps = frame.caps || ({});
                 root._workspaceModel = frame.workspaceModel || "fixed";
+                root._provider = frame.provider || "";
                 root._configFiles = frame.configFiles || [];
             }
             if (v.windows !== old.windows) root._winResidue = frame.windows || [];

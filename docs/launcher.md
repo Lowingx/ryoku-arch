@@ -29,7 +29,7 @@ complete styles and saves the choice as `variant` in
   clock, the app search and the app list. It masks input to the pill rather than
   the window, so the desktop around it stays clickable; Escape (or Super+Space
   again) closes it.
-- **Spotlight** is the iRiS launcher, the one the iRiS bar style ships: it
+- **Spotlight** is the Shima launcher, the one the Shima bar style ships: it
   drives the frame's morphing-glass search, so Super+Space opens the same
   spotlight the island's search bubble does, with apps, actions, commands, math
   and web in one row. When another bar style is active no frame hosts the

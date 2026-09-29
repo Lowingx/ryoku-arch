@@ -98,7 +98,7 @@ Singleton {
                 QT_WAYLAND_FORCE_DPI QT_FONT_DPI QT_AUTO_SCREEN_SCALE_FACTOR \
                 QT_SCREEN_SCALE_FACTORS GDK_SCALE GDK_DPI_SCALE \
                 QSG_ATLAS_WIDTH QSG_ATLAS_HEIGHT QT_LOGGING_RULES \
-                QS_DISABLE_CRASH_HANDLER; do
+                QS_DISABLE_CRASH_HANDLER MALLOC_CONF mesa_glthread DRIRC_CONFIGDIR; do
                 restore_from_manager "$_var"
             done
 

@@ -1,6 +1,6 @@
 # Maintainer: Ryoku <releases@ryoku.dev>
 #
-# ttf-rubik-vf = Rubik, the slightly-rounded sans the iRiS frame renders every
+# ttf-rubik-vf = Rubik, the slightly-rounded sans the Shima frame renders every
 # numeral with (IrisStyle.fontNumbers: island clock, card metrics, gauges).
 #
 # Shipped from [ryoku], not the AUR, on purpose, like otf-space-grotesk before
@@ -15,8 +15,8 @@
 # pinned for real. bump pkgver + _commit + sha256sums for a new upstream release.
 pkgname=ttf-rubik-vf
 pkgver=2.3.0
-pkgrel=1
-pkgdesc="Rubik variable TTF (the iRiS frame's numerals face)"
+pkgrel=2
+pkgdesc="Rubik variable TTF (the Shima frame's numerals face)"
 arch=('any')
 url="https://github.com/googlefonts/rubik"
 license=('OFL-1.1')

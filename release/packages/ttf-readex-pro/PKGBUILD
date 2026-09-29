@@ -1,6 +1,6 @@
 # Maintainer: Ryoku <releases@ryoku.dev>
 #
-# ttf-readex-pro = Readex Pro, the display sans the iRiS frame renders its
+# ttf-readex-pro = Readex Pro, the display sans the Shima frame renders its
 # headlines and titles with (IrisStyle.fontTitle: island clock face, card
 # headers, the studio's titles).
 #
@@ -14,8 +14,8 @@
 # monorepo RYOKU_PKGVER. bump pkgver + _commit + sha256sums for a new release.
 pkgname=ttf-readex-pro
 pkgver=1.204
-pkgrel=1
-pkgdesc="Readex Pro variable TTF (the iRiS frame's title face)"
+pkgrel=2
+pkgdesc="Readex Pro variable TTF (the Shima frame's title face)"
 arch=('any')
 url="https://github.com/ThomasJockin/readexpro"
 license=('OFL-1.1')

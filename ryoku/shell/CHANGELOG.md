@@ -3,6 +3,21 @@
 ## Unreleased
 
 ### New
+- **iRiS is now Shima, synced with iNiR 2.32.** iNiR's license terms keep
+  the names iNiR and iRiS, their logo and the Kira mascot for snowarch, so the
+  frame bar style is renamed Shima everywhere you see it, draws its own island
+  mark, and drops the mascot. Internal ids and settings keys are unchanged, so
+  nothing you set moves. The About page credits "Based on iNiR by snowarch"
+  and gains a second tab for the Ryoku maintainer. The same pass brings
+  iNiR 2.32 across: light, ink and dark schemes with per-scheme tone, colour
+  and frost; widget stacks with dots and controls; a visualizer bubble and
+  visualizer designs; an app-icon tile pack for plates; settings rows that say
+  why they are locked; and upstream's repaint and wallpaper-decode fixes.
+  Orbit, which is built on niri alone, and upstream's IrisGate are left out.
+  Ryoku Hub's Bar Studio says Shima too, and Ryostore rebuilds a saved
+  catalogue whose built-in bar styles carry old names, so the rename shows
+  after an update without pressing refresh
+  (`quickshell/inir/`, `inir/NOTICE`, `apps/ryostore/backend/`).
 - **Per-widget Depth: in front or behind.** Right-clicking a desktop widget or
   a store tile, and the visualiser's own editor, now offer a Depth control
   that lifts just that widget above the subject cut-out or drops it behind
@@ -123,6 +138,11 @@
   `scripts/ryoku-cmd-studiorecord`, `scripts/ryoku-cmd-edit-recording`,
   `scripts/ryoku-cmd-discord-compress`, `ipc/record.go`, `services/Recorder.qml`,
   `modules/bar/RecordIsland.qml`, `modules/bar/popouts/CapturePopout.qml`).
+- **iRiS catches up with iNiR's latest wave.** The vendored frame family now
+  carries upstream's newest desktop widget editor (quick controls, identity
+  marks, design presets), Island and Dock refinements, the reworked settings
+  pages and themes, wallpaper-luma legibility and the new fonts, adapted to
+  Ryoku's seams (`../inir/`).
 
 ### Changed
 - **Optimising images keeps the originals.** As in skwd, each image the optimiser
@@ -205,6 +225,12 @@
   it. The sharp themes keep their crisp joins, and the Fusion slider still
   sets it. Edge bubbles also sit a little off the band so their ring never
   grazes the frame.
+- **QS Bar is the shipped default again.** A store with no `barStyle` renders
+  QS Bar, and the Hub's Bar Studio, the Ryostore catalogue and both compositors'
+  close-confirm binds now agree on that; iRiS stays one click away
+  (`services/Config.qml`, `../../hub/quickshell/pages/BarStudioPage.qml`,
+  `../../apps/ryostore/backend/provider_bars.go`, `../../wm/niri/config_binds.go`,
+  `../../hyprland/modules/binds.lua`).
 
 ### Fixed
 - **The Sun theme mode is back.** The new picker's Variant dropdown and the
@@ -218,6 +244,29 @@
   partial opacity instead of fading out (#301). Each card's fade now
   completes before its outer edge reaches the viewport
   (`ryogami/picker/src/layouts/geometry.cpp`).
+- **iRiS and store bar styles no longer fall back to Sumi.** Syntax damage and
+  lost registrations in the iRiS tree (settings options, theme presets, the
+  Island and Dock resize handles under Qt 6.11, the region-capture router, the
+  tray's status shim) made its scene fail to load, and a style that errored
+  while the shell was mid-update got marked failed for the whole session. A
+  builtin style that keeps failing now degrades to the Sumi rail instead of an
+  empty frame, and hiding a monitor's bar no longer blanks iRiS
+  (`modules/bar/Frame.qml`, `services/BarProducts.qml`).
+- **iRiS settings stick.** Every change after the first was queued on a closed
+  daemon connection and lost on reload; the writer now reopens it
+  (`../inir/modules/common/Config.qml`). `iris settings <section>` opens that
+  page again (and `iris settings about` the About page), the desktop menu's
+  screenshot, record, colour picker, terminal, settings and restart actions
+  use Ryoku's own tools, and the tray lists its icons. Night Light's switch,
+  warmth and schedule now drive Ryoku's night light (sunset to sunrise) instead
+  of a frame-only key. Rows nothing in Ryoku reads are gone: compositor blur,
+  Niri animations, the shell-family switch, app colours, blur and parallax
+  behind windows, banner timeouts, quiet hours and sound, and the capture and
+  recording page, whose real settings live in ryoshot and Hub > Recording.
+- **iRiS says who made what.** About credits the design to iNiR with the
+  upstream version it follows (`../inir/VERSION`), credits this build to Ryoku
+  with its own version and issue tracker, and names the running window
+  manager from the seam; iRiS runs on every compositor Ryoku supports.
 - **Chrome keeps its size when the display scale grows.** The launcher, the
   needle panel and popouts, the overview and the clipboard sized themselves
   by the monitor's logical height, so raising the display scale shrank them
