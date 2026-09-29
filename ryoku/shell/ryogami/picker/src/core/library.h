@@ -61,6 +61,7 @@ private:
     void upsertWallpaper(const Entry &entry);
     void removeWallpaper(const QString &name, const QString &type);
     void rebuildWallIndex();
+    void flushCached();
 
     Daemon *m_daemon = nullptr;
     Catalogs *m_catalogs = nullptr;
@@ -69,6 +70,7 @@ private:
     QVector<Entry> m_workshop;
     QHash<QString, int> m_wallIndex;   // key -> row in m_wallpapers
     QSet<QString> m_appliedKeys;
+    bool m_workshopDirty = false;
     QVariantMap m_currentByOutput;
     QVariantList m_outputs;
     QVariantMap m_rawOutputs;

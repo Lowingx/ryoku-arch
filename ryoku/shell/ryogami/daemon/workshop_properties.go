@@ -254,6 +254,18 @@ func (s *wePropStore) resetValue(weID, name string) {
 	s.saveLocked(m)
 }
 
+// resetAll drops every property override and the frame-rate override for one scene.
+func (s *wePropStore) resetAll(weID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	m := s.load()
+	if _, ok := m[weID]; !ok {
+		return
+	}
+	delete(m, weID)
+	s.saveLocked(m)
+}
+
 func (s *wePropStore) setFps(weID string, fps int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -285,9 +297,11 @@ func (w *workshopLib) sceneFps(weID string) int {
 	return w.globalFps()
 }
 
-func (w *workshopLib) properties(weID string) ([]weProperty, int, int) {
+// properties returns the scene's rows, its own frame rate (nil while it follows
+// the global rate) and the global rate.
+func (w *workshopLib) properties(weID string) ([]weProperty, interface{}, int) {
 	if !validWeID(weID) {
-		return nil, w.globalFps(), w.globalFps()
+		return nil, nil, w.globalFps()
 	}
 	itemDir := filepath.Join(w.workshopDir(), weID)
 	declared := map[string]interface{}{}
@@ -295,7 +309,11 @@ func (w *workshopLib) properties(weID string) ([]weProperty, int, int) {
 		declared = project.declarations()
 	}
 	rows := mergeProperties(declared, w.props.overrides(weID))
-	return rows, w.sceneFps(weID), w.globalFps()
+	var fps interface{}
+	if f, ok := w.props.fpsOverride(weID); ok {
+		fps = clampFps(f)
+	}
+	return rows, fps, w.globalFps()
 }
 
 func (w *workshopLib) reapplyIfCurrent(weID string) bool {
