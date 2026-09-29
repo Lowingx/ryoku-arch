@@ -104,7 +104,8 @@ Q_SIGNALS:
     void lastPageChanged();
     void countChanged();
     void previewReady(const QString &id, const QString &path);
-    void openInSteam(const QString &id, const QString &url);
+    // steamInstalled false means url is the item's Workshop web page, not a steam:// link.
+    void openInSteam(const QString &id, const QString &url, bool steamInstalled);
     // A result's thumbnail finished downloading; the path is unchanged, so a view that loaded early must retry.
     void thumbArrived(int row);
 

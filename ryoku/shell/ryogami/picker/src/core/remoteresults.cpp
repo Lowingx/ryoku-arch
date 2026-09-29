@@ -250,9 +250,10 @@ void RemoteResults::download(int row, const QVariantMap &opts)
         } else {
             const QJsonObject reply = result.toObject();
             const QString status = reply.value(QStringLiteral("status")).toString();
-            if (status == QLatin1String("open_in_steam")) {
+            if (status == QLatin1String("open_in_steam") || status == QLatin1String("no_steam")) {
                 m_rows[at].downloadStatus.clear();
-                Q_EMIT openInSteam(id, reply.value(QStringLiteral("url")).toString());
+                Q_EMIT openInSteam(id, reply.value(QStringLiteral("url")).toString(),
+                                   status == QLatin1String("open_in_steam"));
             } else if (!status.isEmpty() && status != QLatin1String("started")) {
                 m_rows[at].downloadStatus = status;
             }

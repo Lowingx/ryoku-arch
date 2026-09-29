@@ -46,6 +46,7 @@ Item {
     property var applyItem: null
     property var applyingId: undefined
     property string steamUrl: ""
+    property bool steamInstalled: true
     property bool steamPromptOpen: false
 
     property bool previewOpen: false
@@ -315,8 +316,9 @@ Item {
             if (panel.previewOpen && panel.previewRow >= topLeft.row && panel.previewRow <= bottomRight.row)
                 panel.previewItem = remote.get(panel.previewRow)
         }
-        function onOpenInSteam(id, url) {
+        function onOpenInSteam(id, url, steamInstalled) {
             panel.steamUrl = url
+            panel.steamInstalled = steamInstalled
             panel.steamPromptOpen = true
             if (panel.applyingId !== undefined && String(panel.applyingId) === String(id)) {
                 panel.pendingApply = false
@@ -563,7 +565,7 @@ Item {
 
                 Text {
                     width: parent.width
-                    text: I18n.tr("This item downloads through Steam")
+                    text: panel.steamInstalled ? I18n.tr("This item downloads through Steam") : I18n.tr("Steam is not installed")
                     font.family: Theme.ui; font.weight: Theme.uiWeight
                     font.pixelSize: Theme.fontHead
                     color: Theme.surfaceText
@@ -572,7 +574,9 @@ Item {
                 Text {
                     width: parent.width
                     wrapMode: Text.WordWrap
-                    text: I18n.tr("Steam will subscribe and download it. It appears in your library automatically once Steam finishes.")
+                    text: panel.steamInstalled
+                        ? I18n.tr("Steam will subscribe and download it. It appears in your library automatically once Steam finishes.")
+                        : I18n.tr("Workshop items download through Steam. Install Steam and sign in with an account that owns Wallpaper Engine; items you subscribe to then appear in the Workshop tab by themselves.")
                     font.family: Theme.ui; font.weight: Theme.uiWeight
                     font.pixelSize: Theme.fontBody
                     color: Theme.withAlpha(Theme.surfaceText, 0.7)
@@ -586,7 +590,7 @@ Item {
                         onTriggered: panel.steamPromptOpen = false
                     }
                     FolioAction {
-                        label: I18n.tr("Open in Steam")
+                        label: panel.steamInstalled ? I18n.tr("Open in Steam") : I18n.tr("Open Workshop page")
                         active: true
                         enabled: panel.steamUrl.length > 0
                         onTriggered: {
