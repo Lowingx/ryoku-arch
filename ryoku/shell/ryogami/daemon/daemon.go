@@ -270,70 +270,112 @@ func (d *daemon) serveTopic(conn net.Conn, r *bufio.Reader, name string) {
 	}
 }
 
+// Requests run in order on their own goroutine while this one delivers events, so
+// a slow or stuck request never holds back a toggle meant for the same picker.
 func (d *daemon) serveRequests(conn net.Conn, r *bufio.Reader, first string) {
+	quit := make(chan struct{})
+	defer close(quit)
+
+	var writeMu sync.Mutex
+	write := func(line string) error {
+		writeMu.Lock()
+		defer writeMu.Unlock()
+		_, err := fmt.Fprintf(conn, "%s\n", line)
+		return err
+	}
+
+	lines := make(chan string, 4)
+	go func() {
+		defer close(lines)
+		for {
+			l, err := r.ReadString('\n')
+			if l != "" {
+				select {
+				case lines <- l:
+				case <-quit:
+					return
+				}
+			}
+			if err != nil {
+				return
+			}
+		}
+	}()
+
+	subscribed := make(chan chan string, 1)
+	// Carries whether this connection painted a hover preview, which it restores on leaving.
+	finished := make(chan bool, 1)
+	go func() {
+		var events chan string
+		hovered := false
+		defer func() { finished <- hovered }()
+		serve := func(line string) bool {
+			cmd := strings.TrimSpace(line)
+			if cmd == "" {
+				return true
+			}
+			if !strings.HasPrefix(cmd, "{") {
+				return write(d.dispatchVerb(cmd)) == nil
+			}
+			hovered = hovered || strings.Contains(cmd, `"palette.hover"`)
+			was := events
+			reply := d.dispatchJSON(cmd, &events)
+			if err := write(reply); err != nil {
+				if was == nil && events != nil {
+					d.events.unsubscribe(events)
+				}
+				return false
+			}
+			if was == nil && events != nil {
+				subscribed <- events
+			}
+			return true
+		}
+		if !serve(first) {
+			return
+		}
+		for {
+			select {
+			case l, open := <-lines:
+				if !open || !serve(l) {
+					return
+				}
+			case <-quit:
+				return
+			}
+		}
+	}()
+
+	// Nil until the connection subscribes; a nil channel never fires.
 	var events chan string
-	// Only the connection that painted a hover preview restores it when it drops.
-	hovered := false
 	defer func() {
 		if events != nil {
 			d.events.unsubscribe(events)
 		}
-		if hovered {
-			d.restoreHoverPreview()
-		}
 	}()
-	lines := make(chan string, 4)
-	readErr := make(chan struct{})
-	go func() {
-		for {
-			l, err := r.ReadString('\n')
-			if l != "" {
-				lines <- l
-			}
-			if err != nil {
-				close(readErr)
-				return
-			}
-		}
-	}()
-
-	line := first
 	for {
-		cmd := strings.TrimSpace(line)
-		if cmd != "" {
-			var reply string
-			if strings.HasPrefix(cmd, "{") {
-				hovered = hovered || strings.Contains(cmd, `"palette.hover"`)
-				reply = d.dispatchJSON(cmd, &events)
-			} else {
-				reply = d.dispatchVerb(cmd)
-			}
-			if _, err := fmt.Fprintf(conn, "%s\n", reply); err != nil {
-				return
-			}
-		}
 		select {
-		case line = <-lines:
-		case ev := <-eventsOrNil(events):
-			if _, err := fmt.Fprintf(conn, "%s\n", ev); err != nil {
-				return
+		case ch := <-subscribed:
+			events = ch
+		case ev := <-events:
+			if write(ev) != nil {
+				d.events.unsubscribe(events)
+				events = nil
+				// The reader and a waiting request see the close and wind the worker down.
+				conn.Close()
 			}
-			line = ""
-		case <-readErr:
-			// Drain any final buffered line before closing.
+		case hovered := <-finished:
 			select {
-			case line = <-lines:
+			case ch := <-subscribed:
+				events = ch
 			default:
-				return
 			}
+			if hovered {
+				d.restoreHoverPreview()
+			}
+			return
 		}
 	}
-}
-
-// eventsOrNil lets the select treat an unsubscribed connection uniformly: a
-// nil channel never fires.
-func eventsOrNil(ch chan string) chan string {
-	return ch
 }
 
 // dispatchJSON answers one JSON-RPC line with the full serialized Response. A
