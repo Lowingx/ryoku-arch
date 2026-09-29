@@ -585,15 +585,27 @@ func entryAudio(e map[string]interface{}, def wallAudio) (bool, int) {
 	return m, vol
 }
 
-// outputsState answers wall.outputs from the persisted map, echoing each entry's
-// mute flag and volume the picker's monitor popup reads (audio routing itself is
-// the shell's domain, so this is echoed state, not a mixer control).
+// outputsState answers wall.outputs with each connected output under its own
+// name: its per-output entry, or the broadcast "*" entry it is showing. Only
+// when the compositor lists no outputs does "*" itself come back.
 func (d *daemon) outputsState() map[string]interface{} {
 	state := map[string]map[string]interface{}{}
 	loadJSON(filepath.Join(d.config().cacheDir(), "outputs.json"), &state)
+	names := connectedOutputNames()
+	if len(names) == 0 {
+		for k := range state {
+			names = append(names, k)
+		}
+	}
 	def := wallAudioDefaults()
 	out := map[string]interface{}{}
-	for k, e := range state {
+	for _, k := range names {
+		e, ok := state[k]
+		if !ok {
+			if e, ok = state["*"]; !ok {
+				continue
+			}
+		}
 		m, vol := entryAudio(e, def)
 		entry := map[string]interface{}{"type": e["type"], "mute": m, "volume": vol}
 		if p, okPath := e["path"].(string); okPath {
@@ -616,6 +628,11 @@ func (d *daemon) setAudio(mute *bool, volume *int, outputs []string) {
 	cacheDir := d.config().cacheDir()
 	state := map[string]map[string]interface{}{}
 	loadJSON(filepath.Join(cacheDir, "outputs.json"), &state)
+	// A broadcast wallpaper plays one clip on every output, so a change aimed at
+	// one of them is a change to the shared entry.
+	if _, shared := state["*"]; shared && len(outputs) > 0 {
+		outputs = append(outputs, "*")
+	}
 	var weOutputs []string
 	for k, e := range state {
 		if len(outputs) > 0 && !contains(outputs, k) {

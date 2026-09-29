@@ -67,6 +67,7 @@ private:
     void fetchValues();
     void onEvent(const QString &name, const QVariantMap &data);
     void applyIncoming(const QVariantMap &values);
+    void resync(const QStringList &keys);
     void maybeReady();
 
     Daemon *m_daemon = nullptr;
