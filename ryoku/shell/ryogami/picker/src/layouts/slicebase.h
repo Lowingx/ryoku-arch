@@ -40,6 +40,7 @@ public:
     void configure(const LayoutContext &ctx, bool animate) override;
     int hitTest(QPointF point) const override;
     QRectF cardRect(int row) const override;
+    QPointF cardShear(int row) const override;
     QRectF stageRect(const LayoutContext &ctx) const override;
     bool flipsInPlace() const override { return true; }
     // Left/right step the row; up/down are inert in both slice modes.

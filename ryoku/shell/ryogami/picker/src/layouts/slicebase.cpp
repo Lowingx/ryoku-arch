@@ -141,6 +141,15 @@ QRectF SliceBase::cardRect(int row) const
     return QRectF();
 }
 
+QPointF SliceBase::cardShear(int row) const
+{
+    for (const HitRec &h : m_hits) {
+        if (h.row == row)
+            return QPointF(h.skew, h.edgeTilt);
+    }
+    return QPointF();
+}
+
 QRectF SliceBase::stageRect(const LayoutContext &ctx) const
 {
     const double vh = ctx.viewport.height();
