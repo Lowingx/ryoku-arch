@@ -5,6 +5,7 @@
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QQmlEngine>
+#include <QUrl>
 
 namespace {
 const QString kWorkshop = QStringLiteral("steam");
@@ -259,7 +260,8 @@ void RemoteResults::cancelDownload(int row)
 
 void RemoteResults::preview(int row)
 {
-    if (row < 0 || row >= m_rows.size() || !m_daemon)
+    // A clip link plays in the preview itself; there is no still to fetch for it.
+    if (row < 0 || row >= m_rows.size() || !m_daemon || !cardPreviewVideo(row).isEmpty())
         return;
     const Row &r = m_rows[row];
     m_daemon->call(QStringLiteral("source.preview"),
@@ -393,6 +395,20 @@ QString RemoteResults::cardFullImage(int row) const
 {
     // Nothing local exists before download; the cached thumbnail is the sharpest resident source.
     return row >= 0 && row < m_rows.size() ? m_rows[row].thumb : QString();
+}
+
+// A result whose link is the clip itself plays in its card while focused, like a local video.
+QString RemoteResults::cardPreviewVideo(int row) const
+{
+    if (row < 0 || row >= m_rows.size())
+        return {};
+    const QString url = m_rows[row].fullUrl;
+    const QString path = QUrl(url).path().toLower();
+    for (const char *ext : {".webm", ".mp4", ".mkv", ".mov"}) {
+        if (path.endsWith(QLatin1String(ext)))
+            return url;
+    }
+    return {};
 }
 
 QSizeF RemoteResults::cardImageSize(int row) const

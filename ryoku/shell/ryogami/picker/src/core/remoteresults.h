@@ -87,7 +87,7 @@ public:
     QSizeF cardImageSize(int row) const override;
     QColor cardFill(int row) const override;
     unsigned cardBadges(int row) const override;
-    QString cardPreviewVideo(int) const override { return {}; }
+    QString cardPreviewVideo(int row) const override;
     int rowOfKey(const QString &key) const override { return m_idIndex.value(key, -1); }
     quint64 cardGeneration() const override { return m_cardGen; }
     CardSourceNotifier *cardNotifier() const override { return m_notifier; }
