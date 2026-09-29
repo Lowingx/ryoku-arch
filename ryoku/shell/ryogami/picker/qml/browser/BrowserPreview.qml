@@ -37,10 +37,8 @@ Item {
     readonly property bool _downloading: !!sources && sources.isDownloading(item)
     readonly property bool _hasClip: _isYoutube && _duration > 0
     // The thumbnail is a plain cache path until the full image arrives.
-    readonly property string _artSource: {
-        var p = fullPath.length > 0 ? fullPath : (item && item.thumb ? String(item.thumb) : "")
-        return p.length > 0 && p.indexOf("://") < 0 ? "file://" + p : p
-    }
+    readonly property string _artSource: Library.fileUrl(fullPath.length > 0 ? fullPath
+        : (item && item.thumb ? String(item.thumb) : ""))
     readonly property string _clipUrl: {
         var u = item && item.fullUrl ? String(item.fullUrl) : ""
         var path = u.split(/[?#]/)[0].toLowerCase()

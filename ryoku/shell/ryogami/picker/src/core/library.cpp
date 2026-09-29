@@ -82,6 +82,16 @@ QVariantMap Library::entry(const QString &collection, const QString &key) const
     return {};
 }
 
+// fromLocalFile escapes names a bare "file://" prefix would break, such as '#' or '?'.
+QUrl Library::fileUrl(const QString &path)
+{
+    if (path.isEmpty())
+        return {};
+    if (path.contains(QLatin1String("://")))
+        return QUrl(path);
+    return QUrl::fromLocalFile(path);
+}
+
 QStringList Library::folders(const QString &collection) const
 {
     if (collection != kWallpapers && collection != kWorkshop)

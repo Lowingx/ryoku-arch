@@ -63,7 +63,7 @@ Item {
                         return ""
                     var e = c.key ? Library.entry(c.type === "we" ? "workshop" : "wallpapers", c.key) : null
                     var p = (e && (e.thumb || e.thumbSm)) ? (e.thumb || e.thumbSm) : (c.type === "static" ? String(c.path) : "")
-                    return p && p.indexOf("://") < 0 ? "file://" + p : p
+                    return Library.fileUrl(p)
                 }
 
                 Column {

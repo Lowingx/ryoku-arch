@@ -8,6 +8,7 @@
 #include <QSet>
 #include <QString>
 #include <QStringList>
+#include <QUrl>
 #include <QVariantList>
 #include <QVariantMap>
 #include <QVector>
@@ -44,6 +45,8 @@ public:
     Q_INVOKABLE void refreshOutputs();
     Q_INVOKABLE QStringList folders(const QString &collection) const;
     Q_INVOKABLE QVariantMap tagHistogram(const QString &collection) const;
+    // Entries, thumbnails and downloads carry plain paths; an Image needs a URL.
+    Q_INVOKABLE static QUrl fileUrl(const QString &path);
 
 Q_SIGNALS:
     void changed(const QString &collection);

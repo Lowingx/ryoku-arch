@@ -88,15 +88,10 @@ Item {
         outline: Theme.outline, text: Theme.surfaceText, shadow: Qt.rgba(0, 0, 0, 0.5)
     })
 
-    // Results carry thumbnails as plain cache paths; an Image needs a URL.
-    function artUrl(path) {
-        var p = path ? String(path) : ""
-        return p.length > 0 && p.indexOf("://") < 0 ? "file://" + p : p
-    }
     function _artOf(row) {
         if (row < 0 || !remote || row >= remote.count) return ""
         var it = remote.get(row)
-        return panel.artUrl(it ? it.thumb : "")
+        return Library.fileUrl(it ? it.thumb : "")
     }
     property string atmosphereArt: ""
     property string heroArt: ""
