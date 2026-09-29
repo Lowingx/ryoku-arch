@@ -2,6 +2,12 @@
 
 
 ### Added
+- **The Displays page saves resolution presets.** A hand-typed custom
+  resolution is typed once: SAVE stores the selected display's mode and
+  scale under a name, and the Resolution list offers it as a first-class
+  pick alongside the advertised modes. Picking one stages mode and scale
+  into the draft; Apply stays the only path that touches the displays
+  (`quickshell/pages/DisplaysPage.qml`, `backend/outputs.go`).
 - **Bar Studio switches iRiS between its Ryoku and iNiR looks.** The iRiS
   card has a Look control that flips the live frame (`pages/BarStudioPage.qml`).
 - **The Visualizer tab edits the new edge field.** The Desktop page's

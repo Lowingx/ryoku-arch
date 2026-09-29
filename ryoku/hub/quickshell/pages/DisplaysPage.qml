@@ -39,6 +39,7 @@ Item {
     property int tick: 0
     property string committed: "[]"
     property var profiles: []
+    property var presets: []
     property bool listed: false
     property bool listFailed: false
 
@@ -55,6 +56,8 @@ Item {
     // "Custom…" chip in the mode picker opens a W×H@Hz form; the typed mode
     // stages into the draft like any other, and on Apply the provider forces a
     // non-advertised timing where it can and reports it where it cannot.
+    // A named preset (one monitor's mode + scale) rides the same picker, so a
+    // custom resolution is typed once and re-picked thereafter (#298).
     readonly property string customLabel: I18n.tr("Custom\u2026")
     // timed keep-changes safety after applying a custom mode: apply() stashes the
     // prior layout here and counts revertSecs down; not kept in time -> re-apply.
@@ -272,9 +275,87 @@ Item {
 
     Process { id: applyProc }
     Process { id: profileProc } // save | load | rm
+    Process { id: presetProc } // preset-save | preset-rm
 
-    function reload() { listProc.running = true; profilesProc.running = true; }
+    Process {
+        id: presetsProc
+        command: ["ryoku-hub", "outputs", "presets"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try { pg.presets = JSON.parse(this.text); } catch (e) { pg.presets = []; }
+            }
+        }
+    }
+
+    function reload() { listProc.running = true; profilesProc.running = true; presetsProc.running = true; }
     function reloadProfiles() { profilesProc.running = true; }
+    function reloadPresets() { presetsProc.running = true; }
+
+    // A preset is one monitor's mode and scale; picking it stages both into
+    // the draft (the scale re-snaps to the mode's ladder like any mode
+    // change). Saving takes the draft's staged values for the selected
+    // monitor, so "Custom…" then "save as" is one gesture apart.
+    function presetOptions() {
+        var out = [];
+        for (var i = 0; i < pg.presets.length; i++)
+            out.push({
+                "key": "preset:" + pg.presets[i].name,
+                "label": pg.presets[i].name + "  \u00b7  "
+                    + pg.presets[i].mode.replace("@", "  \u00b7  ") + "  \u00b7  "
+                    + pg.presets[i].scale + "\u00d7"
+            });
+        return out;
+    }
+    // the picker highlights a preset only when both mode and scale match,
+    // since two presets can share a mode at different scales.
+    function currentPresetLabel() {
+        if (!pg.sel)
+            return "";
+        for (var i = 0; i < pg.presets.length; i++) {
+            var p = pg.presets[i];
+            if (p.mode === pg.sel.mode && Math.abs(p.scale - pg.sel.scale) < 0.0001)
+                return presetOptions()[i].label;
+        }
+        return "";
+    }
+    // the chip's text: a matching preset wins, then an advertised mode, then
+    // the raw staged mode (a custom one is not in the advertised list and
+    // must still read as what it is, not as blank).
+    function modeLabel(m) {
+        var pl = pg.currentPresetLabel();
+        if (pl !== "")
+            return pl;
+        var ml = pg.labelForKey(pg.modeOptions(m), m.mode);
+        return ml !== "" ? ml : m.mode;
+    }
+    function applyPreset(name) {
+        for (var i = 0; i < pg.presets.length; i++) {
+            var p = pg.presets[i];
+            if (p.name !== name)
+                continue;
+            pg.setMode(pg.selected, p.mode);
+            var l = pg.scaleLadder(pg.draft[pg.selected]);
+            pg.draft[pg.selected].scale = l[pg.nearestScaleIdx(l, p.scale)];
+            pg.tick++;
+            return;
+        }
+    }
+    function savePreset(name) {
+        if (name.trim() === "" || !pg.sel)
+            return;
+        presetProc.command = ["ryoku-hub", "outputs", "preset-save", name.trim(),
+            pg.sel.mode, "" + pg.sel.scale];
+        presetProc.running = true;
+        presetNameField.text = "";
+        presetRefresh.start();
+    }
+    function deletePreset(name) {
+        presetProc.command = ["ryoku-hub", "outputs", "preset-rm", name];
+        presetProc.running = true;
+        presetRefresh.start();
+    }
+    Timer { id: presetRefresh; interval: 300; onTriggered: pg.reloadPresets() }
 
     // ── model helpers ───────────────────────────────────────────────────────
     function parseMode(s) {
@@ -1051,8 +1132,8 @@ Item {
                         PickBar {
                             anchors.left: parent.left; anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
-                            value: { void pg.tick; return pg.sel ? pg.labelForKey(pg.modeOptions(pg.sel), pg.sel.mode) : ""; }
-                            count: { void pg.tick; return pg.sel ? pg.modeOptions(pg.sel).length : 0; }
+                            value: { void pg.tick; return pg.sel ? pg.modeLabel(pg.sel) : ""; }
+                            count: { void pg.tick; return pg.sel ? pg.presetOptions().length + pg.modeOptions(pg.sel).length : 0; }
                             onOpened: pg.openPick("mode")
                         }
                     }
@@ -1390,6 +1471,115 @@ Item {
                     Item { width: parent.width; height: Tokens.s3 }
                 }
 
+                // Resolution presets: one monitor's mode and scale under a
+                // name. Picking one stages it into the draft (Apply still
+                // commits), so a hand-typed custom resolution is typed once
+                // and re-picked from the Resolution list thereafter.
+                SettingCard {
+                    width: ctlCol.width
+                    title: I18n.tr("RESOLUTION PRESETS")
+
+                    Text {
+                        width: parent.width
+                        leftPadding: Tokens.s4; rightPadding: Tokens.s4
+                        topPadding: Tokens.s3; bottomPadding: Tokens.s1
+                        wrapMode: Text.WordWrap
+                        text: I18n.tr("Save the selected display's resolution and scale under a name, then pick it from the Resolution list.")
+                        color: Tokens.inkMuted; font.family: Tokens.ui; font.pixelSize: Tokens.fSmall
+                    }
+
+                    Item {
+                        width: parent.width
+                        height: 32 + Tokens.s2
+                        Btn {
+                            id: presetSaveBtn
+                            anchors.right: parent.right; anchors.rightMargin: Tokens.s4
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: I18n.tr("SAVE")
+                            onAct: pg.savePreset(presetNameField.text)
+                        }
+                        Field {
+                            id: presetNameField
+                            anchors.left: parent.left; anchors.leftMargin: Tokens.s4
+                            anchors.right: presetSaveBtn.left; anchors.rightMargin: Tokens.s2
+                            anchors.verticalCenter: parent.verticalCenter
+                            placeholder: I18n.tr("Preset name\u2026")
+                            onCommitted: (v) => pg.savePreset(v)
+                        }
+                    }
+
+                    Column {
+                        width: parent.width - Tokens.s4 * 2
+                        x: Tokens.s4
+                        spacing: Tokens.s2
+
+                        Repeater {
+                            model: pg.presets
+
+                            delegate: Item {
+                                id: pres
+                                required property var modelData
+                                required property int index
+                                width: parent.width
+                                height: Tokens.rowH
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    anchors.topMargin: 1; anchors.bottomMargin: 1
+                                    radius: Tokens.radius
+                                    color: preshov.hovered ? Tokens.tint5 : "transparent"
+                                    Behavior on color { ColorAnimation { duration: Tokens.snap } }
+                                }
+                                Rectangle {
+                                    anchors { left: parent.left; right: parent.right; top: parent.top }
+                                    anchors.leftMargin: Tokens.s4; anchors.rightMargin: Tokens.s4
+                                    height: 1
+                                    color: Tokens.lineSoft
+                                    visible: pres.index > 0
+                                }
+
+                                HoverHandler { id: preshov }
+
+                                Row {
+                                    anchors.left: parent.left; anchors.leftMargin: Tokens.s4
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: Tokens.s3
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: pres.modelData.name
+                                        color: Tokens.ink; font.family: Tokens.ui
+                                        font.pixelSize: Tokens.fSmall; font.weight: Font.Medium
+                                    }
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: pres.modelData.mode + "  \u00b7  " + pres.modelData.scale + "\u00d7"
+                                        color: Tokens.inkMuted; font.family: Tokens.mono
+                                        font.pixelSize: Tokens.fTiny
+                                    }
+                                }
+
+                                Row {
+                                    anchors.right: parent.right; anchors.rightMargin: Tokens.s3
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: Tokens.s2
+                                    Btn {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: I18n.tr("PICK")
+                                        onAct: pg.applyPreset(pres.modelData.name)
+                                    }
+                                    IconBtn {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        glyph: "\u2212"
+                                        onAct: pg.deletePreset(pres.modelData.name)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Item { width: parent.width; height: Tokens.s3 }
+                }
+
                 // Night light: a display-wide comfort setting, not per-monitor,
                 // so it sits in its own card. On/off and temperature ride the
                 // daemon `nightlight` topic; gated on the capability so a
@@ -1518,20 +1708,35 @@ Item {
             anchors.centerIn: parent
             title: pg.pickKind === "mode" ? I18n.tr("Resolution") : I18n.tr("Mirror of")
             options: {
-                if (pg.pickKind === "mode")
-                    return pg.sel ? pg.modeOptions(pg.sel).map(function (o) { return o.label; }).concat([pg.customLabel]) : [];
+                if (pg.pickKind === "mode") {
+                    if (!pg.sel)
+                        return [];
+                    return pg.presetOptions().map(function (o) { return o.label; })
+                        .concat(pg.modeOptions(pg.sel).map(function (o) { return o.label; }))
+                        .concat([pg.customLabel]);
+                }
                 return pg.mirrorOptions().map(function (o) { return o.label; });
             }
             current: {
                 if (!pg.sel)
                     return "";
-                if (pg.pickKind === "mode")
+                if (pg.pickKind === "mode") {
+                    var pl = pg.currentPresetLabel();
+                    if (pl !== "")
+                        return pl;
                     return pg.labelForKey(pg.modeOptions(pg.sel), pg.sel.mode);
+                }
                 return pg.labelForKey(pg.mirrorOptions(), pg.sel.mirror);
             }
             onChose: (label) => {
                 if (pg.pickKind === "mode") {
                     if (label === pg.customLabel) { pg.pickKind = "custom"; return; }
+                    var pk = pg.keyForLabel(pg.presetOptions(), label);
+                    if (pk) {
+                        pg.applyPreset(pk.slice("preset:".length));
+                        pg.pickKind = "";
+                        return;
+                    }
                     var mk = pg.keyForLabel(pg.modeOptions(pg.sel), label);
                     if (mk)
                         pg.setMode(pg.selected, mk);
