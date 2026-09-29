@@ -10,13 +10,10 @@ func TestDesiredEngine(t *testing.T) {
 	}{
 		{"shell", "ryogami", false, "shell"},
 		{"skwd-paper", "ryogami", false, "skwd-paper"},
-		{"awww", "ryogami", false, "awww"},
 		{"shell", "ryogami", true, "shell"},
 		{"shell", "in_shell", true, "shell"},
 		{"shell", "vulkan", true, "skwd-paper"},
 		{"skwd-paper", "ryogami", true, "skwd-paper"},
-		{"awww", "ryogami", true, "shell"},
-		{"awww", "vulkan", true, "skwd-paper"},
 	}
 	for _, c := range cases {
 		if got := desiredEngine(c.paper, c.video, c.isVideo); got != c.want {

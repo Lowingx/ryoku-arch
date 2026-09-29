@@ -9,16 +9,11 @@ import (
 
 func desiredEngine(paperEngine, videoEngine string, isVideo bool) string {
 	if !isVideo {
-		switch paperEngine {
-		case "awww":
-			return "awww"
-		case "skwd-paper":
+		if paperEngine == "skwd-paper" {
 			return "skwd-paper"
-		default:
-			return "shell"
 		}
+		return "shell"
 	}
-	// awww has no video path, so video on an awww box stays with the shell player.
 	if videoEngine == "vulkan" || paperEngine == "skwd-paper" {
 		return "skwd-paper"
 	}
@@ -28,15 +23,8 @@ func desiredEngine(paperEngine, videoEngine string, isVideo bool) string {
 // An engine whose tool is missing degrades to the shell so the wallpaper still paints.
 func (d *daemon) effectiveEngine(isVideo bool) string {
 	want := desiredEngine(d.settingString("paper.engine"), d.settingString("paper.videoEngine"), isVideo)
-	switch want {
-	case "awww":
-		if !awwwAvailable() {
-			return "shell"
-		}
-	case "skwd-paper":
-		if !d.skwdPaperInstalled() {
-			return "shell"
-		}
+	if want == "skwd-paper" && !d.skwdPaperInstalled() {
+		return "shell"
 	}
 	return want
 }
@@ -48,12 +36,6 @@ func (d *daemon) routeAltEngine(wpType, path, mode string, outputs []string, mut
 	case "skwd-paper":
 		if err := d.applyViaPaper(wpType, path, mode, outputs, mute, volume); err != nil {
 			fmt.Fprintf(os.Stderr, "ryogami: skwd-paper apply failed (%v); falling back to shell\n", err)
-			return false, nil
-		}
-		return true, nil
-	case "awww":
-		if err := d.applyViaAwww(path, mode, outputs, mute, volume); err != nil {
-			fmt.Fprintf(os.Stderr, "ryogami: awww apply failed (%v); falling back to shell\n", err)
 			return false, nil
 		}
 		return true, nil

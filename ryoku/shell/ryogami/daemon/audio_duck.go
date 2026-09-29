@@ -13,7 +13,7 @@ import (
 // Ducking mutes the wallpaper's own streams: the daemon does not own the mixer.
 
 var wallpaperAudioBins = []string{
-	"ryogami-live", "skwd-paper-v2", "skwd-wall-vk", "paper-vk", "awww-daemon",
+	"ryogami-live", "skwd-paper-v2", "skwd-wall-vk", "paper-vk",
 }
 
 var duckState struct {
