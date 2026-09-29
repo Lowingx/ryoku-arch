@@ -73,6 +73,8 @@ public:
 
     Q_INVOKABLE void search();
     Q_INVOKABLE void nextPage();
+    // Drops the rows and any search in flight, for a tab with nothing to search yet.
+    Q_INVOKABLE void clear();
     // opts.clip = {start, dur} in seconds; the item's own trackUrl is forwarded automatically.
     Q_INVOKABLE void download(int row, const QVariantMap &opts = {});
     // Workshop transfers run in Steam or steamcmd, which the daemon cannot stop midway.

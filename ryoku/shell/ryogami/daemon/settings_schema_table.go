@@ -379,6 +379,7 @@ var settingsSchema = []settingSpec{
 	{Key: "sources.pexels.apiKey", Type: "string", Default: ""},
 	{Key: "sources.pexels.enabled", Type: "bool", Default: false},
 	{Key: "sources.pexels.showApplyButton", Type: "bool", Default: false},
+	{Key: "sources.repos", Type: "list", Default: []interface{}{}},
 	{Key: "sources.steam.showApplyButton", Type: "bool", Default: false},
 	{Key: "sources.unsplash.accessKey", Type: "string", Default: ""},
 	{Key: "sources.unsplash.enabled", Type: "bool", Default: false},

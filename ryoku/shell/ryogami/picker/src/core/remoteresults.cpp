@@ -51,6 +51,12 @@ void RemoteResults::setProvider(const QString &value)
         return;
     m_provider = value;
     // Another provider's rows must not linger under this tab while its search runs.
+    clear();
+    Q_EMIT providerChanged();
+}
+
+void RemoteResults::clear()
+{
     ++m_searchGen;
     setLoading(false);
     setError(QString());
@@ -59,9 +65,15 @@ void RemoteResults::setProvider(const QString &value)
     endResetModel();
     rebuildIdIndex();
     ++m_cardGen;
+    // With the old paging kept, the empty grid's infinite scroll would fetch the next page.
+    m_page = 1;
+    Q_EMIT pageChanged();
+    if (m_lastPage != 1) {
+        m_lastPage = 1;
+        Q_EMIT lastPageChanged();
+    }
     Q_EMIT countChanged();
     Q_EMIT m_notifier->cardsChanged();
-    Q_EMIT providerChanged();
 }
 
 void RemoteResults::setQuery(const QString &value)

@@ -33,6 +33,7 @@ QtObject {
         case "unsplash": return I18n.tr("Search Unsplash…")
         case "pexels":   return I18n.tr("Search Pexels…")
         case "youtube":  return I18n.tr("Search YouTube…")
+        case "repos":    return I18n.tr("Filter files…")
         default:         return I18n.tr("Search…")
         }
     }
@@ -128,6 +129,10 @@ QtObject {
             return { orientation: "", size: "", colour: "" }
         case "youtube":
             return { maxDuration: "" }
+        case "repos": {
+            var saved = sources.savedRepos(settings)
+            return { repo: saved.length > 0 ? saved[0] : "", type: "all" }
+        }
         default:
             return {}
         }
@@ -183,6 +188,8 @@ QtObject {
             return { max_duration: st.maxDuration.length > 0 ? parseInt(st.maxDuration, 10) : 0 }
         case "bing":
             return { market: _str(settings, "sources.bing.market", "en-US") }
+        case "repos":
+            return { repo: st.repo || "", type: st.type || "all" }
         default:
             return {}
         }
@@ -253,7 +260,55 @@ QtObject {
         return _bool(settings, "sources." + id + ".showApplyButton", false)
     }
 
-    // Each section: { n, group, build(state, ctx) -> [chip] }.
+    // Saved as owner/repo; a pasted GitHub address is cut back to that.
+    function normaliseRepo(raw) {
+        var v = String(raw || "").trim()
+            .replace(/^(https?:\/\/)?(www\.)?github\.com\//, "")
+            .replace(/\.git$/, "")
+        var parts = v.split("/").filter(function(p) { return p.length > 0 })
+        if (parts.length < 2)
+            return ""
+        var repo = parts[0] + "/" + parts[1].replace(/\.git$/, "")
+        return /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo) ? repo : ""
+    }
+
+    function savedRepos(settings) {
+        var list = settings ? settings.value("sources.repos") : null
+        var out = []
+        if (list && list.length !== undefined)
+            for (var i = 0; i < list.length; ++i)
+                if (typeof list[i] === "string" && list[i].length > 0)
+                    out.push(list[i])
+        return out
+    }
+
+    // A section input hands typed text here; the next filter state, or null to refuse the text.
+    function submit(id, input, text, st) {
+        if (id !== "repos" || !input || input.action !== "addRepo")
+            return null
+        var repo = sources.normaliseRepo(text)
+        if (repo.length === 0)
+            return null
+        var saved = sources.savedRepos(Settings)
+        if (saved.indexOf(repo) < 0) {
+            saved.push(repo)
+            Settings.set("sources.repos", saved)
+        }
+        st.repo = repo
+        return st
+    }
+
+    // An action chip changes saved data rather than a filter; the next filter state, or null.
+    function act(id, chip, st) {
+        if (id !== "repos" || chip.action !== "forgetRepo")
+            return null
+        var saved = sources.savedRepos(Settings).filter(function(r) { return r !== chip.value })
+        Settings.set("sources.repos", saved)
+        st.repo = saved.length > 0 ? saved[0] : ""
+        return st
+    }
+
+    // Each section: { n, group, build(state, ctx) -> [chip], input? }.
     function sections(id) {
         switch (id) {
         case "wallhaven": return sources._wallhavenSections
@@ -261,6 +316,7 @@ QtObject {
         case "unsplash":  return sources._unsplashSections
         case "pexels":    return sources._pexelsSections
         case "youtube":   return sources._youtubeSections
+        case "repos":     return sources._reposSections
         default:          return []
         }
     }
@@ -440,6 +496,25 @@ QtObject {
             { kind: "single", key: "maxDuration", value: "600",  label: I18n.tr("\u226410m") },
             { kind: "single", key: "maxDuration", value: "1800", label: I18n.tr("\u226430m") },
             { kind: "single", key: "maxDuration", value: "3600", label: I18n.tr("\u22641h") }
+        ] } }
+    ]
+
+    readonly property var _reposSections: [
+        { n: "01", group: I18n.tr("Repository"),
+          input: { action: "addRepo", placeholder: I18n.tr("Add owner/repo or a GitHub link"), glyph: "\uf09b" },
+          build: function(st) {
+            var saved = sources.savedRepos(Settings)
+            var out = []
+            for (var i = 0; i < saved.length; ++i)
+                out.push({ kind: "single", key: "repo", value: saved[i], label: saved[i] })
+            if (st.repo && saved.indexOf(st.repo) >= 0)
+                out.push({ kind: "action", action: "forgetRepo", value: st.repo, label: I18n.tr("Forget selected") })
+            return out
+        } },
+        { n: "02", group: I18n.tr("Type"), build: function(st) { return [
+            { kind: "single", key: "type", value: "all",    label: I18n.tr("All") },
+            { kind: "single", key: "type", value: "live",   label: I18n.tr("Live") },
+            { kind: "single", key: "type", value: "images", label: I18n.tr("Images") }
         ] } }
     ]
 }

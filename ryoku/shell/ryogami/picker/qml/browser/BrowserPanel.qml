@@ -184,11 +184,18 @@ Item {
         })
     }
 
+    // Repos has nothing to search until one is added; its empty state says how.
+    readonly property bool needsRepo: panel.provider === "repos" && !(panel.chipState && panel.chipState.repo)
+
     function runSearch() {
         if (!Daemon.connected)
             return
         remote.provider = panel.provider
         remote.query = panel.query
+        if (panel.needsRepo) {
+            remote.clear()
+            return
+        }
         remote.filters = sourceData.buildFilters(panel.provider, panel.chipState, Settings)
         remote.search()
     }
@@ -477,6 +484,9 @@ Item {
                                 pendingApply: panel.pendingApply
                                 applyItem: panel.applyItem
                                 applyingId: panel.applyingId
+                                emptyText: panel.needsRepo
+                                    ? I18n.tr("Add a GitHub repository in the panel on the left to browse its wallpapers.")
+                                    : I18n.tr("No remote wallpapers found")
                                 onPreviewRequested: function(row) { panel.openPreview(row) }
                                 onDownloadRequested: function(row) { panel.saveRow(row) }
                                 onApplyRequested: function(row) { panel.applyRow(row) }
