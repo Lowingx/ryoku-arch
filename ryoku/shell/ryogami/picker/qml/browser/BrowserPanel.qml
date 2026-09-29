@@ -228,13 +228,14 @@ Item {
         panel.pendingApply = true
         panel.saveRow(row)
     }
+    // Search results carry no wallpaper type: Workshop items apply as scenes, and every
+    // other download is a file whose extension tells the daemon still from video.
     function performApply(it, path) {
-        var kind = it.type || "static"
         var outs = (Settings.value("general.applyOnPickerMonitor") === true && panel.state.monitor)
             ? [panel.state.monitor] : []
         var params = { outputs: outs }
-        if (kind === "we") { params.type = "we"; params.we_id = it.id }
-        else { params.type = (kind === "video") ? "video" : "static"; params.path = path || "" }
+        if (panel.provider === "steam") { params.type = "we"; params.we_id = it.id }
+        else params.path = path || ""
         Daemon.call("wall.apply", params, function(result, error) {
             if (error) {
                 panel.state.toast(error.message || I18n.tr("This wallpaper could not be applied."), "error")
