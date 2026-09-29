@@ -207,6 +207,17 @@
   grazes the frame.
 
 ### Fixed
+- **Chrome keeps its size when the display scale grows.** The launcher, the
+  needle panel and popouts, the overview and the clipboard sized themselves
+  by the monitor's logical height, so raising the display scale shrank them
+  while every app grew, and the launcher read as tiny next to the desktop
+  (#293). The shared factor now uses the physical height, with the
+  compositor's own scale read from the daemon's output state; the iRiS pill
+  bar's thickness follows the same rule (`services/lib/screens.js`,
+  `modules/launcher/`, `modules/bar/Frame.qml`,
+  `modules/overview/OverviewSurface.qml`,
+  `modules/clipboard/ClipboardSurface.qml`,
+  `../inir/services/ShellLayoutController.qml`).
 - **A moved wallpaper folder keeps working.** Ryogami kept the path it first saw
   for each wallpaper, so moving the folder or the home directory left the
   catalogue pointing at the old place and applies failed until the files

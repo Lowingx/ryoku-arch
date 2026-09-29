@@ -57,6 +57,11 @@
   `touchpadToggle`, `output.cycle` and `output.enable`, `window.summon` and
   `decoration.gameMode`; providers also publish the window-rule actions they
   honour (`wm/caps.go`, `wm/action.go`, `wm/hyprland/act.go`, `wm/niri/act.go`).
+- **The Wm singleton answers an output's scale.** `Wm.outputScale(name)`
+  reads the compositor's own scale factor for a monitor off the daemon's
+  output state, so a surface can convert its logical rectangle back to
+  physical pixels instead of guessing from the reported height
+  (`ui/Singletons/Wm.qml`).
 
 ### Fixed
 - **Clicking SAVE no longer eats the text you just typed.** A TapHandler
