@@ -160,17 +160,19 @@ Item {
         }, function () {})
     }
 
+    // The library filters on wide/tall; the remote browser's landscape/portrait belong to a
+    // different view and never matched, so the Shape button relabelled without filtering.
     function cycleShape() {
         if (!root.view) return
         var o = root.view.orientation
-        root.view.orientation = (o === "" || o === undefined) ? "landscape"
-                              : (o === "landscape") ? "portrait" : ""
+        root.view.orientation = (o === "" || o === undefined) ? "wide"
+                              : (o === "wide") ? "tall" : ""
     }
     function shapeLabel() {
         if (!root.view) return I18n.tr("Shape")
         var o = root.view.orientation
-        return (o === "landscape") ? I18n.tr("Wide")
-             : (o === "portrait") ? I18n.tr("Tall") : I18n.tr("Shape")
+        return (o === "wide") ? I18n.tr("Wide")
+             : (o === "tall") ? I18n.tr("Tall") : I18n.tr("Shape")
     }
 
     property int resIndex: -1
@@ -194,8 +196,8 @@ Item {
         root.view.minHeight = Number(p.minHeight) || 0
         root.view.maxWidth = Number(p.maxWidth) || 0
         root.view.maxHeight = Number(p.maxHeight) || 0
-        if (p.orientation === "wide") root.view.orientation = "landscape"
-        else if (p.orientation === "tall") root.view.orientation = "portrait"
+        if (p.orientation === "wide") root.view.orientation = "wide"
+        else if (p.orientation === "tall") root.view.orientation = "tall"
     }
     function resLabel() {
         var presets = root.resPresets()
