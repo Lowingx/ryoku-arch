@@ -385,7 +385,7 @@ var settingsSchema = []settingSpec{
 	{Key: "steam.username", Type: "string", Default: ""},
 	{Key: "tagging.defaultSearchMode", Type: "enum", Default: "tags", Options: []string{"tags", "describe"}},
 	{Key: "theme.customColors", Type: "string", Default: ""},
-	{Key: "theme.mode", Type: "enum", Default: "dark", Options: []string{"dark", "light", "auto", "smart"}, Store: "hub"},
+	{Key: "theme.mode", Type: "enum", Default: "dark", Options: []string{"dark", "light", "auto", "smart", "sun"}, Store: "hub"},
 	{Key: "theme.policy", Type: "enum", Default: "wallpaper", Options: []string{"wallpaper", "fixed", "off"}},
 	{Key: "theme.staticTheme", Type: "string", Default: "nord"},
 	{Key: "transition.durationMs", Type: "number", Default: float64(600), Min: fp(50.0), Max: fp(10000.0), Step: fp(1.0)},

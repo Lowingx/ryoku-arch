@@ -60,6 +60,8 @@ func TestValidateSetting(t *testing.T) {
 		{"display.fillMode", 5, false},
 		{"general.language", "de", true},
 		{"general.language", 3, false},
+		{"theme.mode", "sun", true},
+		{"theme.mode", "bogus", false},
 		{"postProcessing", []interface{}{"cmd"}, true},
 		{"postProcessing", "cmd", false},
 		{"transition.shaderScopes", map[string]interface{}{}, true},

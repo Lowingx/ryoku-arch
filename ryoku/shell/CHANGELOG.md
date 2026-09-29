@@ -207,6 +207,11 @@
   grazes the frame.
 
 ### Fixed
+- **The Sun theme mode is back.** The new picker's Variant dropdown and the
+  settings schema dropped the sunrise/sunset-following mode the old picker
+  offered, so it could no longer be selected (#299). The dropdown lists it
+  again and the daemon accepts it (`folio/tabs/ThemeTab.qml`,
+  `ryogami/daemon/settings_schema_table.go`).
 - **Chrome keeps its size when the display scale grows.** The launcher, the
   needle panel and popouts, the overview and the clipboard sized themselves
   by the monitor's logical height, so raising the display scale shrank them
