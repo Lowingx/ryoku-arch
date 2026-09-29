@@ -105,6 +105,8 @@ Q_SIGNALS:
     void countChanged();
     void previewReady(const QString &id, const QString &path);
     void openInSteam(const QString &id, const QString &url);
+    // A result's thumbnail finished downloading; the path is unchanged, so a view that loaded early must retry.
+    void thumbArrived(int row);
 
 private:
     struct Row {

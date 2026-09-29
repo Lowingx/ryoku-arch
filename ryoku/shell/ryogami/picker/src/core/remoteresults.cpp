@@ -312,6 +312,7 @@ void RemoteResults::onEvent(const QString &name, const QVariantMap &data)
         const QModelIndex idx = index(at);
         Q_EMIT dataChanged(idx, idx, {ThumbRole});
         Q_EMIT m_notifier->cardUpdated(at);
+        Q_EMIT thumbArrived(at);
     } else if (name == QLatin1String("ryogami.source.preview_ready")) {
         Q_EMIT previewReady(data.value(QStringLiteral("id")).toString(),
                             data.value(QStringLiteral("path")).toString());

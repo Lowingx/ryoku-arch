@@ -327,6 +327,20 @@ Item {
             if (panel.previewItem && String(panel.previewItem.id) === String(id))
                 panel.previewFull = path
         }
+        // The header asks for a thumbnail before it has downloaded; one that failed loads again once it lands.
+        function onThumbArrived(row) {
+            if (row === 0 && atmosphere.status === Image.Error) {
+                var a = panel.atmosphereArt
+                panel.atmosphereArt = ""
+                panel.atmosphereArt = a
+            }
+            var heroRow = results.field ? Math.max(results.field.currentIndex, 0) : 0
+            if (row === heroRow && heroBand.artFailed) {
+                var h = panel.heroArt
+                panel.heroArt = ""
+                panel.heroArt = h
+            }
+        }
         function onCountChanged() {
             panel._refreshArt()
             if (panel.shown && !panel.previewOpen && remote.count > 0
@@ -387,6 +401,7 @@ Item {
             border.color: Theme.withAlpha(Theme.outline, 0.58 * panel.ease)
 
             Image {
+                id: atmosphere
                 anchors.fill: parent
                 visible: panel.atmosphereArt.length > 0
                 source: panel.atmosphereArt
@@ -436,6 +451,7 @@ Item {
                         spacing: 14 * panel._s
 
                         BrowserHero {
+                            id: heroBand
                             width: parent.width
                             reveal: panel.ease
                             sourceLabel: panel.providerLabel
