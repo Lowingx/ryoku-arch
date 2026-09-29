@@ -24,6 +24,8 @@ struct SliceParams {
     std::array<float, 4> corners{{0, 0, 0, 0}};
     bool wobble = false;
     float wobbleStrength = 1.0f;
+    float shadowStrength = 1.0f;
+    float shadowDistance = 1.0f;
 
     float layoutWidth(float width) const { return geom::sliceMidlineWidth(width, skew); }
     float sliceStride() const { return layoutWidth(sliceW) + spacing; }

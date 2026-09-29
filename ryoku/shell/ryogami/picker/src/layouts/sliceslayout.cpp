@@ -29,6 +29,8 @@ void SlicesLayout::readParams(const LayoutContext &ctx, SliceParams &out) const
     out.wobbleStrength = float(std::clamp(p.num(skey("sliceWobbleStrength"), 100.0) / 100.0, 0.0, 2.0));
     out.parallax = p.flag(skey("sliceParallax"), false);
     out.shadows = p.flag(skey("sliceShadows"), true);
+    out.shadowStrength = float(std::clamp(p.num(skey("shadowStrength"), 100.0) / 100.0, 0.0, 2.0));
+    out.shadowDistance = float(std::clamp(p.num(skey("shadowDistance"), 100.0) / 100.0, 0.0, 2.0));
     out.offsetX = float(std::clamp(p.num(skey("sliceStageX"), 0.0) / 100.0, -1.0, 1.0));
     out.offsetY = float(std::clamp(p.num(skey("sliceStageY"), 0.0) / 100.0, -1.0, 1.0));
     if (p.flag(skey("roundCorners"), true)) {

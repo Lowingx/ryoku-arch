@@ -3,6 +3,7 @@ package main
 var settingsSchema = []settingSpec{
 	{Key: "components.wallpaperSelector.collectionCorners", Type: "number", Default: float64(2), Min: fp(0.0), Max: fp(100.0), Step: fp(1.0)},
 	{Key: "components.wallpaperSelector.collectionCount", Type: "number", Default: float64(7), Min: fp(3.0), Max: fp(11.0), Step: fp(1.0)},
+	{Key: "components.wallpaperSelector.collectionShadows", Type: "bool", Default: true},
 	{Key: "components.wallpaperSelector.collectionSize", Type: "number", Default: float64(42), Min: fp(15.0), Max: fp(65.0), Step: fp(1.0)},
 	{Key: "components.wallpaperSelector.collectionSpacing", Type: "number", Default: float64(17), Min: fp(5.0), Max: fp(30.0), Step: fp(1.0)},
 	{Key: "components.wallpaperSelector.collectionSpeed", Type: "number", Default: float64(100), Min: fp(25.0), Max: fp(300.0), Step: fp(1.0)},
@@ -158,6 +159,8 @@ var settingsSchema = []settingSpec{
 	{Key: "components.wallpaperSelector.sandyTwist", Type: "number", Default: float64(100), Min: fp(0.0), Max: fp(300.0), Step: fp(1.0)},
 	{Key: "components.wallpaperSelector.sandyWaist", Type: "number", Default: float64(100), Min: fp(0.0), Max: fp(300.0), Step: fp(1.0)},
 	{Key: "components.wallpaperSelector.showTypeBadges", Type: "bool", Default: true},
+	{Key: "components.wallpaperSelector.shadowDistance", Type: "number", Default: float64(100), Min: fp(0.0), Max: fp(200.0), Step: fp(1.0)},
+	{Key: "components.wallpaperSelector.shadowStrength", Type: "number", Default: float64(100), Min: fp(0.0), Max: fp(200.0), Step: fp(1.0)},
 	{Key: "components.wallpaperSelector.skewOffset", Type: "number", Default: float64(0), DefaultSmall: float64(0), Min: fp(-1200.0), Max: fp(1200.0), Step: fp(1.0)},
 	{Key: "components.wallpaperSelector.sliceEdgeTilt", Type: "number", Default: float64(0), Min: fp(-240.0), Max: fp(240.0), Step: fp(1.0)},
 	{Key: "components.wallpaperSelector.sliceFilterBarOffsetX", Type: "number", Default: float64(0), Min: fp(-1200.0), Max: fp(1200.0), Step: fp(1.0)},
