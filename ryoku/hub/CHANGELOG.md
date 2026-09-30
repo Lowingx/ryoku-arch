@@ -111,6 +111,13 @@
   `pages/PerformancePage.qml`).
 
 ### Changed
+- **Desktop > Visualizer is short now.** The tab keeps the enable switch, the
+  look gallery and the Place button; the deep knobs moved to the gear drawer in
+  the desktop's placement bar, where the look is visible while you tune it. The
+  page also loads `visualizer.json` synchronously now, so opening the page and
+  saving can no longer overwrite the shell's current values (the frame rate
+  especially) with factory defaults (`quickshell/schema/DesktopPage.js`,
+  `quickshell/Hub.qml`, `quickshell/pages/DesktopPage.qml`).
 - **Ryoku Settings is a full-page window.** It opens at 99% of the screen (the
   Hyprland rule floats it at the same 99% and centres it; niri sizes the column),
   so the settings get the room the layout is designed for instead of a 1200px

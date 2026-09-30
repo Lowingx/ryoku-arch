@@ -3,6 +3,19 @@
 ## Unreleased
 
 ### New
+- **Rices save, export and import from Ryogami.** The Rices tab gains Save
+  look and Import beside its tabs, and an empty tab offers both instead of
+  sending you to Ryoku Hub. A rice's card keeps Apply, Fork, Restore and Delete
+  and adds a Share row: Save look names a capture of this desktop and lists what
+  it carries (it warns before replacing a rice with the same name), Export opens
+  a folder browser with Home, Rices, Downloads and Documents one click away, and
+  Import shows every folder holding a rice as a tile with its preview. Each
+  command reports what really happened, a refused folder keeps the dialog open,
+  and a new rice slides under the cursor once it lands. Wallpaper filters (type,
+  colour, folder, favourites, shape, size) no longer empty the Rices and Themes
+  tabs when left on, and the bar hides them there
+  (`ryogami/picker/qml/chrome/RiceShare.qml`, `RiceFolderBrowser.qml`,
+  `RiceWorkshop.qml`, `ryogami/picker/src/core/libraryview.cpp`).
 - **Night light AT THE CLOCK.** The Displays card's schedule was sun-only, so
   a fixed bedtime had to borrow the weather's sunset. A new switch warms the
   screen between the hours you choose: START AT and OFF AT rows each carry a
@@ -152,6 +165,21 @@
   Ryoku's seams (`../inir/`).
 
 ### Changed
+- **The visualiser's deep settings moved onto the desktop editor.** The
+  placement bar grew a gear that opens a square drawer of everything it has no
+  room for: playback (enabled, idle wave, frame rate, adaptive quality), shape
+  (corner style, segments, bar width, grow direction, spin, reflection, bloom)
+  and the edge field's whole vocabulary, scrollable, dimming what the current
+  look ignores. `S` opens it too. The frame rate row shows a muted "capped 30"
+  or "capped 24" while adaptive quality is shedding frames, so the governor is
+  visible instead of silent. The visualiser no longer drops to 30 fps after a
+  reboot or a power-profile flip (the resume spike tripped the governor, and
+  the Hub could rewrite the file before it had loaded), and the shipped
+  defaults are now 60 fps and the wave look
+  (`modules/visualizer/SettingsPopup.qml`, `EditBar.qml`, `Placer.qml`,
+  `Singletons/Config.qml`, `Motion.qml`, `AuraMotion.qml`,
+  `VisualizerView.qml`).
+
 - **The screen recorder is GPU Screen Recorder.** The wf-recorder pipeline is
   gone: capture and encode now run entirely on the GPU through
   `gpu-screen-recorder` (the Arch package, not the flatpak), which handles the
