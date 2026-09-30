@@ -2,6 +2,17 @@
 
 
 ### Added
+- **A rice now saves everything visual.** The capture grew the stores the
+  desktop gained since rices were written: the plugin roster (every plugin
+  widget's placement and per-widget settings), the widget stage (depth,
+  shadow, motion), the matugen palette engine, the Profile plate's decor (a
+  custom hero travels as a bundled image), and the picker's whole look
+  (transitions, overview backdrop, launch animation, filter style) instead of
+  only its matugen scheme. The window look allowlist now spans both
+  compositors' keys, so a niri box's frame, border gradient, backdrop and
+  overview shadow travel the way Hyprland's rounding and gaps always did.
+  Export no longer refuses a destination that does not exist yet, or a path
+  typed with a leading `~` (`backend/rice.go`).
 - **Recording settings follow GPU Screen Recorder.** The Recording page now
   writes through the shell daemon (`ryoku-shell record settings`) instead of
   owning the file, and carries the recorder's full surface: bitrate mode and
