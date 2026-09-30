@@ -3,6 +3,13 @@
 ## Unreleased
 
 ### New
+- **Night light AT THE CLOCK.** The Displays card's schedule was sun-only, so
+  a fixed bedtime had to borrow the weather's sunset. A new switch warms the
+  screen between the hours you choose: START AT and OFF AT rows each carry a
+  12-hour time you can step by the hour, flip AM/PM, or type ("9:30 pm"), and
+  the window wraps midnight like the sun one. It is exclusive with FOLLOW THE
+  SUN, persists across restarts, and applies at once when armed.
+  (`ipc/nightlight_schedule.go`, `../hub/quickshell/pages/DisplaysPage.qml`).
 - **iRiS is now Shima, synced with iNiR 2.32.** iNiR's license terms keep
   the names iNiR and iRiS, their logo and the Kira mascot for snowarch, so the
   frame bar style is renamed Shima everywhere you see it, draws its own island

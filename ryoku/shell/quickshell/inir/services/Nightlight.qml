@@ -12,7 +12,10 @@ Singleton {
 
     readonly property bool active: Ryoku.Nightlight.on
     readonly property int temperature: Ryoku.Nightlight.temperature
+    // The frame's switch owns the sun schedule; the Hub can also run the
+    // light on the clock, which this row reports but does not edit.
     readonly property bool scheduled: Ryoku.Nightlight.schedule === "sun"
+    readonly property bool clocked: Ryoku.Nightlight.schedule === "clock"
 
     function toggle(): void { Ryoku.Nightlight.setEnabled(!root.active, root.temperature); }
     function setActive(on: bool): void { Ryoku.Nightlight.setEnabled(on, root.temperature); }

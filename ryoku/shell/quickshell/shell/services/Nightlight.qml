@@ -14,7 +14,8 @@ Singleton {
 
     property bool on: false
     property int temperature: 4000
-    // "sun" follows sunset to sunrise where the user is; "off" is manual only.
+    // "sun" follows sunset to sunrise where the user is; "clock" follows the
+    // hours the user set; "off" is manual only.
     property string schedule: "off"
 
     readonly property string sockPath: (Quickshell.env("XDG_RUNTIME_DIR") || "/tmp") + "/ryoku-shell.sock"
@@ -50,7 +51,7 @@ Singleton {
             root.on = f.on === true;
             if (typeof f.temperature === "number" && f.temperature > 0)
                 root.temperature = f.temperature;
-            if (f.schedule === "off" || f.schedule === "sun")
+            if (f.schedule === "off" || f.schedule === "sun" || f.schedule === "clock")
                 root.schedule = f.schedule;
         } catch (e) {
             // A malformed frame keeps the last good state.

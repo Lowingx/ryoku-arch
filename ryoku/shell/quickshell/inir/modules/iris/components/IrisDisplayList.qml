@@ -78,7 +78,7 @@ ColumnLayout {
     IrisControlRow {
         glyph: "nightlight"
         label: Translation.tr("Night Light")
-        detail: Nightlight.scheduled ? Translation.tr("Sunset to sunrise") : Translation.tr("Until you turn it off")
+        detail: Nightlight.scheduled ? Translation.tr("Sunset to sunrise") : Nightlight.clocked ? Translation.tr("On your hours") : Translation.tr("Until you turn it off")
         on: night.toggled
         tint: IrisStyle.identity.orange
         onToggled: night.mainAction()

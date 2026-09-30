@@ -3,6 +3,11 @@
 ## Unreleased
 
 ### Added
+- **The night light can run on the clock.** Hub > Displays > Night light
+  gained an AT THE CLOCK switch with START AT and OFF AT rows: a 12-hour
+  time you step by the hour, flip AM/PM, or type, wrapping midnight, so a
+  fixed bedtime no longer has to borrow the weather's sunset
+  (`shell/ipc/nightlight_schedule.go`, `hub/quickshell/pages/DisplaysPage.qml`).
 - **The Cursor motion plugin says what it costs on NVIDIA.** Realistic
   cursor motion forces software cursor rendering, which reports say stutters
   when the pointer crosses monitors; the plugin's own card now carries that
