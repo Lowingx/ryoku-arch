@@ -42,32 +42,6 @@ var rows = [{
         "ctl": "reload-cover",
         "src": "brand"
     },{
-        "tab": "Visualizer",
-        "group": "STYLE",
-        "key": "enabled",
-        "label": "Enabled",
-        "desc": "Paint the audio spectrum on the desktop",
-        "ctl": "sw",
-        "src": "viz"
-    },{
-        "tab": "Visualizer",
-        "group": "STYLE",
-        "key": "style",
-        "label": "Style",
-        "desc": "How the spectrum is drawn",
-        "ctl": "gallery",
-        "src": "viz",
-        "set": "viz"
-    },{
-        "tab": "Visualizer",
-        "group": "PLACEMENT",
-        "key": "vizPlace",
-        "label": "Place on the desktop",
-        "desc": "Drag and size it directly on screen",
-        "ctl": "action",
-        "actionLabel": "PLACE",
-        "when": {"style":["bars","split","dots","segments","wave","ribbon","curtain","line","frame","radial","orb","spiral"]}
-    },{
         "tab": "General",
         "group": "QUICK SETTINGS",
         "key": "frameBars.menus.quick-settings.anchor",

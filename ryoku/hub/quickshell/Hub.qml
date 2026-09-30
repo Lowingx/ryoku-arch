@@ -154,7 +154,7 @@ Rectangle {
         "windowmanager": "compositor window manager wm wayland switch change swap session provider window windows rounding corners softness gaps border borders thickness colour tiling layout opacity transparency transparent dim blur shadow float snap resize animation spread offset",
         "plugins": "plugin plugins hyprland compositor hyprpm title bar titlebar hyprbars glass hyprglass image border imgborders cursor motion dynamic cursors focus flash hyprfocus key sound sounds keyboard keysounds typing click clicky thock creamy cherry mx topre mechvibes switch version abi mismatch rebuild build update add git repository install",
         "bar-studio": "bar frame rails zones widgets menus surfaces style catalogue layout framebars sidebar dock dockapps pinned pin magnify autohide auto-hide media chip peek labels edge taskbar",
-        "desktop": "desktop visualizer visualiser spectrum brand logo mark name widget board wallpaper",
+        "desktop": "desktop brand logo mark name widget board wallpaper",
         "launcher": "launcher spotlight command palette greeting weather home",
         "fastfetch": "fetch neofetch terminal system info logo ascii emblem readout",
         "lockscreen": "lock screensaver signin greeter skin theme login",
@@ -278,7 +278,7 @@ Rectangle {
         "titlebar": "title bar", "titlebars": "title bar", "plugin": "plugins addon", "plugins": "plugin addon",
         "monitor": "displays screen", "monitors": "displays screen", "resolution": "displays screen", "hidpi": "displays scale", "refresh": "displays",
         "mouse": "input pointer", "pointer": "input", "keyboard": "input", "touchpad": "input trackpad", "trackpad": "input touchpad",
-        "visualizer": "desktop spectrum", "visualiser": "desktop spectrum", "notifications": "layerrules",
+        "notifications": "layerrules",
         "update": "updates upgrade", "upgrade": "updates", "blur": "windows glass", "rounding": "windows corners", "corners": "windows rounding",
         "animation": "animations motion", "motion": "animations", "gpu": "graphics", "graphics": "gpu",
         "voice": "dictation", "speech": "dictation voice", "microphone": "dictation", "mic": "dictation"
@@ -517,23 +517,6 @@ Rectangle {
         "frameBars.menus.quick-settings.expansion": "always",
         "frameBars.menus.quick-settings.minWidth": 410,
         "weatherLocation": "", "weatherUnit": "auto", "formatLocale": "",
-        "enabled": true, "bars": 64, "thickness": 0.58, "bloom": 0.6,
-        "reflection": 0.1, "idleWave": true, "style": "wave", "shape": "rounded",
-        "mirror": false, "segments": 10, "fps": 60,
-        "adaptive": true, "smoothing": 0.5, "gain": 1.0, "peaks": false,
-        "spin": 0, "x": 0, "y": 0.58, "w": 1, "h": 0.42, "grow": "up", "angle": 0, "tiltX": 0, "tiltY": 0,
-        "auraEdges": ["left", "right"], "auraDepth": 180, "auraSpan": 1.0,
-        "auraTaper": 0.14, "auraCornerRadius": 24, "auraJoin": "auto",
-        "auraCornerBlend": 0.55, "auraFlow": "clockwise", "auraMaterial": "silk",
-        "auraShape": "flow", "auraEffect": "clean", "auraEffectStrength": 0.38,
-        "auraColorMode": "flow", "auraColor2": "", "auraColor3": "", "auraOpacity": 1.0,
-        "auraColorSpeed": 0.35, "auraBodyOpacity": 0.32, "auraCrestStrength": 0.9,
-        "auraGlow": 0.52, "auraGlowSpread": 0.48, "auraAudioRange": 0.78,
-        "auraThickness": 0.22, "auraDetail": 0.42, "auraBassDrive": 0.88,
-        "auraTrebleDrive": 0.68, "auraTransient": 0.9, "auraBeatGlow": 0.64,
-        "auraCompression": 0.12, "auraMotionSpeed": 1.0, "auraIdleMotion": 0.14,
-        "auraAttack": 1.05, "auraRelease": 0.82, "auraProfile": "flat",
-        "auraAccent": 0.7, "auraSensitivity": 0.72,
         "markText": "力", "markImage": "", "markTint": true, "name": "Ryoku",
         "reloadCover": ReloadCoverModel.empty(),
         "language": "Auto", "barStyle": "sumi", "obi": {}, "nacre": NacreConfig.defaultConfig(), "qsbar": {}, "dock": {},
@@ -553,8 +536,8 @@ Rectangle {
         m.frameBars = "shell";
         return m;
     }
-    function adapterFor(src) { return src === "viz" ? vizA : brandA; }
-    function fileFor(src) { return src === "viz" ? "visualizer" : (src === "brand" ? "brand" : "shell"); }
+    function adapterFor(src) { return brandA; }
+    function fileFor(src) { return src === "brand" ? "brand" : "shell"; }
 
     // The full config files backing the current page: the source of truth the GUI
     // writes and the user can hand-edit in place (every value present, not a sparse
@@ -713,7 +696,6 @@ Rectangle {
             else adapterFor(src)[k] = draft[k];
             files[src] = true;
         }
-        if (files.viz) vizFV.writeAdapter();
         if (files.brand) {
             brandFV.writeAdapter();
             hub.requestReloadCoverPrune(hub.draft.reloadCover);
@@ -784,7 +766,7 @@ Rectangle {
 
     // the diff, grouped by file, in each file's own JSON syntax.
     readonly property var diff: {
-        var by = { shell: [], viz: [], brand: [] };
+        var by = { shell: [], brand: [] };
         for (var k in defs) {
             if (draft[k] === undefined || committed[k] === undefined) continue;
             if (JSON.stringify(draft[k]) === JSON.stringify(committed[k])) continue;
@@ -792,7 +774,7 @@ Rectangle {
             by[src].push({ key: k, was: JSON.stringify(committed[k]), now: JSON.stringify(draft[k]) });
         }
         var out = [];
-        var order = ["shell", "viz", "brand"];
+        var order = ["shell", "brand"];
         for (var i = 0; i < order.length; i++)
             if (by[order[i]].length)
                 out.push({ file: hub.fileFor(order[i]) + ".json", changes: by[order[i]] });
@@ -834,84 +816,6 @@ Rectangle {
     Connections {
         target: Settings
         function onRevisionChanged() { hub.rebase(); }
-    }
-    FileView {
-        id: vizFV
-        path: hub.cfgDir + "/visualizer.json"
-        blockLoading: true
-        watchChanges: true
-        onFileChanged: reload()
-        onLoaded: hub.rebase()
-        JsonAdapter {
-            id: vizA
-            property bool enabled: true
-            property real bars: 64
-            property real thickness: 0.58
-            property real bloom: 0.6
-            property real reflection: 0.1
-            property bool idleWave: true
-            property string style: "wave"
-            property string shape: "rounded"
-            property string color: ""
-            property string color2: ""
-            property bool gradient: false
-            property bool mirror: false
-            property real segments: 10
-            property real fps: 60
-            property bool adaptive: true
-            property real smoothing: 0.5
-            property real gain: 1.0
-            property bool peaks: false
-            property real spin: 0
-            property real x: 0
-            property real y: 0.58
-            property real w: 1
-            property real h: 0.42
-            property string grow: "up"
-        property real angle: 0
-        property real tiltX: 0
-        property real tiltY: 0
-        property var auraEdges: ["left", "right"]
-        property real auraDepth: 180
-        property real auraSpan: 1.0
-        property real auraTaper: 0.14
-        property real auraCornerRadius: 24
-        property string auraJoin: "auto"
-        property real auraCornerBlend: 0.55
-        property string auraFlow: "clockwise"
-        property string auraMaterial: "silk"
-        property string auraShape: "flow"
-        property string auraEffect: "clean"
-        property real auraEffectStrength: 0.38
-        property string auraColorMode: "flow"
-        property string auraColor2: ""
-        property string auraColor3: ""
-        property real auraOpacity: 1.0
-        property real auraColorSpeed: 0.35
-        property real auraBodyOpacity: 0.32
-        property real auraCrestStrength: 0.9
-        property real auraGlow: 0.52
-        property real auraGlowSpread: 0.48
-        property real auraAudioRange: 0.78
-        property real auraThickness: 0.22
-        property real auraDetail: 0.42
-        property real auraBassDrive: 0.88
-        property real auraTrebleDrive: 0.68
-        property real auraTransient: 0.9
-        property real auraBeatGlow: 0.64
-        property real auraCompression: 0.12
-        property real auraMotionSpeed: 1.0
-        property real auraIdleMotion: 0.14
-        property real auraAttack: 1.05
-        property real auraRelease: 0.82
-        property string auraProfile: "flat"
-        property real auraAccent: 0.7
-        property real auraSensitivity: 0.72
-        // Preserved so a hub save never drops the desktop's extra visualisers or
-        // which one it is editing; the hub itself tunes the primary (flat keys).
-        property var extras: []
-        property int active: 0
-        }
     }
     FileView {
         id: brandFV

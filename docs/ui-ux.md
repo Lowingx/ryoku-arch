@@ -742,8 +742,8 @@ crosses none of them, which `place.test.mjs` pins as an invariant, and the place
 guides stay honest without the gestures having to invert a projection.
 
 The box is placed by hand rather than by numbers. `Super+Alt+M`, the Move
-visualiser row in the desktop's right-click menu, or the Hub's Place on the desktop
-button starts placement mode. The box takes an outline, a grip on its corner and a
+visualiser row in the desktop's right-click menu, or the Edit widgets toolbar's
+`Visualizer...` button starts placement mode. The box takes an outline, a grip on its corner and a
 dot on a stem above its top edge: a drag anywhere moves it, the grip or the wheel
 sizes it, and the dot turns it through a full circle. Each step writes to
 `visualizer.json` as it happens, and right click, Escape or the keybind ends it.
