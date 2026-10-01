@@ -24,7 +24,7 @@ arch=('x86_64')
 url="https://github.com/horriblename/hyprgrass"
 license=('Apache-2.0')
 depends=('hyprland')
-makedepends=('hyprland' 'pkgconf' 'gcc' 'git' 'meson' 'ninja' 'pango' 'cairo' 'libdrm' 'pixman')
+makedepends=('hyprland' 'pkgconf' 'gcc' 'git' 'meson' 'ninja' 'pango' 'cairo' 'libdrm' 'pixman' 'glm')
 source=("$pkgname::git+https://github.com/horriblename/hyprgrass.git")
 sha256sums=('SKIP')
 
@@ -60,7 +60,23 @@ prepare() {
 
 build() {
   cd "$srcdir/$pkgname"
-  meson setup build
+  # wf-touch's meson hard-requires dependency('glm'). glm is header-only and
+  # Arch's glm ships no glm.pc, so meson falls back to CMake config detection,
+  # which CMake 4.x rejects (glm's ancient config fails the preliminary trace
+  # check). A one-line pkg-config shim over the installed headers makes meson
+  # resolve glm the way wf-touch's own check_header fallback would.
+  mkdir -p "$srcdir/pkgconfig"
+  cat > "$srcdir/pkgconfig/glm.pc" <<'PC'
+prefix=/usr
+includedir=${prefix}/include
+
+Name: glm
+Description: C++ OpenGL math library (header-only)
+Version: 1.0.3
+Cflags: -I${includedir}
+PC
+  PKG_CONFIG_PATH="$srcdir/pkgconfig${PKG_CONFIG_PATH:+:$PKG_CONFIG_PATH}" \
+    meson setup build
   ninja -C build
 }
 
