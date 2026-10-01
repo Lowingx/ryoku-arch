@@ -50,6 +50,7 @@ Required:
 | `RYOKU_DISK_STRATEGY` | `whole` (wipe the disk) or `alongside` (dual-boot; keeps existing partitions and chooses shared or dedicated ESP boot automatically). No default: an empty value aborts rather than risk a silent wipe. |
 | `RYOKU_COMPOSITOR`        | Window manager to install, e.g. `hyprland`. Selects the `ryoku-desktop-<name>` variant package. |
 | `RYOKU_COMPOSITOR_CONFIG_DIR` | The `~/.config` subdir that compositor owns (the TUI derives it from `wm.ConfigDir`, e.g. `hypr`); seeds the keymap and GPU pin. Empty means an unknown compositor and the install aborts. |
+| `RYOKU_COMPOSITOR_GPU_PIN` | The render-pin file inside that dir the TUI derives from `wm.GpuPinFile` (`gpu.lua` on Hyprland, `gpu.conf` on mango). Empty means the compositor picks its own render device (niri) and the GPU-mode step skips. |
 
 With defaults:
 

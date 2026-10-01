@@ -7,7 +7,7 @@
 **力と美のために** &middot; *For the sake of power and beauty.*
 
 Ryoku is a hand-built Linux distribution built on Arch Linux: one cohesive
-desktop that runs on Hyprland or niri, a guided installer, and the system
+desktop that runs on Hyprland, niri or MangoWM, a guided installer, and the system
 definition that reproduces them, all from a single repository. It is a whole
 operating system you install to disk from its own ISO -- the bootloader,
 drivers, packages, installer and desktop are all part of it -- not a shell or a
@@ -62,7 +62,7 @@ Underneath, Ryoku is a hand-built Linux distribution rather than a config dump.
 The desktop, the installer, and the system definition all live in this
 repository, and every machine is built from it; the repository is the single
 source of truth, and a live machine is only ever a deployment target. The
-desktop is a Wayland session, on Hyprland or niri, with the Quickshell-based
+desktop is a Wayland session, on Hyprland, niri or MangoWM, with the Quickshell-based
 Ryoku shell on top. Ryoku's alpha series was a fork of Omarchy. From the beta
 series on, the tree was pruned and rebuilt from an empty root, so the installer,
 shell, theming, tooling, and system definition are all Ryoku's own, and the
@@ -117,7 +117,7 @@ Everything else waits in Ryoku Settings (`Super + ,`).
 
 ## What ships
 
-- **The desktop** under `ryoku/`: a Wayland session on Hyprland or niri (its
+- **The desktop** under `ryoku/`: a Wayland session on Hyprland, niri or MangoWM (its
   config in the compositor's own language), the Quickshell-based Ryoku shell,
   the lockscreen, app configs, and brand assets.
 - **The system definition** under `system/`: the boot chain, hardware policy,
@@ -130,7 +130,7 @@ Everything else waits in Ryoku Settings (`Super + ,`).
 ## Requirements
 
 Ryoku is `x86_64` only and boots in UEFI mode. The session is Wayland on
-Hyprland or niri, with the GPU-composited Ryoku shell on top. The installer
+Hyprland, niri or MangoWM, with the GPU-composited Ryoku shell on top. The installer
 refuses a machine with Secure Boot on (Limine ships unsigned) unless you have
 enrolled your own keys, and there is no 32-bit build and no legacy BIOS path.
 

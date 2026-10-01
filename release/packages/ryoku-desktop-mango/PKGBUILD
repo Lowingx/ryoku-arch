@@ -1,0 +1,94 @@
+# Maintainer: Ryoku <releases@ryoku.dev>
+#
+# ryoku-desktop-mango: the mango compositor variant of the Ryoku desktop.
+# Carries mango, the wlr portal backend its caps report, the night-light
+# client, the mango config tree, the ryoku-wm-mango provider binary
+# (ryoku/wm/mango), and the greeter session entry. It provides the
+# ryoku-desktop-compositor virtual, so an installed ryoku-desktop is satisfied
+# by it, and may be installed beside the other variants: a switch is then a
+# config change, not a package swap.
+#
+# There is no plugin subsystem here: mango has no plugins, and its caps say
+# so. There is no X11 satellite either: mango embeds Xwayland and drives it.
+#
+# built from in-repo sources, no tarball fetch. makepkg runs from a full
+# checkout, so the repo root is three levels up.
+pkgname=ryoku-desktop-mango
+pkgver=${RYOKU_PKGVER:-0.1.0}
+pkgrel=1
+pkgdesc="Ryoku desktop: the mango compositor, its portal backend, and the ryoku-wm-mango provider"
+# package() builds the Go provider, so the payload is arch-specific.
+arch=('x86_64')
+url="https://ryoku.dev"
+license=('GPL-3.0-or-later')
+makedepends=('go')
+depends=(
+  "ryoku-desktop=$pkgver"
+  # compositor + Wayland session. The upstream package suppresses its own
+  # session entry and portal file; this package owns both (see mangowm's
+  # PKGBUILD), and the caps' reclaim list names exactly this depends set.
+  'mangowm'
+  # the effects library mango renders through (blur, shadows, rounding); a
+  # mangowm dependency, named here too so the variant states the whole stack
+  # its reclaim list reclaims.
+  'scenefx0.5'
+  # screencast/screenshot portal: ryoku-wm-mango caps reports portalBackend
+  # "wlr", and doctor's portal reconciler routes xdg-desktop-portal to this
+  # backend. It needs a region chooser for interactive sharing; slurp ships
+  # with the base set.
+  'xdg-desktop-portal-wlr'
+  # night-light backend: wlsunset warms the screen over wlr-gamma-control,
+  # mango's route, so it is mango's variant to ship and reclaim
+  # (ryoku-cmd-nightlight, pill Super+U, quick tile, Hub Displays).
+  'wlsunset'
+)
+provides=('ryoku-desktop-compositor')
+# deliberately not exclusive: all variants may be installed, so a switch is a
+# config change with no download and a switch back is instant.
+source=(ryoku-mango-session mango.desktop)
+sha256sums=('SKIP' 'SKIP')
+
+_repo="$startdir/../../.."
+
+package() {
+  local cfg="$pkgdir/usr/share/ryoku/config"
+
+  # mango config tree: config.conf plus every static file it sources (session
+  # startup, lid events, machine seeds, and the user override). A missing
+  # source is an error line in mango's log, so the whole tree ships as one
+  # unit. The generated settings.conf/rebinds.conf are written by
+  # `ryoku-wm-mango apply`, not packaged (see caps.GeneratedFiles). No
+  # scripts/: mango's leaf keybinds are compositor actions or
+  # `spawn ryoku-shell`, and the share picker is a hyprland-only helper.
+  install -d "$cfg/mango"
+  cp -a "$_repo/ryoku/mango/." "$cfg/mango/"
+
+  # xdg-desktop-portal: mango's routing (wlr for ScreenCast/Screenshot, gtk
+  # default, no portal inhibit). Upstream ships the same file; the mangowm
+  # build drops its copy so this package is the single owner. doctor's portal
+  # reconciler reads it by the running desktop's name.
+  install -Dm644 "$_repo/ryoku/mango/mango-portals.conf" \
+    "$cfg/xdg-desktop-portal/mango-portals.conf"
+
+  # cp -a kept source modes; the tree is all data, so world-readable is right.
+  chmod -R u=rwX,go=rX "$pkgdir/usr/share/ryoku"
+
+  # ryoku-wm-mango: the mango half of the window-manager seam. Built from the
+  # ryoku/wm module (its root is one dir up from this package).
+  ( cd "$_repo/ryoku/wm/mango" && go build -o ryoku-wm-mango . )
+  install -Dm755 "$_repo/ryoku/wm/mango/ryoku-wm-mango" \
+    "$pkgdir/usr/bin/ryoku-wm-mango"
+
+  # The greeter entry and its wrapper. mango's session starts as a bare
+  # `Exec=mango` from SDDM, not as a systemd user unit, so no drop-in can
+  # order ryoku-bootstrap ahead of it: a fresh `pacman -S ryoku-desktop-mango`
+  # + reboot would race the bootstrap and boot an unmaterialized tree (a bare
+  # compositor: no keybinds, no autostart, no shell). The wrapper closes that
+  # lane: materialize synchronously when the tree is not laid yet (it is
+  # declarative and preserves user files, so a second run is harmless), then
+  # exec mango, which still does its own env push and target activation.
+  install -Dm755 "$srcdir/ryoku-mango-session" \
+    "$pkgdir/usr/bin/ryoku-mango-session"
+  install -Dm644 "$srcdir/mango.desktop" \
+    "$pkgdir/usr/share/wayland-sessions/mango.desktop"
+}

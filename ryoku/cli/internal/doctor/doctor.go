@@ -191,6 +191,7 @@ func reconcilers() []reconciler {
 		{i18n.T("decor art"), reconcileRyodecors},
 		{i18n.T("Hyprland config integrity"), reconcileHyprlandConfig},
 		{i18n.T("niri config integrity"), reconcileNiriConfig},
+		{i18n.T("mango config integrity"), reconcileMangoConfig},
 		{i18n.T("window manager plugin builds"), reconcileWmPlugins},
 		{i18n.T("stale window-border pin"), reconcileBorderPin},
 		{i18n.T("orphaned theme.lua"), reconcileThemeLua},

@@ -37,7 +37,7 @@ status` prints it as `system:`, and the Hub lists it under SYSTEM PACKAGES;
 
 The desktop package's post-transaction power cutover also makes a direct
 `pacman -Syu` safe while graphical sessions are live. One temporary login1 sleep
-block covers the logind reload; then each Hyprland or niri user session (never
+block covers the logind reload; then each Ryoku user session (never
 the SDDM greeter or another desktop) stops the old lid/idle/shell owners,
 must report its new sleep guard ready before the block is released. The first
 release that introduces the hook schedules the same adoption after pacman drops
@@ -241,12 +241,12 @@ same names. Best-effort: a box with no mirror or no network reports what did not
 land and the update moves on. `ryoku verify` answers the same diff read-only, so
 two machines can be compared line by line.
 
-## Two compositors
+## More than one compositor
 
-A box can have both compositors installed and switch between them. Update, doctor
+A box can have every compositor installed and switch between them. Update, doctor
 and recovery reach the compositor only through the seam (`ryoku/wm/`), so none of
 them names one. Update and doctor keep the inactive compositor's config
-untouched; recovery deliberately resets both when both are installed.
+untouched; recovery deliberately resets every installed one.
 
 - **`ryoku update`** re-lays the base config, then reloads the active compositor
   through `wm.Open()` (`update.go` `pauseConfigAutoreload`/`reloadConfig` call
@@ -265,7 +265,7 @@ untouched; recovery deliberately resets both when both are installed.
 - **`ryoku recovery`** clears the `user_edits` overlay and the neutral Hub
   stores, then removes every path that `ryoku wm reset-paths` prints: each
   provider's generated config plus its hand-edit files (`wm.ResetPaths` over
-  `wm.Providers`), for both compositors when both are installed. It runs that
+  `wm.Providers`), for every installed compositor. It runs that
   command from the freshly fetched checkout first (`go run . wm reset-paths`), so
   a broken installed build cannot skew the list, then redeploys the shipped
   defaults. The per-machine seeds (monitors, gpu, keyboard) and saved rices are
@@ -292,8 +292,8 @@ mount the repo domain serves (`repo.ryoku.dev/stable/<key>` is bucket object
 | `channels/testing/x86_64/` | **testing** | every push to `unstable-dev` |
 
 So a box on stable moves between named releases, and can be put back on any
-earlier one, on either variant: the `[ryoku]` packages are one `x86_64` build
-that both variants install, the frozen release directories are never pruned,
+earlier one, on any variant: the `[ryoku]` packages are one `x86_64` build
+that every variant installs, the frozen release directories are never pruned,
 and the ledger's `images` map names the Arch and CachyOS ISO of each release
 (derived from the per-ISO manifests in the bucket, so it heals on every
 rebuild) for a reinstall of an older release. Each build carries a strictly

@@ -37,7 +37,7 @@ Read these first, then keep them open while you work:
 
 ## Set up the dev loop
 
-Ryoku is developed on a running Ryoku machine, or Arch running Hyprland or niri.
+Ryoku is developed on a running Ryoku machine, or Arch running Hyprland, niri or MangoWM.
 Edit the repository, deploy, and test live:
 
 ```bash

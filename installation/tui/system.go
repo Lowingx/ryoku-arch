@@ -1095,9 +1095,13 @@ func (m model) installEnv() []string {
 		env = append(env, "RYOKU_ONLINE=1")
 	}
 	// backend picks the ryoku-desktop-<name> variant and seeds ConfigDir(name);
-	// an unknown name yields an empty dir the backend refuses on.
+	// an unknown name yields an empty dir the backend refuses on. The GPU mode
+	// write goes to the provider's render-pin file, asked of the seam: a
+	// provider with no ryoku-gpu writer (niri picks its own device) exports an
+	// empty path and the backend skips the step.
 	comp := m.picks["compositor"]
-	env = append(env, "RYOKU_COMPOSITOR="+comp, "RYOKU_COMPOSITOR_CONFIG_DIR="+wm.ConfigDir(comp))
+	env = append(env, "RYOKU_COMPOSITOR="+comp, "RYOKU_COMPOSITOR_CONFIG_DIR="+wm.ConfigDir(comp),
+		"RYOKU_COMPOSITOR_GPU_PIN="+wm.GpuPinFile(comp))
 	if m.picks["gpu"] != "" {
 		env = append(env, "RYOKU_GPU_MODE="+m.picks["gpu"])
 	}

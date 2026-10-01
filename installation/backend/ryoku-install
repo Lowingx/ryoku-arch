@@ -111,6 +111,7 @@ export RYOKU_VARIANT
 : "${RYOKU_GPU_MODE:=}"
 : "${RYOKU_COMPOSITOR:=}"
 : "${RYOKU_COMPOSITOR_CONFIG_DIR:=}"
+: "${RYOKU_COMPOSITOR_GPU_PIN:=}"
 : "${RYOKU_REBOOT:=}"
 : "${RYOKU_DRYRUN:=}"
 # carve (in-place resize) contract: shrink RYOKU_RESIZE_PART to free

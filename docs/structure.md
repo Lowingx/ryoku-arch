@@ -47,6 +47,14 @@ truth for the live desktop.
   `modules/` and no `scripts/`, since the neutral settings come from the store
   and the keybind helpers are shell verbs. It deploys to `~/.config/niri/`.
   See `docs/compositors.md`.
+- `mango/` the MangoWM config, authored in **mango's ini dialect**. `config.conf`
+  is the entry point and `source`s the rest, in override order (last wins): the
+  `keyboard.conf`, `gpu.conf`, `monitors.conf` and `monitors_user.conf` seeds,
+  then the generated `settings.conf` and `rebinds.conf`, then `user.conf` as the
+  last word. A missing source only logs an error, but every file ships so the
+  tree is whole from first login. There is no `scripts/`: the keybinds are
+  compositor dispatchers or `spawn ryoku-shell`. It deploys to
+  `~/.config/mango/`. See `docs/compositors.md`.
 - `lockscreen/` `qylock/` (the lock theme and its quickshell lockscreen),
   `install-qylock`, and `sddm/` (the greeter setup).
 - `shell/` the desktop shell subsystem: `quickshell/` (the QML UI. Every surface
