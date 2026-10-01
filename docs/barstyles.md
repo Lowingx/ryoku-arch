@@ -667,7 +667,10 @@ modes are Ryoku's (widgets.json, the desktop edit bar and the widget menu); the
 face only paints. Pick **Serpantinum** or **Ryoku** as the widget's style in its
 right-click menu: Serpantinum draws the upstream plate, Ryoku lets the slot draw
 the shared paper-and-ink backing, so the widget can read as part of either
-system while staying on the same host.
+system while staying on the same host. The Customize panel carries each face's
+own options (clock seconds, music layout, the image path, the GitHub account)
+under each widget's own tab; they persist in the widget's `<prefix>Opts` slot of
+widgets.json and reach the live face through `PythonFaceProvider`.
 
 The style's palette follows Ryoku's live wallpaper palette, with one exception:
 picking a preset in the guide's Theme tab stores that palette under
