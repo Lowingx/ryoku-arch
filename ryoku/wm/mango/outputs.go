@@ -138,7 +138,7 @@ func modeHz(mode string) (float64, bool) {
 // outputsUnhonored names each requested detail mango cannot express. mango
 // covers mode, position, scale, transform and VRR through monitorrule; the
 // losses are output mirroring, the HDR pipeline (the wl-only Vulkan branch,
-// not the scenefx build we ship) and a forced non-advertised mode, which mango
+// not the scenefx build mango links) and a forced non-advertised mode, which mango
 // can write (custom:1) but the docs warn may black-screen, so it is reported
 // as a risk the user sees rather than applied silently.
 func outputsUnhonored(layout []wm.OutputLayout) []wm.Unhonored {

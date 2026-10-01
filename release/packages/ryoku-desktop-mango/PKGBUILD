@@ -30,8 +30,9 @@ depends=(
   'mangowm'
   # the effects library mango renders through (blur, shadows, rounding); a
   # mangowm dependency, named here too so the variant states the whole stack
-  # its reclaim list reclaims.
-  'scenefx0.5'
+  # its reclaim list reclaims. Official extra: Ryoku's vendored scenefx0.5 was
+  # retired when extra shipped the same 0.5 tag.
+  'scenefx'
   # screencast/screenshot portal: ryoku-wm-mango caps reports portalBackend
   # "wlr", and doctor's portal reconciler routes xdg-desktop-portal to this
   # backend. It needs a region chooser for interactive sharing; slurp ships

@@ -77,7 +77,7 @@ mapfile -t PKGS < <(
   # and an offline install has no network to fetch a missing variant from --
   # a bake without ryoku-desktop-niri bricks the niri choice at configure.
   # The variants coexist (they own disjoint paths), so the closure carries all
-  # of them; mangowm and its scenefx0.5 library ride in as the variant's deps.
+  # of them; mangowm and its scenefx library ride in as the variant's deps.
   printf '%s\n' ryoku-keyring ryoku-desktop ryoku-desktop-hyprland ryoku-desktop-niri ryoku-desktop-mango asusctl
 )
 # dedupe, keep order.
