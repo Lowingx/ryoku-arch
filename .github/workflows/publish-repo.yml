@@ -246,11 +246,18 @@ jobs:
 
           rm -f "$key_file"
 
+      - name: Pack the repo for the artifact transport
+        # actions/upload-artifact refuses ':' in member paths (Windows
+        # compatibility), and a package epoch puts one in the filename. The
+        # repo dir is internal to this workflow -- the gate and the publish
+        # both unpack this tar -- so it rides as one archive.
+        run: tar -C release/repo/out/x86_64 -cf release/repo/ryoku-repo.tar .
+
       - name: Keep the signed repo for the gate and the publish
         uses: actions/upload-artifact@v4
         with:
           name: ryoku-repo-${{ github.run_id }}
-          path: release/repo/out/x86_64
+          path: release/repo/ryoku-repo.tar
           if-no-files-found: error
           retention-days: 3
           # packages are already zstd; recompressing them only costs minutes
@@ -305,7 +312,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ryoku-repo-${{ github.run_id }}
-          path: release/repo/out/x86_64
+          path: release/repo
+      - name: Unpack the signed repo
+        run: |
+          mkdir -p release/repo/out/x86_64
+          tar -C release/repo/out/x86_64 -xf release/repo/ryoku-repo.tar
       - name: Install and verify the config
         run: RYOKU_PREBUILT_REPO=1 installation/tests/container-install.sh ${{ matrix.base }}
 
@@ -330,7 +341,11 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: ryoku-repo-${{ github.run_id }}
-          path: release/repo/out/x86_64
+          path: release/repo
+      - name: Unpack the signed repo
+        run: |
+          mkdir -p release/repo/out/x86_64
+          tar -C release/repo/out/x86_64 -xf release/repo/ryoku-repo.tar
       - name: Configure the bucket
         env:
           R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
