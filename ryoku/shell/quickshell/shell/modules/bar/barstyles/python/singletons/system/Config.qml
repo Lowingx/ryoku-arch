@@ -45,7 +45,13 @@ Item {
 
     function applyDefaults(settings) {
         let merged = JSON.parse(JSON.stringify(defaultSettings));
-        let source = (settings && typeof settings === "object") ? settings : ({});
+        // The daemon delivers Config.python as QVariant wrappers: a nested
+        // array (a grouped bar-module row) stringifies and indexes fine but
+        // fails Array.isArray, so consumers that branch on grouping silently
+        // treat the whole group as one opaque entry. Normalise the incoming
+        // tree to plain JS values before merging.
+        let source = (settings && typeof settings === "object")
+            ? JSON.parse(JSON.stringify(settings)) : ({});
         for (let key in source) {
             let value = source[key];
             if (value && typeof value === "object" && !Array.isArray(value)
