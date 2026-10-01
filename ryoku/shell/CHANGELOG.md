@@ -3,6 +3,34 @@
 ## Unreleased
 
 ### New
+- **A fifth bar style: Python.** The serpantinum shell (by ilyamiro, AGPL-3.0)
+  is ported into the style folder as `python`: a top or edge bar of pill
+  widgets that open into one morphing stage, with the ported network, sound,
+  calendar, media, system panel, notification centre, dock, floating
+  quick-actions rail, song pill, OSD pills and the style's own settings guide.
+  The QML is serpantinum's; its data plane is Ryoku's. Workspaces, windows,
+  the keyboard layout and monitor power ride the window-manager seam, so the
+  bar behaves the same on Hyprland and niri; settings live in the `python` key
+  of `shell.json` and apply live through the daemon; the palette follows the
+  wallpaper (a guide preset can override it), the font picker writes Ryoku's
+  single global font, and the blue-light rows drive the daemon's night light.
+  Ryoku keeps what it owns: the launcher, the clipboard, ryogami, the lock
+  screen, capture, updates and the desktop widgets, and the bar's buttons for
+  those hand over to Ryoku's surfaces. While Python is the bar, the shell's own
+  notification banners and OSD pills stand down so the ported ones draw alone;
+  `python.general.notifications` / `python.general.osd` flip them back. Pick it
+  with `ryoku-shell barstyle python` or Bar Studio.
+  (`barstyles/python/`, `services/BarProducts.qml`, `services/Config.qml`)
+- **Python's desktop widgets join the global roster.** Serpantinum's widget
+  face library (clock, music, weather, visualizer, image, user, cpu, ram, temp,
+  disk, battery, github, with their variant ladders) is ported into the style
+  folder and hosted by Ryoku's desktop widgets, the same way the Shima faces
+  are: the slot owns placement, size, lock and backing, the face only paints.
+  Each widget's right-click menu carries a Serpantinum/Ryoku style switch, so a
+  face can keep its own plate or wear the shared paper-and-ink chrome. The
+  style's guide also regains its Welcome and Launcher tabs, and the bar's
+  calendar, media and notification surfaces run error-free.
+  (`barstyles/python/widgets/`, `modules/desktop/python/`)
 - **Rices save, export and import from Ryogami.** The Rices tab gains Save
   look and Import beside its tabs, and an empty tab offers both instead of
   sending you to Ryoku Hub. A rice's card keeps Apply, Fork, Restore and Delete
