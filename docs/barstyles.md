@@ -1,16 +1,19 @@
 # Bar styles
 
-Ryoku ships four bar styles, and a single key decides which one runs. The
+Ryoku ships five bar styles, and a single key decides which one runs. The
 shipped default is **QS Bar** (`qsbar`), the full-colour top bar. **Shima**
-(`iris`) is the frame family: an island on any screen edge
+(`iris`) and **Python** (`python`) are the frame family: whole-desktop systems
+hosted once on the primary output. Shima is an island on any screen edge
 that morphs into whatever you clicked, with glass popups, bubbles, a dock, a live
-Studio and its own settings overlay. **Sumi** is the monochrome left rail, and **Kairos** is a single
+Studio and its own settings overlay. Python is a bar of pill widgets that open
+into one morphing stage (its own guide carries its settings), based on
+Serpantinum by ilyamiro. **Sumi** is the monochrome left rail, and **Kairos** is a single
 island at the top centre that carries the clock: hovering opens it into a
 rolling date wheel, a track that plays adds a cover bubble beside it, and
 Super+Space grows the same island into its own app launcher
 (`docs/launcher.md`). Sumi is not a folder: the shell paints it from the
 built-in frame scene in `shell.qml`, so it has no scene file of its own. The
-other three live under `ryoku/shell/quickshell/shell/modules/bar/barstyles/`,
+other four live under `ryoku/shell/quickshell/shell/modules/bar/barstyles/`,
 ship their own scene, and load once per monitor. Shima is special: its scene is
 a thin host that mounts the vendored frame family in
 `ryoku/shell/quickshell/inir/`. It is based on iNiR by snowarch
@@ -60,7 +63,8 @@ file. Built-in folder styles ship inside the shell, one row each:
 readonly property var builtins: ({
     "qsbar": "barstyles/qsbar/Scene.qml",
     "kairos": "barstyles/kairos/Scene.qml",
-    "iris": "barstyles/iris/Scene.qml"
+    "iris": "barstyles/iris/Scene.qml",
+    "python": "barstyles/python/Scene.qml"
 })
 ```
 
@@ -68,7 +72,8 @@ readonly property var builtins: ({
 
 - `""` for `"sumi"`, an empty id, or a style that has failed to load. An empty
   scene is the built-in frame scene (Sumi), which `shell.qml` paints itself.
-- the built-in's relative `Scene.qml` for a built-in id (`"qsbar"`, `"kairos"`, `"iris"`).
+- the built-in's relative `Scene.qml` for a built-in id (`"qsbar"`, `"kairos"`, `"iris"`,
+  `"python"`).
 - a `file://` path drawn from `~/.local/state/ryoku/store/barstyles.json` for a
   store-installed folder style. The store writes that index and a `revision.json`;
   `BarProducts` watches both and reloads live.
@@ -112,7 +117,8 @@ Ryoku Settings > Displays can suppress the active bar on any output. Sumi releas
 its rail reserve there, normal folder styles are not instantiated there, and QS
 Bar filters that output from its shared multi-monitor bar model. The primary
 output still hosts QS Bar and any frame-family style (`BarProducts.isFrameFamily`,
-today Shima), because their popups, dock and island serve the whole desktop. A
+today Shima and Python), because their popups, dock and island serve the whole
+desktop. A
 missing per-display setting means enabled, so upgrades preserve the existing layout.
 
 **To add a built-in style, drop its folder under `barstyles/` and add one row to
@@ -630,6 +636,45 @@ scale, resolution and Night Light). It is written and drawn inside the island
 (`barstyles/kairos/quicksettings/`) and dismissed by clicking anywhere outside
 it, by moving the pointer away, by Escape, or by tapping the tune icon again; it
 never replaces Ryoku Settings.
+
+## Python Settings
+
+Python keeps its settings in the style itself: the **guide**, opened by the bar's
+gear pill (or `qs -c shell ipc call main handleCommand toggle guide`). It is
+serpantinum's own settings surface, ported 1:1, with tabs for Welcome, General,
+Display, Theme, Bar, Dock, Launcher, On-Screen Display, Notifications, Wellbeing
+and About. Every
+control writes the `python` key in `shell.json` through the shell daemon (the
+sole writer) and applies live; Ryoku Settings is untouched except that Bar
+Studio carries an **OPEN PYTHON SETTINGS** button that routes to the guide.
+
+What stays Ryoku's while Python is the bar: the app launcher (Super+Space), the
+clipboard history, the wallpaper picker (Super+W, ryogami), the lock screen,
+screen capture, updates and the desktop widgets. The bar's buttons for those
+hand over to Ryoku's own surfaces. Two visual takeovers are the style's: while
+`barStyle` is `python`, the shell's own notification banners and OSD pills stand
+down (`Config.styleOwnsBanners` / `styleOwnsFeedback`) and Python draws its
+ported versions; a user can flip `python.general.notifications` (or
+`python.general.osd`) off to get Ryoku's back.
+
+Python also brings serpantinum's desktop-widget faces to Ryoku's global desktop
+widgets: the style folder carries the ported face library under
+`barstyles/python/widgets/faces/`, and `shell/modules/desktop/` adapts each type
+(clock, music, weather, visualizer, image, user, cpu, ram, temp, disk, battery,
+github, each with its variant ladder) into the same `WidgetSlot` that hosts the
+built-ins and the Shima faces. Placement, size, lock, backing and the colour
+modes are Ryoku's (widgets.json, the desktop edit bar and the widget menu); the
+face only paints. Pick **Serpantinum** or **Ryoku** as the widget's style in its
+right-click menu: Serpantinum draws the upstream plate, Ryoku lets the slot draw
+the shared paper-and-ink backing, so the widget can read as part of either
+system while staying on the same host.
+
+The style's palette follows Ryoku's live wallpaper palette, with one exception:
+picking a preset in the guide's Theme tab stores that palette under
+`python.theme.colors` and Python paints itself with it (the ported Catppuccin
+slot names map onto the Material roles in `ThemeBackend`). The font picker
+writes Ryoku's single global `fontFamily`, so the whole desktop retunes, and
+the blue-light rows drive the daemon's night light.
 
 ## Frame menus
 

@@ -14,7 +14,7 @@ instantly and toggles with `ryoku-shell launcher`.
 
 ## Launcher variants
 
-Hero is the default launcher. Ryoku Settings -> App Launcher offers five
+Hero is the default launcher. Ryoku Settings -> App Launcher offers six
 complete styles and saves the choice as `variant` in
 `~/.config/ryoku/launcher.json`:
 
@@ -34,6 +34,11 @@ complete styles and saves the choice as `variant` in
   spotlight the island's search bubble does, with apps, actions, commands, math
   and web in one row. When another bar style is active no frame hosts the
   palette, so the variant mounts the frame's palette surface itself.
+- **Python** is the Python bar style's launcher, ported 1:1 from Serpantinum by
+  ilyamiro: the bar-attached search pill that docks under the bar edge, ranks
+  apps by launch usage, and carries a Files tab beside the app list. It reads
+  the style's own settings namespace, so pick it with the Python bar for the
+  full look.
 
 The resident `shell.qml` selector loads the saved catalog entry without changing
 the stable `ryoku-shell launcher` command or socket. An unknown saved ID resolves

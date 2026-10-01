@@ -40,3 +40,13 @@ window-manager layer. It is not iNiR or iRiS, and those names, logos and the Kir
 mascot belong to snowarch. iNiR is released under the GNU General Public License
 version 3 with additional section 7 terms; its NOTICE and LICENSE ship unchanged
 beside the code in ryoku/shell/quickshell/inir/.
+
+The Python bar style (ryoku/shell/quickshell/shell/modules/bar/barstyles/python/)
+is based on Serpantinum by ilyamiro and contributors
+(https://github.com/ilyamiro/serpantinum). It is a modified version: Ryoku
+renamed it, gave it its own mark, runs its data plane through Ryoku's
+window-manager seam and services, and keeps the launcher, clipboard, wallpaper,
+lock, screenshot and update surfaces as Ryoku's own. Serpantinum is released
+under the GNU Affero General Public License version 3 or later; the ported
+portions keep that license (see the NOTICE and LICENSE beside the code), and
+AGPL-3.0 section 13 permits their combination with Ryoku's GPL-3 distribution.

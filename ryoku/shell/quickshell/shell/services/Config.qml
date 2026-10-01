@@ -48,6 +48,19 @@ Singleton {
     property alias qsbar: adapter.qsbar
     property alias kairos: adapter.kairos
 
+    // python: the serpantinum bar style's own settings namespace (shell.json
+    // "python"), read and written by the style's own Config mirror.
+    property alias python: adapter.python
+
+    // A folder style may draw its own notification banners and its own volume/
+    // brightness OSD (serpantinum's Python does, like Nacre before it). While it
+    // is active and does not opt out under its own `general` map, the shell's
+    // resident banners and OSD windows hold back so exactly one of each paints.
+    readonly property bool styleOwnsBanners: barStyle === "python"
+        && !(root.python && root.python.general && root.python.general.notifications === false)
+    readonly property bool styleOwnsFeedback: barStyle === "python"
+        && !(root.python && root.python.general && root.python.general.osd === false)
+
     // dock: the first-class app dock surface (modules/dock). A top-level store,
     // not a bar-style key, because the dock is now style-agnostic -- neither qsbar
     // nor Sumi owns it. Off until the user turns it on (Hub -> Bar Studio -> Dock).
@@ -196,6 +209,7 @@ Singleton {
             property var nacre: NacreConfig.defaultConfig()
             property var qsbar: ({})
             property var kairos: ({})
+            property var python: ({})
             property var dock: ({
                 "enabled": false,
                 "edge": "auto",
