@@ -1,11 +1,12 @@
 # Maintainer: Ryoku <releases@ryoku.dev>
 #
-# mangowm: the compositor itself, built from the tagged source. Ryoku ships it
-# because the AUR alternative (mangowm-git, run by the upstream author) lags
-# the tag (0.16.0.r0 against the 0.17.4 release) and the desktop's install
-# path is the [ryoku] repo: a compositor behind its release, or AUR-only,
-# makes the mango variant a worse first login than the other two. Same
-# posture as the in-repo xwayland-satellite build.
+# mangowm: the compositor itself, built from the tagged source. Arch's extra
+# carries mangowm too, but its build ships the greeter entry as-is
+# (Exec=mango): a first login on it boots the bare compositor with no
+# keybinds, no autostart and no shell. Only a build that leaves the entry to
+# ryoku-desktop-mango (whose Exec is the materializing wrapper) can back the
+# desktop, so this one carries epoch=1: it stays the install candidate
+# however extra's pkgrel sorts. Re-vendor on each tag Ryoku tracks.
 #
 # The greeter session entry and the portal routing file are NOT owned here:
 # meson installs assets/mango.desktop and assets/mango-portals.conf, and
@@ -17,6 +18,7 @@ pkgname=mangowm
 _pkgname=mango
 pkgver=0.17.4
 pkgrel=1
+epoch=1
 pkgdesc="A Wayland compositor with smooth animation (Ryoku build, tagged release)"
 arch=('x86_64')
 url="https://github.com/mangowm/mango"
