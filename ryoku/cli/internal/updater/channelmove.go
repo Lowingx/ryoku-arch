@@ -8,6 +8,7 @@ import (
 
 	"ryoku-cli/internal/sys"
 	i18n "ryoku-i18n"
+	wm "ryoku-wm"
 )
 
 // The one place that moves the Ryoku set onto a package channel.
@@ -74,6 +75,24 @@ func moveRyokuSetToChannel() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf(i18n.T("cannot read the [ryoku] repository, so there is nothing safe to move: %w"), err)
 	}
+	// A box migrating onto packages (a checkout retired by `ryoku track`) has
+	// no ryoku-desktop installed, and the set above is installed-only: without
+	// this the move would run, succeed, and install nothing -- the track
+	// message promises the switch installs the base, and a box left with its
+	// source lane retired and no packaged base cannot update at all. The
+	// umbrella pulls the compositor virtual; naming the active variant makes
+	// the choice deterministic on a box that has no provider installed yet
+	// (the same pair the ISO installer lays, lib/deploy.sh).
+	if !pkgInstalledForMove(ryokuDesktopPkg) {
+		name := detectCompositorForMove()
+		if name == "" {
+			name = wm.Providers()[0] // the shipped default variant
+		}
+		set = append([]string{
+			ryokuRepo + "/" + ryokuDesktopPkg,
+			ryokuRepo + "/" + ryokuDesktopPkg + "-" + name,
+		}, set...)
+	}
 	// A channel that predates the compositor split carries no
 	// ryoku-desktop-hyprland/niri; their exact-version pins would fail the
 	// whole transaction, so drop the installed metas the target does not serve
@@ -93,14 +112,18 @@ func moveRyokuSetToChannel() ([]string, error) {
 	return set, nil
 }
 
-// The two read-only pacman queries the move makes, as seams: both hit the real
-// /etc/pacman.conf, so a test pins them without a live database.
+// The read-only queries the move makes, as seams: they hit the live database
+// and the running session, so a test pins them without either.
+const ryokuDesktopPkg = "ryoku-desktop"
+
 var (
 	ryokuSetForMove = func() ([]string, error) {
 		set, _, err := installedRyokuSet(true)
 		return set, err
 	}
-	servedSetForMove = repoServedSet
+	servedSetForMove        = repoServedSet
+	pkgInstalledForMove     = sys.PkgInstalled
+	detectCompositorForMove = func() string { return wm.Detect().Name }
 )
 
 // lastDroppedMetas holds the split metas the most recent move removed with -Rdd.
