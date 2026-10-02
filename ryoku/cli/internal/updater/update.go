@@ -498,24 +498,32 @@ func unownedFiles(paths []string) []string {
 	return out
 }
 
-// ryokuOverwriteGlob names the ryoku-desktop-owned paths that the ISO installer
+// RyokuOverwriteGlob names the ryoku-desktop-owned paths that the ISO installer
 // and ryoku/shell/deploy.sh seed unowned before the package began owning them:
 // the privileged helpers (ryoku-dns, ryoku-network-kill, ryoku-boot-apply,
-// ryoku-wifi-powersave), their polkit rules, the Plymouth splash theme, the
-// ryoku-owned systemd units, the mkinitcpio install hooks the HOOKS drop-in
-// names, the shipped boot configs under /usr/share/ryoku/boot, and the logind
-// lid-switch drop-in. Every ryoku-desktop (re)install --overwrites these, or the
+// ryoku-wifi-powersave, ryoku-hub), their polkit rules, the Plymouth splash
+// theme, the ryoku-owned systemd units, the mkinitcpio install hooks the HOOKS
+// drop-in names, the shipped boot configs under /usr/share/ryoku/boot, the
+// logind lid-switch drop-in, the boot hook, the uinput modules-load drop-in,
+// the backlight udev rule, the lockscreen greeter bundle, and the default-apps
+// mimeapps map. Every ryoku-desktop (re)install --overwrites these, or the
 // first upgrade that starts owning a seeded path aborts the whole transaction
 // ("exists in filesystem") and blocks every update until the files are removed
 // by hand. Keep in sync with the doctor's ryokuSystemGlobs, which clears the
 // same paths on an already-wedged box.
-const ryokuOverwriteGlob = "/usr/bin/ryoku-*," +
+const RyokuOverwriteGlob = "/usr/bin/ryoku-*," +
 	"/usr/lib/systemd/system/ryoku-*," +
 	"/usr/lib/initcpio/install/ryoku-*," +
 	"/usr/share/polkit-1/rules.d/*ryoku*.rules," +
 	"/usr/share/plymouth/themes/ryoku/*," +
 	"/usr/share/ryoku/boot/*," +
-	"/etc/systemd/logind.conf.d/10-ryoku-lid.conf"
+	"/usr/share/ryoku/lockscreen/ryoku-*," +
+	"/usr/share/ryoku/lockscreen/install-qylock," +
+	"/etc/systemd/logind.conf.d/10-ryoku-lid.conf," +
+	"/etc/boot/hooks/post.d/*ryoku*," +
+	"/etc/modules-load.d/*ryoku*," +
+	"/usr/lib/udev/rules.d/*ryoku*.rules," +
+	"/usr/local/share/applications/mimeapps.list"
 
 // systemUpgradeArgs is the user's lane, run only by `ryoku update --system`:
 // the full sysupgrade, kernel included, exactly what `sudo pacman -Syu` does
@@ -523,7 +531,7 @@ const ryokuOverwriteGlob = "/usr/bin/ryoku-*," +
 // owns cannot abort the transaction here either.
 func systemUpgradeArgs() []string {
 	return []string{"sudo", "env", "SNAP_PAC_SKIP=y", "RYOKU_MANAGED_UPDATE=1",
-		"pacman", "-Syu", "--noconfirm", "--overwrite", ryokuOverwriteGlob}
+		"pacman", "-Syu", "--noconfirm", "--overwrite", RyokuOverwriteGlob}
 }
 
 // runAURUpgrade runs `yay -Sua` under the same sleep inhibitor.

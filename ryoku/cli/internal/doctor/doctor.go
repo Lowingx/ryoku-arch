@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"ryoku-cli/internal/sys"
+	"ryoku-cli/internal/updater"
 	"strconv"
 	"strings"
 	"syscall"
@@ -3941,16 +3942,10 @@ func tailLines(s string, n int) string {
 // older ISO, or `ryoku recovery` collides with the package on `pacman -Syu`
 // ("exists in filesystem") and aborts the whole atomic transaction, so no update
 // lands. `ryoku update` now passes --overwrite for these
-// (updater.ryokuOverwriteGlob), but a box already wedged cannot reach that fixed
-// binary; clearing the copies here lets the next update adopt them.
-var ryokuSystemGlobs = []string{
-	"/usr/bin/ryoku-*",
-	"/usr/lib/systemd/system/ryoku-*",
-	"/usr/share/polkit-1/rules.d/*ryoku*.rules",
-	"/usr/share/plymouth/themes/ryoku/*",
-	"/usr/share/ryoku/boot/*",
-	"/etc/systemd/logind.conf.d/10-ryoku-lid.conf",
-}
+// (updater.RyokuOverwriteGlob), but a box already wedged cannot reach that fixed
+// binary; clearing the copies here lets the next update adopt them. The list is
+// the overwrite glob itself, split: one source of truth, no drift.
+var ryokuSystemGlobs = strings.Split(updater.RyokuOverwriteGlob, ",")
 
 // pkgOwnsFile reports whether an installed package owns path. A var so tests stub
 // the probe without a real pacman database.

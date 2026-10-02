@@ -200,6 +200,7 @@ func TestRyokuInstallArgsStayInTheRyokuLane(t *testing.T) {
 	for _, p := range []string{
 		"/usr/bin/ryoku-dns",
 		"/usr/bin/ryoku-wifi-powersave",
+		"/usr/bin/ryoku-hub",
 		"/usr/share/polkit-1/rules.d/50-ryoku-dns.rules",
 		"/usr/share/polkit-1/rules.d/49-ryoku-wifi-powersave.rules",
 		"/usr/share/plymouth/themes/ryoku/bullet.png",
@@ -207,7 +208,12 @@ func TestRyokuInstallArgsStayInTheRyokuLane(t *testing.T) {
 		"/usr/lib/systemd/system/ryoku-network-kill-guard.service",
 		"/usr/lib/initcpio/install/ryoku-gpu-trim",
 		"/usr/share/ryoku/boot/default.conf",
+		"/usr/share/ryoku/lockscreen/ryoku-greeter",
 		"/etc/systemd/logind.conf.d/10-ryoku-lid.conf",
+		"/etc/boot/hooks/post.d/45-ryoku-windows",
+		"/etc/modules-load.d/99-ryoku-uinput.conf",
+		"/usr/lib/udev/rules.d/90-ryoku-backlight.rules",
+		"/usr/local/share/applications/mimeapps.list",
 	} {
 		covered := false
 		for _, g := range strings.Split(glob, ",") {

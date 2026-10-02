@@ -52,10 +52,10 @@ var privileged = func(argv ...string) error {
 // need; --needed leaves a package already at the channel's version alone.
 // SNAP_PAC_SKIP because the interactive path brackets the run with a snapper
 // pair and the guard wants no snapshot noise; --overwrite adopts the paths the
-// installer and deploy.sh seed unowned (see ryokuOverwriteGlob).
+// installer and deploy.sh seed unowned (see RyokuOverwriteGlob).
 func ryokuMoveArgs(set []string) []string {
 	args := []string{"env", "SNAP_PAC_SKIP=y", "RYOKU_MANAGED_UPDATE=1",
-		"pacman", "-S", "--needed", "--noconfirm", "--overwrite", ryokuOverwriteGlob}
+		"pacman", "-S", "--needed", "--noconfirm", "--overwrite", RyokuOverwriteGlob}
 	return append(args, set...)
 }
 

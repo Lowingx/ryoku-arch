@@ -292,7 +292,7 @@ func cmdWmUse(args []string) {
 		// compositor in place and "keep" means what it says. A box whose packages
 		// predate that still declares the shared virtual as a conflict and pacman
 		// refuses the install under --noconfirm; only then drop it first.
-		if err := sys.Sudo("pacman", "-S", "--needed", "--noconfirm", pkg); err != nil {
+		if err := sys.Sudo(wmSwitchInstallArgs(pkg)...); err != nil {
 			out := "ryoku-desktop-" + active
 			if active == "" || active == name || !packageInstalled(out) {
 				die(i18n.T("could not install %s: %v"), pkg, err)
@@ -300,7 +300,7 @@ func cmdWmUse(args []string) {
 			if err := sys.Sudo("pacman", "-Rdd", "--noconfirm", out); err != nil {
 				die(i18n.T("could not install %s, and could not remove %s first: %v"), pkg, out, err)
 			}
-			if err := sys.Sudo("pacman", "-S", "--needed", "--noconfirm", pkg); err != nil {
+			if err := sys.Sudo(wmSwitchInstallArgs(pkg)...); err != nil {
 				die(i18n.T("could not install %s after removing %s: %v"), pkg, out, err)
 			}
 		}
@@ -521,6 +521,19 @@ func rawLen(raw json.RawMessage) int {
 		return len(obj)
 	}
 	return 0
+}
+
+// wmSwitchInstallArgs is the compositor-switch install transaction. It carries
+// --overwrite for the ryoku-desktop-owned paths the ISO installer and deploy.sh
+// seed unowned (updater.RyokuOverwriteGlob), exactly like `ryoku update` and the
+// channel move: the variant package pulls ryoku-desktop itself, and on a box
+// seeded by an older ISO or a dev deploy those unowned copies abort the whole
+// atomic transaction ("exists in filesystem"), failing the switch. No
+// SNAP_PAC_SKIP: the interactive path wants snap-pac to snapshot the switch so
+// `ryoku rollback` can undo it.
+func wmSwitchInstallArgs(pkg string) []string {
+	return []string{"pacman", "-S", "--needed", "--noconfirm",
+		"--overwrite", updater.RyokuOverwriteGlob, pkg}
 }
 
 func packageAvailable(pkg string) bool {
