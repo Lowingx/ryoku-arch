@@ -48,3 +48,19 @@ test("presentation rejects invalid modes and retired native geometry is discarde
     assert.deepEqual(JSON.parse(JSON.stringify(value.left.presentations)), { media: "summary", tools: "expanded" });
     assert.equal(Object.hasOwn(value.left, "geometry"), false);
 });
+
+test("switching layouts preserves sections, presentation and independent widths", () => {
+    const classic = context.normalize({
+        layout: "classic",
+        left: { cards: ["weather", "system"], width: 1080, classicWidth: 410, presentations: { system: "summary" } },
+        right: { cards: [], width: 1180, classicWidth: 460 }
+    });
+    const modern = context.normalize({ ...classic, layout: "modern" });
+    assert.equal(modern.layout, "modern");
+    assert.deepEqual(Array.from(modern.left.cards), ["weather", "system"]);
+    assert.deepEqual(Array.from(modern.right.cards), []);
+    assert.equal(modern.left.presentations.system, "summary");
+    assert.deepEqual([modern.left.width, modern.left.classicWidth, modern.right.width, modern.right.classicWidth],
+        [1080, 410, 1180, 460]);
+    assert.equal(context.normalize({ ...modern, layout: "classic" }).layout, "classic");
+});

@@ -20,7 +20,8 @@ Scope {
     readonly property real screenHeight: screen && screen.height > 0 ? screen.height : 800
     readonly property real availableWidth: Math.max(1, screenWidth - clearances.left - clearances.right - gap * 2)
     readonly property real availableHeight: Math.max(1, screenHeight - clearances.top - clearances.bottom - gap * 2)
-    readonly property real wantedWidth: Math.min(availableWidth, options.width * s)
+    readonly property real wantedWidth: Math.min(availableWidth,
+        (Config.sidebars.layout === "classic" ? options.classicWidth : options.width) * s)
     readonly property real heightCap: Math.min(availableHeight, screenHeight * options.maxHeight / 100)
     readonly property real wantedHeight: Math.min(heightCap, options.heightMode === "fit"
         ? Math.max(520 * s, chrome.fittedHeight) : options.height * s)

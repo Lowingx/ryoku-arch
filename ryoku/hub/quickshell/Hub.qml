@@ -179,7 +179,7 @@ Rectangle {
         "plugins": "plugin plugins hyprland compositor hyprpm title bar titlebar hyprbars glass hyprglass image border imgborders cursor motion dynamic cursors focus flash hyprfocus key sound sounds keyboard keysounds typing click clicky thock creamy cherry mx topre mechvibes switch version abi mismatch rebuild build update add git repository install",
         "bar-studio": "bar frame rails zones widgets menus surfaces style catalogue layout framebars sidebar dock dockapps pinned pin magnify autohide auto-hide media chip peek labels edge taskbar",
         "desktop": "desktop brand logo mark name wallpaper picker clipboard",
-        "sidebars": "sidebar sidebars controls companion cards sections order move summary full width height fit fixed alignment keep open pinned motion plugin",
+        "sidebars": "sidebar sidebars classic modern skin layout controls companion cards sections order move summary full width height fit fixed alignment keep open pinned motion plugin",
         "desktop-scene": "desktop stage scene depth parallax wallpaper cut layer model quality shadow edge visualizer spectrum widgets placement edit",
         "launcher": "launcher spotlight command palette greeting weather home",
         "fastfetch": "fetch neofetch terminal system info logo ascii emblem readout",

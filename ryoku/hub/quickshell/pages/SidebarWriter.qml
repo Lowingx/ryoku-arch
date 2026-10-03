@@ -74,8 +74,9 @@ Item {
     function merged(value) {
         var clean = FrameModels.Sidebars.normalize(value);
         var out = root.raw && typeof root.raw === "object" && !Array.isArray(root.raw) ? root.clone(root.raw) : ({});
+        out.layout = clean.layout;
         out.motion = clean.motion;
-        var fields = ["enabled", "cards", "width", "height", "heightMode", "maxHeight", "position", "pinned", "presentations"];
+        var fields = ["enabled", "cards", "width", "classicWidth", "height", "heightMode", "maxHeight", "position", "pinned", "presentations"];
         for (var i = 0; i < 2; ++i) {
             var name = i === 0 ? "left" : "right";
             var target = out[name] && typeof out[name] === "object" && !Array.isArray(out[name]) ? root.clone(out[name]) : ({});

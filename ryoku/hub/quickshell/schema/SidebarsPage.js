@@ -13,10 +13,13 @@ var builtIns = [
 ];
 
 var rows = [
+    { tab: "Layout", group: "STYLE", key: "sidebars.layout", label: "Sidebar layout", desc: "Modern or the original Classic sidebars, applied to both sides", src: "shell" },
     { tab: "Contents", group: "SECTIONS", key: "sidebars.left.cards", label: "Controls sections", desc: "Show, order, move, and choose the detail level of every section", src: "shell" },
     { tab: "Contents", group: "SECTIONS", key: "sidebars.right.cards", label: "Companion sections", desc: "Show, order, move, and choose the detail level of every section", src: "shell" },
     { tab: "Layout", group: "FRAME", key: "sidebars.left.width", label: "Controls width", desc: "Exact width, height mode, alignment and screen limit", src: "shell" },
     { tab: "Layout", group: "FRAME", key: "sidebars.right.width", label: "Companion width", desc: "Exact width, height mode, alignment and screen limit", src: "shell" },
+    { tab: "Layout", group: "FRAME", key: "sidebars.left.classicWidth", label: "Classic Controls width", desc: "Classic and Modern remember their widths separately", src: "shell" },
+    { tab: "Layout", group: "FRAME", key: "sidebars.right.classicWidth", label: "Classic Companion width", desc: "Classic and Modern remember their widths separately", src: "shell" },
     { tab: "Behaviour", group: "OPENING", key: "sidebars.motion", label: "Opening motion", desc: "Quick, standard, or calm opening tempo", src: "shell" },
     { tab: "Behaviour", group: "OPENING", key: "sidebars.left.pinned", label: "Keep Controls open", desc: "Keep the sidebar visible when focus moves away", src: "shell" },
     { tab: "Behaviour", group: "OPENING", key: "sidebars.right.pinned", label: "Keep Companion open", desc: "Keep the sidebar visible when focus moves away", src: "shell" }

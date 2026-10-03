@@ -36,6 +36,10 @@ const canonicalSidebarsJSON = `{
 }`
 
 func TestMigrateSidebarRework(t *testing.T) {
+	currentSidebars, err := json.Marshal(defaultSidebars())
+	if err != nil {
+		t.Fatal(err)
+	}
 	tests := []struct {
 		name    string
 		in      string
@@ -80,7 +84,7 @@ func TestMigrateSidebarRework(t *testing.T) {
 		},
 		{
 			name:    "current store is unchanged",
-			in:      `{"frameBars":{"menus":{"theme":{"anchor":"right"}},"surfaces":{"future":{"anchor":"top"}}},"sidebars":` + canonicalSidebarsJSON + `,"custom":{"nested":[1,2,3]}}`,
+			in:      `{"frameBars":{"menus":{"theme":{"anchor":"right"}},"surfaces":{"future":{"anchor":"top"}}},"sidebars":` + string(currentSidebars) + `,"custom":{"nested":[1,2,3]}}`,
 			changed: false,
 		},
 		{
@@ -144,11 +148,15 @@ func TestMigrateSidebarRework(t *testing.T) {
 				t.Fatal(err)
 			}
 			originalSides, _ := original["sidebars"].(map[string]any)
+			if _, supplied := originalSides["layout"]; !supplied {
+				delete(got["sidebars"].(map[string]any), "layout")
+				delete(want["sidebars"].(map[string]any), "layout")
+			}
 			for _, side := range []string{"left", "right"} {
 				prior, _ := originalSides[side].(map[string]any)
 				actual, _ := got["sidebars"].(map[string]any)[side].(map[string]any)
 				expected, _ := want["sidebars"].(map[string]any)[side].(map[string]any)
-				for _, key := range []string{"width", "height"} {
+				for _, key := range []string{"width", "height", "classicWidth"} {
 					if _, supplied := prior[key]; supplied || (side == "left" && key == "width" && originalSides["width"] != nil) {
 						continue
 					}
@@ -277,5 +285,35 @@ func TestReconcileSidebarRework(t *testing.T) {
 	}
 	if r := reconcileSidebarRework(false); r.status != recOK {
 		t.Fatalf("clean store: status=%s detail=%q, want ok", r.status.label(), r.detail)
+	}
+}
+
+func TestSidebarMigrationPreservesClassicLayout(t *testing.T) {
+	raw := []byte(`{"sidebars":{"layout":"classic","left":{"cards":["weather","system"],"width":1100,"classicWidth":405,"presentations":{"system":"summary"}},"right":{"cards":[],"width":1200,"classicWidth":445}},"fontScale":1.3}`)
+	out, _, err := migrateSidebarRework(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cfg map[string]any
+	if err := json.Unmarshal(out, &cfg); err != nil {
+		t.Fatal(err)
+	}
+	sidebars := cfg["sidebars"].(map[string]any)
+	if sidebars["layout"] != "classic" {
+		t.Fatalf("migration replaced the selected layout: %v", sidebars["layout"])
+	}
+	left := sidebars["left"].(map[string]any)
+	right := sidebars["right"].(map[string]any)
+	if !reflect.DeepEqual(left["cards"], []any{"weather", "system"}) || !reflect.DeepEqual(right["cards"], []any{}) {
+		t.Fatalf("migration changed selected sections: left=%v right=%v", left["cards"], right["cards"])
+	}
+	if left["presentations"].(map[string]any)["system"] != "summary" {
+		t.Fatal("migration changed the section presentation")
+	}
+	if left["width"] != float64(1100) || left["classicWidth"] != float64(405) || right["width"] != float64(1200) || right["classicWidth"] != float64(445) {
+		t.Fatalf("migration changed remembered widths: left=%v right=%v", left, right)
+	}
+	if second, changed, err := migrateSidebarRework(out); err != nil || changed || second != nil {
+		t.Fatalf("second migration is not a no-op: changed=%v err=%v", changed, err)
 	}
 }

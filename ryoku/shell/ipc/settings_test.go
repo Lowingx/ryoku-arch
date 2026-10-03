@@ -60,6 +60,9 @@ func TestPatchRejectsInvalidSchemaValues(t *testing.T) {
 		{"margin negative", "notifications.popup_window_margins", `-5`, "out of range"},
 		{"min height too high", "bars.top_bar.minimum_height", `9000`, "out of range"},
 		{"empty theme", "theme.theme", `""`, "must not be empty"},
+		{"bad sidebar layout", "sidebars.layout", `"grain"`, "must be modern or classic"},
+		{"non-string sidebar layout", "sidebars.layout", `null`, "must be modern or classic"},
+		{"bad compound sidebar layout", "sidebars", `{"layout":"grain"}`, "must be modern or classic"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -736,5 +739,37 @@ func TestSettingsBoolAt(t *testing.T) {
 	}
 	if s.boolAt("clipboard.pruneWeekly") {
 		t.Error("boolAt still true after the key was patched off")
+	}
+}
+
+func TestSidebarLayoutSurvivesReloadAndSectionEdits(t *testing.T) {
+	s := newTestStore(t)
+	if err := s.patch("sidebars", rm(`{"layout":"classic","left":{"cards":["weather"],"width":930,"classicWidth":410},"right":{"cards":["chat"],"width":1100,"classicWidth":450}}`)); err != nil {
+		t.Fatal(err)
+	}
+	reloaded := newSettingsStore(s.path)
+	if err := reloaded.patch("sidebars.left.cards", rm(`["media","weather"]`)); err != nil {
+		t.Fatal(err)
+	}
+	frame := reloaded.frameLocked()
+	if got := frameGet(t, frame, "sidebars.layout"); got != "classic" {
+		t.Fatalf("layout after reload and section edit = %v, want classic", got)
+	}
+	if got := frameGet(t, frame, "sidebars.left.cards"); !reflect.DeepEqual(got, []any{"media", "weather"}) {
+		t.Fatalf("sections = %v, want [media weather]", got)
+	}
+	for path, want := range map[string]float64{
+		"sidebars.left.width": 930, "sidebars.left.classicWidth": 410,
+		"sidebars.right.width": 1100, "sidebars.right.classicWidth": 450,
+	} {
+		if got := frameNum(t, frame, path); got != want {
+			t.Fatalf("%s = %v, want %v", path, got, want)
+		}
+	}
+	if err := reloaded.patch("sidebars.layout", rm(`"modern"`)); err != nil {
+		t.Fatal(err)
+	}
+	if got := frameGet(t, newSettingsStore(s.path).frameLocked(), "sidebars.layout"); got != "modern" {
+		t.Fatalf("layout after switching back and reopening = %v, want modern", got)
 	}
 }

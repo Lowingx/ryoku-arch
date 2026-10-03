@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import Ryoku.PluginKit
 import Ryoku.Ui.Singletons
+import shell.services
 import "SidebarCatalog.js" as SidebarCatalog
 
 Item {
@@ -20,11 +21,15 @@ Item {
     property string page: ""
     property bool compact: false
     property real viewportHeight: 0
+    property bool initialized: false
 
     signal requestClose()
 
     readonly property var catalogEntry: SidebarCatalog.byId(root.cardId)
     readonly property bool pluginCard: root.pluginEntry !== null
+    readonly property string builtinSource: root.catalogEntry
+        ? Config.sidebars.layout === "classic" ? root.catalogEntry.classicSource : root.catalogEntry.source
+        : ""
     readonly property var pluginManifest: root.pluginCard && root.pluginEntry.manifest
         ? root.pluginEntry.manifest : ({})
     readonly property string pluginName: {
@@ -74,7 +79,7 @@ Item {
         builtinLoader.source = "";
         if (!root.catalogEntry || root.pluginCard)
             return;
-        builtinLoader.setSource(Qt.resolvedUrl(root.catalogEntry.source), {
+        builtinLoader.setSource(Qt.resolvedUrl(root.builtinSource), {
             s: root.s,
             open: root.open,
             reveal: root.reveal,
@@ -83,7 +88,8 @@ Item {
         });
     }
 
-    Component.onCompleted: loadBuiltin()
+    onBuiltinSourceChanged: if (root.initialized) root.loadBuiltin()
+    Component.onCompleted: { root.initialized = true; root.loadBuiltin(); }
 
     Loader {
         id: builtinLoader

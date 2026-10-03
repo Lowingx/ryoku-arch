@@ -19,13 +19,16 @@ Item {
     property string contentSignature: ""
     property real currentContentHeight: 0
     readonly property real s: Tokens.uiScaleFor(screen ? screen.name : "")
-    readonly property real pad: Tokens.s5 * s
+    readonly property bool classic: Config.sidebars.layout === "classic"
+    readonly property real pad: classic ? 0 : Tokens.s5 * s
     readonly property bool narrow: width < 520 * s
     readonly property string requestedTab: SidebarState.activeTab(screen, side)
     readonly property var options: Config.sidebars[side]
     readonly property var pluginCards: pluginHost.cards(side)
-    readonly property real chromeHeight: header.height + footer.height + root.pad * 2 + Tokens.s5 * s * 2
-    readonly property real fittedHeight: chromeHeight + Math.max(currentContentHeight, sectionList.implicitHeight)
+    readonly property real chromeHeight: classic ? 0
+        : header.height + footer.height + root.pad * 2 + Tokens.s5 * s * 2
+    readonly property real fittedHeight: chromeHeight
+        + Math.max(currentContentHeight, classic ? classicRail.minimumHeight : sectionList.implicitHeight)
     signal closeRequested()
 
     LayoutMirroring.enabled: I18n.rtl
@@ -86,6 +89,7 @@ Item {
 
     Item {
         id: header
+        visible: !root.classic
         x: root.pad; y: root.pad
         width: parent.width - root.pad * 2
         height: Math.max(titleCopy.implicitHeight, headerActions.height)
@@ -131,18 +135,30 @@ Item {
         }
     }
     Rectangle {
+        visible: !root.classic
         x: root.pad; y: header.y + header.height + Tokens.s4 * root.s
         width: parent.width - root.pad * 2; height: Tokens.border
         color: Tokens.lineSoft
     }
     Item {
         id: body
-        x: root.pad; y: header.y + header.height + Tokens.s5 * root.s
+        x: root.pad; y: root.classic ? 0 : header.y + header.height + Tokens.s5 * root.s
         width: parent.width - root.pad * 2
-        height: Math.max(0, footer.y - y - Tokens.s4 * root.s)
+        height: root.classic ? parent.height : Math.max(0, footer.y - y - Tokens.s4 * root.s)
+        ClassicRail {
+            id: classicRail
+            visible: root.classic
+            side: root.side; s: root.s
+            height: parent.height
+            tabs: root.tabs
+            selectedTab: root.selectedTab
+            onTabActivated: index => root.choose(index)
+            onSettingsRequested: root.openSettings()
+            onCloseRequested: root.closeRequested()
+        }
         Rectangle {
             id: navigation
-            visible: root.tabs.length > 0
+            visible: !root.classic && root.tabs.length > 0
             width: (root.narrow ? 48 : 148) * root.s
             height: parent.height
             radius: Tokens.radius * root.s * 2
@@ -212,7 +228,7 @@ Item {
         }
         Item {
             id: pages
-            x: navigation.visible ? navigation.width + Tokens.s4 * root.s : 0
+            x: root.classic ? classicRail.width : navigation.visible ? navigation.width + Tokens.s4 * root.s : 0
             width: parent.width - x
             height: parent.height
             clip: true
@@ -247,8 +263,8 @@ Item {
                         WheelScroll {}
                         Column {
                             id: cardColumn
-                            width: Math.max(0, contentFlick.width - Tokens.s2 * root.s)
-                            spacing: Tokens.s5 * root.s
+                            width: Math.max(0, contentFlick.width - (root.classic ? 0 : Tokens.s2 * root.s))
+                            spacing: (root.classic ? Tokens.s2 : Tokens.s5) * root.s
                             Repeater {
                                 model: page.visited ? page.modelData.cards : []
                                 delegate: SidebarCardHost {
@@ -262,7 +278,7 @@ Item {
                                     pluginEntry: modelData.entry
                                     compact: (root.options.presentations[modelData.id] || "expanded") === "summary"
                                     page: root.requestedTab
-                                    s: root.s * 1.12
+                                    s: root.s * (root.classic ? 1 : 1.12)
                                     open: root.open
                                     reveal: root.reveal
                                     tabActive: page.active
@@ -285,6 +301,7 @@ Item {
     }
     Item {
         id: footer
+        visible: !root.classic
         x: root.pad; y: parent.height - root.pad - height
         width: parent.width - root.pad * 2
         height: 32 * root.s

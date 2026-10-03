@@ -1,15 +1,15 @@
 .pragma library
 
 const catalog = [
-    { id: "system", side: "left", tab: "controls", label: "System", glyph: "settings", source: "cards/SystemCard.qml" },
-    { id: "notifications", side: "left", tab: "notices", label: "Notifications", glyph: "notifications", source: "cards/NotificationsCard.qml" },
-    { id: "weather", side: "left", tab: "weather", label: "Weather", glyph: "cloud", source: "cards/WeatherCard.qml" },
-    { id: "media", side: "left", tab: "media", label: "Media", glyph: "play_circle", source: "cards/MediaCard.qml" },
-    { id: "capture", side: "left", tab: "capture", label: "Capture", glyph: "photo_camera", source: "cards/CaptureCard.qml" },
-    { id: "stage", side: "left", tab: "stage", label: "Stage", glyph: "graphic_eq", source: "cards/StageCard.qml" },
-    { id: "usage", side: "right", tab: "overview", label: "Usage", glyph: "monitor_heart", source: "cards/UsageCard.qml" },
-    { id: "tools", side: "right", tab: "tools", label: "Tools", glyph: "download", source: "cards/ToolsCard.qml" },
-    { id: "chat", side: "right", tab: "chat", label: "Chat", glyph: "chat", source: "cards/ChatCard.qml" }
+    { id: "system", side: "left", tab: "controls", label: "System", glyph: "settings", source: "cards/SystemCard.qml", classicSource: "classic/ClassicSystem.qml" },
+    { id: "notifications", side: "left", tab: "notices", label: "Notifications", glyph: "notifications", source: "cards/NotificationsCard.qml", classicSource: "classic/ClassicNotifications.qml" },
+    { id: "weather", side: "left", tab: "weather", label: "Weather", glyph: "cloud", source: "cards/WeatherCard.qml", classicSource: "classic/ClassicWeather.qml" },
+    { id: "media", side: "left", tab: "media", label: "Media", glyph: "play_circle", source: "cards/MediaCard.qml", classicSource: "classic/ClassicMedia.qml" },
+    { id: "capture", side: "left", tab: "capture", label: "Capture", glyph: "photo_camera", source: "cards/CaptureCard.qml", classicSource: "classic/ClassicCapture.qml" },
+    { id: "stage", side: "left", tab: "stage", label: "Stage", glyph: "graphic_eq", source: "cards/StageCard.qml", classicSource: "classic/ClassicStage.qml" },
+    { id: "usage", side: "right", tab: "overview", label: "Usage", glyph: "monitor_heart", source: "cards/UsageCard.qml", classicSource: "classic/ClassicUsage.qml" },
+    { id: "tools", side: "right", tab: "tools", label: "Tools", glyph: "download", source: "cards/ToolsCard.qml", classicSource: "classic/ClassicTools.qml" },
+    { id: "chat", side: "right", tab: "chat", label: "Chat", glyph: "chat", source: "cards/ChatCard.qml", classicSource: "classic/ClassicChat.qml" }
 ];
 
 function entries(side) {

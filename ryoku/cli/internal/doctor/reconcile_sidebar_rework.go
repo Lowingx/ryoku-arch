@@ -12,11 +12,13 @@ import (
 
 func defaultSidebars() map[string]any {
 	return map[string]any{
+		"layout": "modern",
 		"motion": "standard",
 		"left": map[string]any{
 			"enabled":       true,
 			"cards":         []any{"system", "notifications", "weather", "media", "capture", "stage"},
 			"width":         float64(1040),
+			"classicWidth":  float64(380),
 			"height":        float64(1000),
 			"heightMode":    "fixed",
 			"maxHeight":     float64(85),
@@ -28,6 +30,7 @@ func defaultSidebars() map[string]any {
 			"enabled":       true,
 			"cards":         []any{"usage", "tools", "chat"},
 			"width":         float64(1040),
+			"classicWidth":  float64(428),
 			"height":        float64(1000),
 			"heightMode":    "fixed",
 			"maxHeight":     float64(85),
@@ -157,13 +160,15 @@ func migrateSidebarRework(raw []byte) ([]byte, bool, error) {
 		}
 
 		defaults := defaultSidebars()
-		if _, found := sidebars["motion"]; !found {
-			value, err := json.Marshal(defaults["motion"])
-			if err != nil {
-				return nil, false, err
+		for _, key := range []string{"layout", "motion"} {
+			if _, found := sidebars[key]; !found {
+				value, err := json.Marshal(defaults[key])
+				if err != nil {
+					return nil, false, err
+				}
+				sidebars[key] = value
+				sidebarsChanged = true
 			}
-			sidebars["motion"] = value
-			sidebarsChanged = true
 		}
 		for _, side := range []string{"left", "right"} {
 			fallback := defaults[side].(map[string]any)

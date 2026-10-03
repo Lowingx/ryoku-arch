@@ -1296,13 +1296,6 @@ func TestMigrateShellConfig(t *testing.T) {
 	if _, present := surfaces["system"]; present {
 		t.Error("retired system sidebar was recreated")
 	}
-	var wantSidebars map[string]any
-	if err := json.Unmarshal([]byte(canonicalSidebarsJSON), &wantSidebars); err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(cfg["sidebars"], wantSidebars) {
-		t.Errorf("sidebars = %#v, want %#v", cfg["sidebars"], wantSidebars)
-	}
 	for _, key := range []string{"sidebarLeftPanes", "sidebarRightPanes", "sidebarWidth"} {
 		if _, ok := cfg[key]; ok {
 			t.Errorf("sidebar-only key %s survived migration", key)

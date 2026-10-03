@@ -5,6 +5,7 @@ const rightIds = ["usage", "tools", "chat"];
 const positions = ["top", "center", "bottom"];
 const heightModes = ["fit", "fixed"];
 const presentations = ["summary", "expanded"];
+const layouts = ["modern", "classic"];
 
 function defaultSide(side) {
     var left = side === "left";
@@ -12,6 +13,7 @@ function defaultSide(side) {
         enabled: true,
         cards: left ? leftIds.slice() : rightIds.slice(),
         width: 1040,
+        classicWidth: left ? 380 : 428,
         height: 1000,
         heightMode: "fixed",
         maxHeight: 85,
@@ -23,6 +25,7 @@ function defaultSide(side) {
 
 function defaultConfig() {
     return {
+        layout: "modern",
         motion: "standard",
         left: defaultSide("left"),
         right: defaultSide("right")
@@ -83,6 +86,7 @@ function sideConfig(raw, side, fallback, legacyWidth) {
         enabled: typeof value.enabled === "boolean" ? value.enabled : fallback.enabled,
         cards: cardList(value.cards, fallback.cards),
         width: Math.round(clamp(finiteNumber(value.width, widthFallback), minWidth, maxWidth)),
+        classicWidth: Math.round(clamp(finiteNumber(value.classicWidth, fallback.classicWidth), minWidth, maxWidth)),
         height: Math.round(clamp(finiteNumber(value.height, fallback.height), 260, 1200)),
         heightMode: mode,
         maxHeight: Math.round(clamp(finiteNumber(value.maxHeight, fallback.maxHeight), 40, 95)),
@@ -98,6 +102,7 @@ function normalize(raw) {
     var motion = ["quick", "standard", "calm"].indexOf(value.motion) >= 0
         ? value.motion : defaults.motion;
     return {
+        layout: layouts.indexOf(value.layout) >= 0 ? value.layout : defaults.layout,
         motion: motion,
         left: sideConfig(value.left, "left", defaults.left, value.width),
         right: sideConfig(value.right, "right", defaults.right, undefined)

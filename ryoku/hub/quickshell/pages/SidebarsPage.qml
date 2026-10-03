@@ -27,6 +27,9 @@ Item {
     readonly property string otherName: pg.side === "left" ? I18n.tr("Companion") : I18n.tr("Controls")
     readonly property bool ready: pg.current !== null
     readonly property bool twoColumns: width >= 700
+    readonly property bool classic: pg.config !== null && pg.config.layout === "classic"
+    readonly property string widthKey: pg.classic ? "classicWidth" : "width"
+    readonly property real currentWidth: pg.current ? pg.current[pg.widthKey] : 0
 
     function focusKey(key) {
         if (String(key).indexOf("sidebars.right") === 0) pg.side = "right";
@@ -145,19 +148,25 @@ Item {
         map[id] = value;
         pg.patch("presentations", map);
     }
+    function presetValues() {
+        return pg.classic
+            ? { compact: [pg.side === "left" ? 380 : 428, 720], roomy: [600, 1100] }
+            : { compact: [720, 720], roomy: [1280, 1100] };
+    }
     function preset(name) {
-        var values = { compact: [720, 720], roomy: [1280, 1100] };
+        var values = pg.presetValues();
         if (!values[name]) return;
         var all = FrameModels.Sidebars.normalize(pg.config);
-        all[pg.side].width = values[name][0];
+        all[pg.side][pg.widthKey] = values[name][0];
         all[pg.side].height = values[name][1];
         all[pg.side].heightMode = "fixed";
         pg.patchAll(all);
     }
     function presetName() {
         if (!pg.current || pg.current.heightMode !== "fixed") return "custom";
-        if (pg.current.width === 720 && pg.current.height === 720) return "compact";
-        if (pg.current.width === 1280 && pg.current.height === 1100) return "roomy";
+        var values = pg.presetValues();
+        if (pg.currentWidth === values.compact[0] && pg.current.height === values.compact[1]) return "compact";
+        if (pg.currentWidth === values.roomy[0] && pg.current.height === values.roomy[1]) return "roomy";
         return "custom";
     }
     function runPlugins(commands, after) {
@@ -278,6 +287,45 @@ Item {
             Btn { text: "+"; compact: true; armed: !pg.busy && metric.value < metric.high; onAct: metric.changed(Math.min(metric.high, metric.value + metric.step)) }
         }
     }
+
+    component LayoutChoice: QQC.AbstractButton {
+        id: choice
+        required property string layoutId
+        required property string detail
+        readonly property bool selected: pg.config !== null && pg.config.layout === layoutId
+        width: pg.twoColumns ? (body.width - Tokens.s4) / 2 : body.width
+        implicitHeight: Math.max(92, choiceCopy.implicitHeight + Tokens.s4 * 2)
+        enabled: pg.ready && !pg.busy
+        hoverEnabled: true
+        Accessible.role: Accessible.RadioButton
+        Accessible.name: text
+        Accessible.checked: selected
+        onClicked: pg.patch("sidebars.layout", layoutId)
+        background: Rectangle {
+            radius: Tokens.radius
+            color: choice.selected ? Tokens.bone : choice.down || choice.hovered ? Tokens.tint10 : Tokens.paperLift
+            border.width: Tokens.border
+            border.color: choice.selected || choice.visualFocus ? Tokens.bone : Tokens.line
+        }
+        contentItem: Item {
+            Text {
+                anchors { left: parent.left; leftMargin: Tokens.s4; verticalCenter: parent.verticalCenter }
+                text: choice.layoutId === "classic" ? "view_sidebar" : "dashboard"
+                color: choice.selected ? Tokens.inkOnBone : Tokens.inkDim
+                font.family: "Material Symbols Rounded"
+                font.pixelSize: 30
+                Accessible.ignored: true
+            }
+            Column {
+                id: choiceCopy
+                anchors { left: parent.left; leftMargin: 64; right: parent.right; rightMargin: Tokens.s4; verticalCenter: parent.verticalCenter }
+                spacing: Tokens.s1
+                Text { width: parent.width; text: choice.text; color: choice.selected ? Tokens.inkOnBone : Tokens.ink; font.family: Tokens.ui; font.pixelSize: Tokens.fBody; font.weight: Font.DemiBold; wrapMode: Text.WordWrap }
+                Text { width: parent.width; text: choice.detail; color: choice.selected ? Tokens.inkOnBone : Tokens.inkMuted; font.family: Tokens.ui; font.pixelSize: Tokens.fSmall; wrapMode: Text.WordWrap }
+            }
+        }
+        HoverHandler { cursorShape: Qt.PointingHandCursor }
+    }
     component SectionCard: Rectangle {
         id: card
         required property var entryData
@@ -357,10 +405,17 @@ Item {
                     Text { text: pg.side === "left" ? "west" : "east"; color: Tokens.bone; font.family: "Material Symbols Rounded"; font.pixelSize: 36; anchors.verticalCenter: parent.verticalCenter }
                     Column { width: parent.width - enabledSwitch.width - 64; spacing: Tokens.s1
                         Text { width: parent.width; text: pg.sideName; color: Tokens.ink; font.family: Tokens.display; font.pixelSize: Tokens.fHero; elide: Text.ElideRight }
-                        Text { width: parent.width; text: pg.ready ? I18n.tr("%1 sections · %2 × %3").arg(pg.selectedEntries().length).arg(pg.current.width).arg(pg.current.height) : I18n.tr("Waiting for the desktop service…"); color: Tokens.inkMuted; font.family: Tokens.ui; font.pixelSize: Tokens.fSmall; wrapMode: Text.WordWrap }
+                        Text { width: parent.width; text: pg.ready ? I18n.tr("%1 sections · %2 × %3").arg(pg.selectedEntries().length).arg(pg.currentWidth).arg(pg.current.height) : I18n.tr("Waiting for the desktop service…"); color: Tokens.inkMuted; font.family: Tokens.ui; font.pixelSize: Tokens.fSmall; wrapMode: Text.WordWrap }
                     }
                     Sw { id: enabledSwitch; anchors.verticalCenter: parent.verticalCenter; on: pg.ready && pg.current.enabled; enabled: pg.ready && !pg.busy; onToggled: value => pg.patch("enabled", value) }
                 }
+            }
+
+            Copy { title: I18n.tr("Sidebar layout"); detail: I18n.tr("One choice for both sides. Your sections and settings stay in place.") }
+            Flow {
+                width: parent.width; spacing: Tokens.s4
+                LayoutChoice { layoutId: "modern"; text: I18n.tr("Modern"); detail: I18n.tr("Spacious dashboards with a labelled section rail.") }
+                LayoutChoice { layoutId: "classic"; text: I18n.tr("Classic"); detail: I18n.tr("The original sidebars with compact icon rails.") }
             }
 
             Grid {
@@ -384,7 +439,7 @@ Item {
                         Btn { text: I18n.tr("Compact"); primary: pg.presetName() === "compact"; armed: pg.ready && !pg.busy; onAct: pg.preset("compact") }
                         Btn { text: I18n.tr("Roomy"); primary: pg.presetName() === "roomy"; armed: pg.ready && !pg.busy; onAct: pg.preset("roomy") }
                     }
-                    Metric { width: parent.width; label: I18n.tr("Width"); detail: I18n.tr("Logical pixels"); value: pg.ready ? pg.current.width : 0; low: pg.side === "left" ? 300 : 380; high: 1440; onChanged: value => pg.patch("width", value) }
+                    Metric { width: parent.width; label: I18n.tr("Width"); detail: I18n.tr("Classic and Modern remember their widths separately."); value: pg.currentWidth; low: pg.side === "left" ? 300 : 380; high: 1440; onChanged: value => pg.patch(pg.widthKey, value) }
                     Item { width: parent.width; implicitHeight: 58
                         Copy { anchors.left: parent.left; anchors.right: heightMode.left; anchors.rightMargin: Tokens.s4; anchors.verticalCenter: parent.verticalCenter; title: I18n.tr("Panel height"); detail: I18n.tr("Fit the current section or hold a steady frame.") }
                         Seg { id: heightMode; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; options: ["fit", "fixed"]; labels: ({ fit: I18n.tr("Fit content"), fixed: I18n.tr("Fixed") }); current: pg.ready ? pg.current.heightMode : "fixed"; onChose: value => pg.patch("heightMode", value) }
