@@ -554,7 +554,8 @@ func orphanedWatchers() []int {
 }
 
 // isShellWatcher recognises the helper processes the shell spawns: the ryoku
-// python inotifywait watchers, the keyboard-lock daemon, and the cava analyser.
+// python inotifywait watchers, the keyboard-lock daemons (the packaged script
+// and the python watcher it execs), and the cava analyser.
 func isShellWatcher(cmdline string) bool {
 	argv := strings.Split(strings.TrimRight(cmdline, "\x00"), "\x00")
 	if len(argv) == 0 {
@@ -569,7 +570,15 @@ func isShellWatcher(cmdline string) bool {
 		}
 	case "python3", "python":
 		for _, a := range argv[1:] {
-			if strings.Contains(a, "keyboard_lock_state_daemon.py") {
+			if strings.Contains(a, "keyboard_lock_state_daemon.py") ||
+				strings.Contains(a, "ryoku-python") ||
+				strings.Contains(a, "/sys/class/leds/*capslock*") {
+				return true
+			}
+		}
+	case "bash":
+		for _, a := range argv[1:] {
+			if strings.Contains(a, "kb_locks.sh") {
 				return true
 			}
 		}

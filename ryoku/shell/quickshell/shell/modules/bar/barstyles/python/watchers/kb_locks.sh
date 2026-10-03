@@ -37,6 +37,7 @@ get_locks() {
 watch_locks() {
     if command -v python3 >/dev/null 2>&1; then
         exec python3 -u -c '
+# ryoku-python kb_locks watcher
 import glob, os, select, struct, sys, time
 
 is_64bit = struct.calcsize("P") == 8
