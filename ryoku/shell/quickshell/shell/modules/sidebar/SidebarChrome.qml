@@ -272,7 +272,8 @@ Item {
                                     required property int index
                                     width: cardColumn.width
                                     viewportHeight: root.options.heightMode === "fit"
-                                        ? Math.max(0, root.maximumHeight - root.chromeHeight) : contentFlick.height
+                                        ? Math.max(0, root.maximumHeight - root.chromeHeight)
+                                        : contentFlick ? contentFlick.height : 0
                                     cardIndex: index
                                     cardId: modelData.id
                                     pluginEntry: modelData.entry
