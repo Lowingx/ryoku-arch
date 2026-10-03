@@ -19,7 +19,7 @@ Item {
 
     Timer {
         interval: 16
-        running: true
+        running: root.visible
         repeat: true
         onTriggered: {
             root.currentTime = new Date();
