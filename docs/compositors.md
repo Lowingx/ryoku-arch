@@ -35,6 +35,13 @@ A provider is one binary, `ryoku-wm-<name>`, shipped by
 |`session`|the `wayland-session` desktop entry|
 |`environment <pid>`|export the provider's opaque handle from one verified session process|
 
+`act window.place <id> <x> <y> <width> <height> <output>` is the neutral
+floating-window placement contract. The id is copied unchanged from `state`;
+coordinates are output-relative logical pixels. A provider makes the window
+floating, moves it to the named output, sizes it and positions it. Missing
+windows, outputs and invalid dimensions are errors rather than a fallback to the
+focused window.
+
 `apply --preview` writes nothing and reports what it could not honour. That
 report is what `ryoku wm use` and the Hub show before a switch, so the cost of
 moving is known in advance rather than discovered afterwards. The Hub also
@@ -77,7 +84,7 @@ it has nothing to move):
     workspaceMoveToOutput
 
 Hyprland and MangoWM (niri's config is file-only and niri has no key modes,
-special tag, per-workspace layouts or window geometry to speak of):
+special tag, per-workspace layouts or general tiled-window geometry):
 
     configReload  liveConfigEval  specialWorkspace  submap  tiledLayout
     windowGeometry
@@ -104,9 +111,11 @@ sees on a compositor that lacks them:
 - **`nativeOverview`** is why the shell's own overview stands aside. niri and
   MangoWM have a real overview, so `Super+Tab` is the compositor's, not the
   shell's.
-- **`windowGeometry`** is absent on niri because a niri window reports a tile
-  size but no on-screen position. Mango's client JSON carries x/y/w/h, so
-  anything that measures a window works there.
+- **`windowGeometry`** is absent on niri because tiled windows do not expose an
+  on-screen position. Floating windows do expose their output-local tile
+  rectangle; the provider converts it to global logical geometry so native
+  move/resize placement can be persisted without claiming general geometry.
+  Mango's client JSON carries x/y/w/h for every window.
 - **`globalShortcuts`** is absent on niri and MangoWM because neither implements
   the protocol, so keybinds reach shell surfaces by running `ryoku-shell
   <verb>` instead. Every shell surface is reachable that way on any compositor,
