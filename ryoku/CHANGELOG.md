@@ -69,6 +69,12 @@
   (`ui/Singletons/Wm.qml`).
 
 ### Fixed
+- **The Glass plugin says what it costs on NVIDIA.** Liquid-glass blur and
+  refraction re-render per window on every monitor, and reports say it turns
+  visibly laggy on NVIDIA multi-monitor setups; the plugin's own card now
+  carries that caveat whenever an NVIDIA driver is active, joining the
+  Cursor motion plugin's note (`wm/hyprland/config_plugins_tier.go`).
+
 - **The night light warms the screen on niri.** Users reported it doing
   nothing there. The niri backend is now wlsunset, the small day/night gamma
   daemon in extra, which speaks the gamma protocol niri serves and holds the
