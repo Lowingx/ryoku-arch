@@ -211,6 +211,7 @@ func reconcilers() []reconciler {
 		{i18n.T("failed services"), reconcileFailedUnits},
 		{i18n.T("btrfs device health"), reconcileBtrfsHealth},
 		{i18n.T("wireless regulatory domain"), reconcileWifiRegdom},
+		{i18n.T("Wi-Fi access-point pins"), reconcileWifiBssidPin},
 		{i18n.T("ASUS Aura lighting provider"), reconcileAsusAura},
 		{i18n.T("QMK/VIA keyboard lighting provider"), reconcileQMK},
 		{i18n.T("display backlight"), reconcileBacklight},

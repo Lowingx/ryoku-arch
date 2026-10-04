@@ -52,6 +52,12 @@
   `internal/sys/release.go`, `internal/updater/release.go`).
 
 ### Fixed
+- **`ryoku doctor` drops a Wi-Fi profile's access-point pin.** A profile saved
+  by the old Hub band picker carried `802-11-wireless.bssid`, which locks the
+  client to one AP; on a multi-AP 5 GHz network the association cycles as the
+  access points steer and the pin forces back, reading as "5 GHz keeps
+  reconnecting". Every pinned Wi-Fi profile loses the pin, so it roams again
+  inside its band (`internal/doctor/reconcile_wifi_bssid_pin.go`).
 - **`ryoku update` survives a private `/var/lib/ryoku`.** The power-cutover
   preflight statted the adoption marker as the user; with the state dir at
   0700 (a drifted mode the kill switch used to leave behind) the stat failed

@@ -113,6 +113,15 @@
   `schema/WidgetsPage.test.mjs` and the widget preview cards).
 
 ### Fixed
+- **A band-picked Wi-Fi join roams again.** Picking 5 GHz on a dual-band
+  network joined through `nmcli dev wifi connect <BSSID>`, which pins the
+  saved profile to that one access point; on a multi-AP network the access
+  points steer the client and the pin forces it back, so the connection
+  visibly reconnects in a loop (nmtui, which joins by SSID, worked). The join
+  now locks the profile to the band (`802-11-wireless.band`) after connecting,
+  keeping the 5 GHz choice without freezing the AP; profiles the old picker
+  pinned are healed by `ryoku doctor`
+  (`quickshell/pages/ConnectionsPage.qml`).
 - **The update and rollback log opens where you can see it.** Both launch a
   terminal from inside Ryoku Settings, and a tiled window always sits under a
   float, so the run's output hid behind the settings page until it finished
