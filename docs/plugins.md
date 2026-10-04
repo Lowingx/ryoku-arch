@@ -246,11 +246,10 @@ manage it from a terminal; see "Share it" below for export and share.
 
 ### 4. Sidebar card - lives in a global sidebar
 
-A `sidebarCard` plugin can live in the Controls or Companion screen-edge
-overlay. It uses the same entry points as every other plugin:
-`service/Main.qml` for persistent logic and `content/Widget.qml` for the view.
-There is no `content/Sidebar.qml`. Ryoku owns the surface frame, section
-navigation, width, placement, and motion.
+A `sidebarCard` plugin lives in Extensions inside Controls or Today. It uses
+the same entry points as every other plugin: `service/Main.qml` for logic and
+`content/Widget.qml` for the view. There is no `content/Sidebar.qml`. Ryoku owns
+the surface frame, navigation, width, placement, and motion.
 
 The root must be an `Item` with `pragma ComponentBehavior: Bound`. These are the
 core host-set members:
@@ -290,34 +289,24 @@ Two additional properties are optional. If declared, the host binds them:
 
 | Optional member | Meaning |
 | --- | --- |
-| `compact: bool` | `true` for Summary and `false` for Expanded. Use it to provide a deliberate compact layout. |
-| `viewportHeight: real` | Height available to the section below the shared chrome. Use it to cap an internal scroll region. |
+| `compact: bool` | The Extensions view supplies `false`; provide the full widget. |
+| `viewportHeight: real` | Height available below the shared chrome. Use it to cap an internal scroll region. |
 
-If `compact` is absent, Summary uses a generic host view built from the
-manifest name and its real description. The one real `Widget.qml` instance
-stays loaded and appears unchanged in Expanded, so the fallback does not clip
-the widget, duplicate its service state, or substitute fake content. A plugin
-that declares `compact` owns both presentations. Omitting `viewportHeight` is
-also valid.
-
-The host continues to drive `open`, `reveal`, `tabActive`, and optional
-`active` from the real sidebar state in either presentation. Service objects
-and their timers are not recreated when the user switches between Summary and
-Expanded.
+The host drives `open`, `reveal`, `tabActive`, and optional `active` from the
+real panel state. Stop timers and other live work when inactive. Sidebar plugin
+instances unload with the owning panel; persistent external work belongs in
+the backend rather than a hidden QML view.
 
 Sidebar placement is stored under the plugin's `sidebarCard` placement object:
 
-- `side`: `"left"` for Controls or `"right"` for Companion;
-- `tab`: the section label; `"Plugins"` is the shared trailing plugin section;
-- `order`: numeric order among plugins in that section;
+- `side`: `"left"` for Controls or `"right"` for Today;
+- `order`: numeric order within that side's Extensions view;
 - `label`: the displayed label; and
 - `glyph`: a Material Symbols Rounded ligature, default `"extension"`.
 
 Manifest suggestions use `"defaults": { "host": "sidebarCard", "sidebar": {
-"side": "left", "tab": "Plugins", "order": 10 } }`. The manifest declares
-`sidebarCard` in `hosts`, keeps `entryPoints.content` at
-`content/Widget.qml`, and may include `"compact"` in
-`capabilities.densities` when the widget supplies its own Summary view.
+"side": "left", "order": 10 } }`. The manifest declares `sidebarCard` in
+`hosts` and keeps `entryPoints.content` at `content/Widget.qml`.
 
 The plugin draws content, never its own window chrome, outer surface, position,
 or motion. R1-R11 are otherwise unchanged; public imports remain `QtQuick*`,

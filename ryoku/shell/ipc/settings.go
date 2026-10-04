@@ -25,9 +25,9 @@ import (
 // bars, menus, notifications, wallpaper). Those are validated: enum membership
 // and integer ranges are rejected, the float strength/contrast/opacity values
 // clamp into range. Every other top-level key in the file (the Ryoku-native look
-// knobs frameRadius, frameBars, weatherLocation, sidebar panes, language, and the
-// rest) is carried through verbatim as passthrough: echoed in the frame and
-// merged on patch, but not validated, because the daemon has no schema for them.
+// knobs frameRadius, frameBars, weatherLocation, language, and the rest) is
+// carried through verbatim as passthrough: echoed in the frame and merged on
+// patch, but not validated, because the daemon has no schema for them.
 // Passthrough keeps the daemon the sole writer without having to model keys other
 // surfaces own.
 //
@@ -904,27 +904,18 @@ func lockSettingsFile(path string) (func(), error) {
 
 const barStyleTransactionKey = "ryoStoreBarStyleTransaction"
 
-func validateSidebarLayout(raw map[string]any) error {
-	sidebars, _ := raw["sidebars"].(map[string]any)
-	value, found := sidebars["layout"]
-	if !found {
-		return nil
-	}
-	layout, ok := value.(string)
-	if !ok || (layout != "modern" && layout != "classic") {
-		return fmt.Errorf("sidebars.layout must be modern or classic")
-	}
-	return nil
-}
-
-// patch sets one leaf. A schema path is validated and clamped; any other path is
-// passthrough (merged, not validated). The change is persisted before it is
-// committed in memory, so a write failure drops the change rather than leaving
-// memory and disk disagreeing.
+// patch sets one leaf. A schema path is validated and clamped; native
+// passthrough paths are merged without validation. Retired settings namespaces
+// are rejected rather than silently resurrected. The change is persisted before
+// it is committed in memory, so a write failure cannot leave memory and disk
+// disagreeing.
 func (s *settingsStore) patch(path string, value json.RawMessage) error {
 	segs, err := splitPath(path)
 	if err != nil {
 		return err
+	}
+	if segs[0] == "sidebars" {
+		return fmt.Errorf("sidebars settings are retired")
 	}
 	if len(value) == 0 {
 		return fmt.Errorf("missing value")
@@ -946,11 +937,6 @@ func (s *settingsStore) patch(path string, value json.RawMessage) error {
 	contract := contractKeys[segs[0]]
 	if err := setByPath(full, segs, value, !contract); err != nil {
 		return err
-	}
-	if segs[0] == "sidebars" {
-		if err := validateSidebarLayout(full); err != nil {
-			return err
-		}
 	}
 	if len(segs) == 1 && segs[0] == "barStyle" {
 		delete(full, barStyleTransactionKey)

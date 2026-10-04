@@ -245,16 +245,40 @@ ShellRoot {
                 dockLaneCenter: dockLoader.item ? dockLoader.item.bandCenter : 0
             }
 
-            Sidebar {
-                screen: perScreen.modelData
-                side: "left"
-                visible: Config.sidebars.left.enabled
+            LazyLoader {
+                id: controlsLoader
+                property bool open: SidebarState.isOpen(perScreen.modelData, "left")
+                property bool showNow: false
+                activeAsync: open || controlsHold.running
+                onItemChanged: if (item) Qt.callLater(() => controlsLoader.showNow = controlsLoader.open)
+                onOpenChanged: {
+                    showNow = open && item !== null;
+                    if (!open && active) controlsHold.restart();
+                }
+                Sidebar {
+                    screen: perScreen.modelData
+                    side: "left"
+                    active: controlsLoader.showNow
+                }
             }
-            Sidebar {
-                screen: perScreen.modelData
-                side: "right"
-                visible: Config.sidebars.right.enabled
+            Timer { id: controlsHold; interval: SidebarState.exitDuration + 48 }
+            LazyLoader {
+                id: todayLoader
+                property bool open: SidebarState.isOpen(perScreen.modelData, "right")
+                property bool showNow: false
+                activeAsync: open || todayHold.running
+                onItemChanged: if (item) Qt.callLater(() => todayLoader.showNow = todayLoader.open)
+                onOpenChanged: {
+                    showNow = open && item !== null;
+                    if (!open && active) todayHold.restart();
+                }
+                Sidebar {
+                    screen: perScreen.modelData
+                    side: "right"
+                    active: todayLoader.showNow
+                }
             }
+            Timer { id: todayHold; interval: SidebarState.exitDuration + 48 }
 
             // The dock: a resident per-monitor surface on the edge opposite the
             // bar. Style-agnostic, so it lives here rather than inside a bar style;
@@ -481,6 +505,33 @@ ShellRoot {
                 }
             }
             Timer { id: confirmHold; interval: 5000 }
+        }
+    }
+
+    LazyLoader {
+        activeAsync: SidebarState.windowKind === "tools"
+        ToolsWindow {
+            screen: SidebarState.windowScreen
+            page: SidebarState.windowPage
+            active: SidebarState.windowKind === "tools"
+            onRequestClose: SidebarState.closeWindow()
+        }
+    }
+    LazyLoader {
+        activeAsync: SidebarState.windowKind === "chat"
+        ChatWindow {
+            screen: SidebarState.windowScreen
+            page: SidebarState.windowPage
+            active: SidebarState.windowKind === "chat"
+            onRequestClose: SidebarState.closeWindow()
+        }
+    }
+    LazyLoader {
+        activeAsync: SidebarState.windowKind === "activity"
+        ActivityWindow {
+            screen: SidebarState.windowScreen
+            active: SidebarState.windowKind === "activity"
+            onRequestClose: SidebarState.closeWindow()
         }
     }
 
@@ -989,12 +1040,12 @@ ShellRoot {
     }
     CustomShortcut {
         name: "compress"
-        description: I18n.tr("Open the right sidebar's file picker to compress media")
+        description: I18n.tr("Open Tools to compress media")
         onPressed: root.toggleSurface("compress")
     }
     CustomShortcut {
         name: "install"
-        description: I18n.tr("Open the right sidebar's file picker to install a package")
+        description: I18n.tr("Open Tools to install a package")
         onPressed: root.toggleSurface("install")
     }
 

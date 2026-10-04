@@ -1296,6 +1296,9 @@ func TestMigrateShellConfig(t *testing.T) {
 	if _, present := surfaces["system"]; present {
 		t.Error("retired system sidebar was recreated")
 	}
+	if _, present := cfg["sidebars"]; present {
+		t.Error("shell config migration seeded the retired global sidebars tree")
+	}
 	for _, key := range []string{"sidebarLeftPanes", "sidebarRightPanes", "sidebarWidth"} {
 		if _, ok := cfg[key]; ok {
 			t.Errorf("sidebar-only key %s survived migration", key)

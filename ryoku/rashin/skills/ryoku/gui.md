@@ -61,15 +61,16 @@ them (see below), never as dead settings.
 
 ## Surfaces outside the Hub
 
-Wallpaper, theme, the bar, the launcher, and the Stash are not Hub pages. Reach
-them here:
+Wallpaper, theme, the bar, the launcher, Controls, and Today are shell surfaces,
+not Hub pages. Reach them here:
 
 | Intent | GUI surface | How to open | The command behind it |
 |---|---|---|---|
 | Change wallpaper or theme | Wallpaper picker | Super+W | `ryogami wallpaper ui` (picker), `ryogami wallpaper set\|next\|random` |
 | Bar layout, widgets, dock | QS Bar Settings | `ryoku-shell bar settings [route]` | `ryoku-shell bar ...`, `ryoku-shell dock ...` (see bar.md) |
 | Launch an app | App launcher | Super+Space | the shell launcher (the App Launcher page tunes it) |
-| Screen time and downloads | Stash | Super+S | a shell surface; no config command |
+| System controls and session actions | Controls | Super+Escape | `ryoku-shell quicksettings` |
+| Calendar, weather, media, activity, and tools | Today | Super+S | `ryoku-shell stash` |
 
 QS Bar Settings routes are `bars`, `layout`, `widgets`, `dock`, and `community`,
 so `ryoku-shell bar settings layout` opens straight to the layout lanes. The bar

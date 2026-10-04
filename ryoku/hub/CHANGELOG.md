@@ -1,15 +1,18 @@
 # Changelog: ryoku/hub/
 
+### Fixed
+- **General and Desktop settings no longer open blank.** The app picker now
+  resolves to Hub's own component and imports its scrolling controls.
+  (`quickshell/SchemaPage.qml`, `quickshell/AppPicker.qml`)
+
+### Removed
+- **Sidebar styles and layout customization.** Controls and Today now have one
+  compact layout shared by every bar style. The Sidebars page, Classic/Modern
+  selector, geometry, pinning, and content-order controls are gone. Sidebar
+  plugins remain available through Add-ons; old sidebar links open Desktop.
+  (`quickshell/Hub.qml`)
+
 ### Added
-- **Choose Classic or Modern sidebars.** Sidebars > Layout & behavior now
-  offers the original compact sidebars alongside the redesigned layout.
-  The choice applies to both sides, survives reloads and updates, and keeps
-  each layout's widths without resetting contents or behavior.
-  (`quickshell/pages/SidebarsPage.qml`)
-- **Sidebars has its own page.** Contents, ordering, Summary/Full controls,
-  placement, size, and opening behavior are edited in Hub rather than inside
-  sidebar tabs. Saves wait for the daemon's reply and settings-frame confirmation
-  (`quickshell/pages/SidebarsPage.qml`, `quickshell/pages/SidebarWriter.qml`).
 - **Desktop Scene brings the editors together.** Scene, Visualizer, and Widgets
   have dedicated views. The scene view includes layers, cut quality, shadow
   direction, motion presets, idle speed, music intensity, and pointer tuning.

@@ -1,242 +1,108 @@
 # Sidebars
 
-Ryoku has two global sidebar surfaces. They are part of the shell rather than a
-bar style, so every bar uses the same pair:
+Ryoku has one pair of compact corner panels, shared by every bar style and both
+supported compositors:
 
-- `Super+Escape` opens the **Control center** on the left screen edge.
-- `Super+S` opens **Companion** on the right screen edge.
+- `Super+Escape` opens **Controls** in the top-left corner.
+- `Super+S` opens **Today** in the top-right corner.
 
-Both open on the focused display. Repeating the shortcut or using the close
-button closes the surface. Escape also closes it. Either unpinned sidebar closes
-on an outside click.
+They open on the focused display and stay clear of its bar and other screen
+rails. Opening either closes the other. Repeat the shortcut, press Escape, use
+the close button, or click outside to dismiss the panel. They do not reserve
+screen space or move windows.
 
-The shell keeps the old shortcut command names at its boundary so compositor
-binds do not need special cases. In
-`ryoku/shell/quickshell/shell/shell.qml`, `quicksettings` routes to
-`sidebar-left` and `stash` routes to `sidebar-right`. Capture, compress, and
-install requests use the same surface bus to open the relevant section.
+## Controls
 
-## Surfaces
+The header shows the user, time, uptime, and root-disk usage alongside a live
+CPU, memory, and GPU graph. Wi-Fi and Bluetooth tiles open their device lists.
+Volume and brightness have labelled sliders; the action row contains the audio
+mixer, night light, keep awake, do-not-disturb, and microphone mute.
 
-`ryoku/shell/quickshell/shell/modules/sidebar/Sidebar.qml` owns both overlays.
-Each uses one `PanelWindow` on `WlrLayer.Overlay`, above normal and fullscreen
-windows, with no exclusive zone. The visible panel stays clear of bars and
-other screen rails and defaults to vertical centering on its own screen edge.
-The layer-shell namespaces are `ryoku-sidebar-left` and `ryoku-sidebar-right`.
+The mixer provides separate output-device, microphone, playback-app, and
+recording-app controls. Each source has mute, a slider, an editable percentage,
+and 1% steps. Changing a level preserves mute; **Use** selects a default device.
 
-An unpinned sidebar catches outside presses in the same window that draws its
-content. **Keep open** limits the input region to the visible panel instead, so
-the rest of the desktop remains usable. Screen rails remain outside the input
-region in either mode.
+Lock, sleep, logout, restart, and power off sit in a separate bottom row. Session
+confirmation uses the shell's existing confirmation dialog. The camera button
+opens screenshot and recording controls. Gaming mode appears only when the
+running provider supports it, or when it is already enabled.
 
-Both surfaces use `SidebarFrame.qml` and a vertical section rail. Neither is a
-native floating window. Size, placement, and contents are edited in Ryoku Hub.
+## Today
 
-## Layouts
+The calendar anchors the left column. Current weather and the next hours sit
+above the media player on the right, followed by today's activity and
+notifications. Forecast and notification buttons open their detailed views.
 
-**Ryoku Hub > Sidebars > Layout & behavior** offers two layouts for both sides:
+**Tools**, **Chat**, and **View activity** open normal, resizable windows rather
+than expanding the corner panel. Tools retains downloads, compression,
+installation, and their file pickers. Chat uses the existing Rashin conversation
+view; Activity shows the full usage history.
 
-- **Modern** is the default: larger headings, labelled controls, and the
-  redesigned Control center and Companion.
-- **Classic** restores the compact sidebars from `main`, with the circular
-  Controls rail, Companion's activity rail, and the original theme treatment.
-  It does not use the intermediate grain design.
+Installed `sidebarCard` plugins appear under the Extensions button on their
+chosen side. Enable and place them in **Ryoku Hub > Add-ons**. The built-in panel
+layout is fixed: there is no sidebar style, size, pinning, or contents editor.
+Wallpaper, widget, and visualizer editing remains in **Ryoku Hub > Desktop Scene**.
 
-Both layouts use the same selected sections, ordering, Summary/Full controls
-choices, and plugins. Widths are remembered separately; height, placement, and
-opening behavior are shared. Switching layouts does not reset those choices.
-Classic also keeps the newer Wi-Fi, Bluetooth, and per-source audio controls.
+## Rendering and lifecycle
 
-## Contents and customization
+`Sidebar.qml` owns a small layer-shell content window and a transparent
+click-away window. Both use overlay-layer keyboard focus so clicks inside and
+outside work consistently. Their namespaces are `ryoku-sidebar-left`,
+`ryoku-sidebar-right`, and `ryoku-corner-dismiss`; their exclusive zone is zero.
+The click-away input region excludes the panel and the display's rails.
 
-The built-in catalog contains nine sections:
+Controls is 688 logical pixels wide and Today is 640 before per-display UI
+scaling. Each fits its content and clamps to the space available on its display.
+They share the current wallpaper palette and shell typography. Opening fades
+and settles the panel from its top corner; reduced motion disables that animation.
 
-| Id | Label | Default surface | Contents |
-|---|---|---|---|
-| `system` | System | Control center | Connectivity, audio, brightness, battery, power profile, and session controls |
-| `notifications` | Notifications | Control center | Notification history and do-not-disturb |
-| `weather` | Weather | Control center | Current conditions, hourly forecast, daily ranges, and air conditions |
-| `media` | Media | Control center | Active-player metadata and transport controls |
-| `capture` | Capture | Control center | Screenshot and recording targets, destinations, and capture options |
-| `stage` | Stage | Control center | Wallpaper preview, scene status, widgets, and visualizer overview |
-| `usage` | Usage | Companion | Current and historical screen-time summaries |
-| `tools` | Tools | Companion | Downloads, recent jobs, compression, and package installation |
-| `chat` | Chat | Companion | Persistent Rashin conversation UI |
+The root shell asynchronously loads a panel on first use and unloads it after
+its closing animation. Detailed pages load only when selected. Plugin discovery
+and its file watches run only while the owning panel is active.
 
-**Ryoku Hub > Sidebars > Contents** lists all nine built-ins and installed
-`sidebarCard` plugins. A user can hide an entry, move it up or down, move it
-between sides, and choose its **Summary** or **Full controls** presentation.
-The ordered `cards` arrays are authoritative: omitted built-ins stay hidden and
-are not silently appended.
+`SystemMonitor` and `SystemGraph`, in `Ryoku.Blobs`, own the native graph.
+The monitor samples once per second on a worker thread and keeps a bounded
+history. The scene graph animates those real samples in a 10–60 second window,
+without QML Canvas or per-frame subprocesses. Unavailable metrics are not drawn
+as fabricated zero readings. Sampling stops when inactive; graph frames stop
+when inactive, hidden, unexposed, or reduced-motion animation is disabled.
 
-Summary is a section's compact view; Full controls exposes its complete view.
-A plugin may implement its own compact view. If it does not, the host shows the
-manifest name and description for Summary while keeping the one real widget
-instance loaded and unchanged for Full controls.
+## Commands and migration
 
-## Daily controls
+`quicksettings` still routes to the left panel and `stash` to the right. These
+are the compositor keybind commands, not layout choices. Screenshot requests
+open Capture; compress and install requests open Tools on their file picker.
 
-System is a dashboard rather than a list of settings. Its Wi-Fi and Bluetooth
-tiles open device lists inside the sidebar: scan for networks or devices,
-connect to a network with a password when needed, and pair or connect a device.
-Audio, brightness, power, and session controls stay alongside the status readouts.
+`SidebarState.qml` owns per-display open state, selected details, and utility
+window routing. The shell daemon remains the only writer of persistent shell
+settings. `ryoku doctor` removes the retired `sidebars` object and the old
+`frameBars.menus.quick-settings` and `frameBars.surfaces.stash/system` records,
+without changing neighbouring settings.
 
-The **Audio mixer** button below volume and microphone opens controls for output
-devices, microphones, playing apps, and recording apps. Each source has its own
-mute, slider, editable percentage, and 1% steps. Changing a level keeps its mute
-state. **Use** selects the default output or microphone. Hover, press, and page
-animations respect reduced motion.
+## Contributor map
 
-Weather combines current conditions, the next hours, daily high/low ranges, and
-humidity, wind, precipitation, visibility, UV, and pressure. Its settings button
-opens the weather controls in Hub.
+All panel components below live under
+`ryoku/shell/quickshell/shell/modules/sidebar/`:
 
-Capture separates screenshots from recordings. Target tiles choose a display,
-window, or region; screenshot options choose the clipboard, a folder, or both,
-and optional annotation. Recording options include desktop audio and microphone;
-the detailed recorder settings open in Hub.
-
-Stage is an overview, not a second editor. It shows the current wallpaper,
-scene mode, enabled widgets, and visualizer state. **Edit scene**, **Visualizer**,
-and **Widgets** open the matching **Ryoku Hub > Desktop Scene** view.
-
-## Size and behavior
-
-**Ryoku Hub > Sidebars > Layout & behavior** provides:
-
-- the **Modern** or **Classic** layout;
-- compact and roomy presets, plus exact width and height;
-- **Fit content** or **Fixed size** height;
-- a maximum screen-height percentage in either height mode;
-- top, center, or bottom alignment on the sidebar's own screen edge;
-- **Keep open** pinning; and
-- quick, standard, or calm opening and closing motion.
-
-Modern defaults to 1040 logical pixels wide on either side. Classic defaults
-to 380 on the left and 428 on the right. Both use a height of 1000 and an 85%
-screen-height limit. Actual dimensions are clamped to the available display
-area after per-display UI scaling.
-
-Modern's compact preset is 720 by 720 and roomy is 1280 by 1100. Classic's
-compact preset uses its default width by 720 and roomy is 600 by 1100.
-
-Hub's `SidebarWriter.qml` does not treat a successful write call as a saved
-setting. It waits for both the daemon reply and the subscribed settings frame to
-contain the expected value. The editor shows a saving state while confirmation
-is pending and reports rejection or timeout without replacing its last confirmed
-settings.
-
-Both panels fade and settle in from their own screen edge. Section pages
-crossfade, and controls provide hover and focus feedback. Opening and closing
-use the selected `sidebars.motion` tempo. Every surface and chrome animation is
-gated by both `Motion.reduce` and `Tokens.reduceMotion`; either reduced-motion
-flag turns the animation into an immediate state change.
-
-## Settings
-
-The normalized settings live under `sidebars` in `shell.json`:
-
-```json
-"sidebars": {
-  "layout": "modern",
-  "motion": "standard",
-  "left": {
-    "enabled": true,
-    "cards": ["system", "notifications", "weather", "media", "capture", "stage"],
-    "width": 1040,
-    "classicWidth": 380,
-    "height": 1000,
-    "heightMode": "fixed",
-    "maxHeight": 85,
-    "position": "center",
-    "pinned": false,
-    "presentations": {}
-  },
-  "right": {
-    "enabled": true,
-    "cards": ["usage", "tools", "chat"],
-    "width": 1040,
-    "classicWidth": 428,
-    "height": 1000,
-    "heightMode": "fixed",
-    "maxHeight": 85,
-    "position": "center",
-    "pinned": false,
-    "presentations": {}
-  }
-}
-```
-
-`presentations` maps a built-in or plugin id to `summary` or `expanded`; the
-editor labels the latter Full controls. `layout` accepts `modern` or `classic`;
-the daemon rejects other values before saving. Each side's `width` stores its
-Modern width and `classicWidth` stores its Classic width. Both are clamped to
-300–1440 for the Control center and 380–1440 for Companion; height is 260–1200
-and `maxHeight` is 40–95. The doctor preserves the selected layout and both
-widths while removing retired native-window geometry and converting old corner
-positions to top or bottom alignment.
-
-`ryoku/shell/framebars/Sidebars.js` owns these defaults and normalizes persisted
-values through `Ryoku.FrameBars.Sidebars`. `Config.qml` exposes `Config.sidebars`;
-`ryoku/shell/ipc/settings.go` remains the sole writer for patches.
-
-## Section host contract
-
-A built-in section is an `Item` with `pragma ComponentBehavior: Bound`.
-`SidebarCardHost.qml` supplies:
-
-| Member | Direction | Meaning |
-|---|---|---|
-| `s: real` | host to section | Per-display UI scale |
-| `open: bool` | host to section | Whether its surface is requested open |
-| `reveal: real` | host to section | Current reveal progress from 0 to 1 |
-| `tabActive: bool` | host to section | Whether its section is selected |
-| `compact: bool` | host to section | Summary when true, Expanded when false |
-| `viewportHeight: real` | host to section | Height available below the shared chrome |
-| `width` | host to section | Host-managed width; report `implicitHeight` |
-| `index: int` | host to section, when declared | Position in a grouped section |
-| `page: string` | host to section, when declared | Optional deep link such as a Tools action |
-| `requestClose()` | section to host | Ask the owning surface to close |
-
-The host binds these values after loading the catalog source and forwards
-`requestClose()`. Sections should stop polling or other live work when `open` or
-`tabActive` is false.
-
-Modern built-in content uses `SidebarCardShell.qml` as a small layout scaffold.
-It provides an optional heading and summary-aware spacing; the surface frame
-and chrome own the visual boundary. Classic views live in `classic/`, selected
-through each catalog entry's `classicSource`. The host loads only the selected
-layout's built-in view. Plugins retain their shared host in either layout.
-
-Plugins have a narrower public contract. See
-[`docs/plugins.md`, section 4](plugins.md#4-sidebar-card---lives-in-a-global-sidebar)
-for its entry points, optional compact contract, placement, and `pluginApi`.
-
-## Adding a built-in section
-
-1. Add one component under
-   `ryoku/shell/quickshell/shell/modules/sidebar/cards/`.
-2. Declare the host members above, report content height through
-   `implicitHeight`, and put visible content in `SidebarCardShell`.
-3. Add its Classic view under `classic/`, using the same runtime contract.
-4. Add its id, default surface, label, glyph, Modern `source`, and
-   `classicSource` to `SidebarCatalog.js`.
-5. Add the id to the appropriate defaults in `ryoku/shell/framebars/Sidebars.js`
-   only if it should ship selected. Keep Hub's customization choices in sync.
-
-## File map
-
-| Path | Responsibility |
+| File | Responsibility |
 |---|---|
-| `ryoku/shell/quickshell/shell/modules/sidebar/Sidebar.qml` | Left and right overlays, screen bounds, input region, and dismissal |
-| `ryoku/shell/quickshell/shell/modules/sidebar/SidebarFrame.qml` | Shared boundary with Modern or Classic theme treatment |
-| `ryoku/shell/quickshell/shell/modules/sidebar/SidebarChrome.qml` | Layout-specific chrome, section navigation, and shared content viewport |
-| `ryoku/hub/quickshell/pages/SidebarsPage.qml` | Contents and layout/behavior editor |
-| `ryoku/hub/quickshell/pages/SidebarWriter.qml` | Confirmed daemon writes |
-| `ryoku/shell/quickshell/shell/modules/sidebar/SidebarCardHost.qml` | Built-in and plugin loading plus host-property binding |
-| `ryoku/shell/quickshell/shell/modules/sidebar/SidebarCardShell.qml` | Built-in heading and content layout scaffold |
-| `ryoku/shell/quickshell/shell/modules/sidebar/classic/` | Compact Classic built-in views and controls |
-| `ryoku/shell/quickshell/shell/modules/sidebar/SidebarCatalog.js` | Nine-section built-in registry |
-| `ryoku/shell/framebars/Sidebars.js` | Shared defaults and settings normalization |
-| `ryoku/shell/quickshell/shell/modules/sidebar/SidebarPlugins.qml` | Installed `sidebarCard` discovery and ordering |
-| `ryoku/shell/quickshell/shell/services/SidebarState.qml` | Per-display open state, selected section, motion, and surface-bus handling |
+| `Sidebar.qml` | Corner placement, screen bounds, input regions, and dismissal |
+| `SidebarFrame.qml` | Shared palette-matched surface |
+| `SidebarChrome.qml` | Header, navigation, and lazy board selection |
+| `ControlsBoard.qml`, `ControlsHero.qml` | Controls layout and native graph presentation |
+| `TodayBoard.qml`, `Today*.qml` | Calendar, weather, media, activity, and notifications |
+| `CornerButton.qml`, `CornerConnection.qml`, `CornerSlider.qml` | Shared compact controls |
+| `UtilityWindow.qml` | Normal window sizing and shared header |
+| `ToolsWindow.qml`, `ChatWindow.qml`, `ActivityWindow.qml` | Full utility views |
+| `cards/` | Reusable detail views and their controls |
+| `ExtensionsBoard.qml`, `SidebarCardHost.qml`, `SidebarPlugins.qml` | Plugin discovery, ordering, and runtime contract |
+
+The state owner is
+`ryoku/shell/quickshell/shell/services/SidebarState.qml`. Native sampling and
+rendering live in `ryoku/shell/plugin/systemmonitor.{hpp,cpp}` and
+`ryoku/shell/plugin/systemgraph.{hpp,cpp}`. New built-in views belong in the
+appropriate board or utility window; do not add another layout catalogue or
+persist panel geometry.
+
+Contributor plugins use the public
+[`sidebarCard` contract](plugins.md#4-sidebar-card---lives-in-a-global-sidebar).

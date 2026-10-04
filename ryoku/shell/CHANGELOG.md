@@ -3,33 +3,24 @@
 ## Unreleased
 
 ### New
-- **Classic sidebars are an optional layout.** Hub's Sidebars page switches
-  both sides between the original compact rails and the redesigned Modern
-  layout. Sections, ordering, Summary/Full controls, plugins, and behavior stay
-  shared; each layout remembers its widths. Classic keeps the per-source audio
-  mixer and respects reduced motion. Modern remains the default.
-  (`quickshell/shell/modules/sidebar/classic/`, `framebars/Sidebars.js`)
-- **Per-source audio and microphone controls.** The **Audio mixer** button below
-  System's volume and microphone controls opens output devices, microphones,
+- **Compact corner panels replace the tall sidebars.** Super+Escape opens
+  Controls at the top left, with a native animated CPU, memory, and GPU graph,
+  connectivity, sliders, and session actions. Super+S opens Today at the top
+  right, with calendar, weather, media, activity, and notifications. Tools,
+  Chat, and full Activity open in normal windows. Both panels share the
+  wallpaper palette and work across bar styles; they load only when opened
+  and unload after closing. The native sampler and graph stop their work when
+  inactive, and animation respects reduced motion.
+  (`quickshell/shell/modules/sidebar/`, `plugin/systemmonitor.cpp`,
+  `plugin/systemgraph.cpp`)
+- **Per-source audio and microphone controls.** The **Mixer** button in Controls
+  opens output devices, microphones,
   playing apps, and recording apps. Each has independent mute and level, an
   editable percentage, and 1% steps; devices can be chosen as the default.
   Level changes preserve mute. Subtle hover, press, and page-entry animations
   respect reduced motion.
   (`quickshell/shell/modules/sidebar/cards/SystemAudioPage.qml`,
   `quickshell/shell/modules/sidebar/cards/SystemAudioRow.qml`)
-- **Larger, clearer global sidebars.** `Super+Escape` opens the Control center
-  on the left and `Super+S` opens Companion on the right. Both use matching
-  screen-edge chrome, readable type, a section rail, and labelled controls.
-  System has an informative dashboard with Wi-Fi discovery and connection,
-  Bluetooth discovery and pairing, and audio, brightness, and session controls.
-  Weather includes hourly forecasts, daily ranges, and air conditions; Capture
-  shows screenshot and recording targets and options instead of an empty page.
-  Stage is a wallpaper and widget overview; scene, motion, visualizer, and widget
-  editing now live in Hub. Sidebar contents, placement, size, and behavior also
-  live in Hub, with confirmed saves, card ordering, and movement between sides.
-  Retired native-window geometry is removed by the doctor.
-  (`quickshell/shell/modules/sidebar/`, `../hub/quickshell/pages/SidebarsPage.qml`,
-  `../hub/quickshell/pages/DesktopScenePage.qml`)
 - **A fifth bar style: Python.** The serpantinum shell (by ilyamiro, AGPL-3.0)
   is ported into the style folder as `python`: a top or edge bar of pill
   widgets that open into one morphing stage, with the ported network, sound,

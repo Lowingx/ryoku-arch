@@ -7,7 +7,6 @@ import Ryoku.Ui
 import Ryoku.Ui.Singletons
 import "Singletons"
 import "schema/DesktopPage.js" as DesktopSchema
-import "schema/SidebarsPage.js" as SidebarsSchema
 import "schema/DesktopScenePage.js" as DesktopSceneSchema
 import "schema/BarStudioPage.js" as BarStudioSchema
 import "schema/WindowSettings.js" as WindowSettingsSchema
@@ -56,24 +55,21 @@ Rectangle {
     // remember the last section so a reopen lands where you left, not the default.
     // Read once at startup by `sectionGet` below; written here on every change.
     onSectionChanged: Quickshell.execDetached(["ryoku-hub", "config", "set", "section", hub.section])
-    // A Hub that remembered the retired `windows` section, or a deep link that
-    // still names it, lands on the compositor page that now holds those rows
-    // rather than a blank pane.
+    // Retired section names and old deep links land on the page that now owns
+    // their remaining general settings rather than a blank pane.
     function canonicalSection(s) {
         // sections that were folded into another page: an old deep link (the
         // Store's "open in settings", a keybind, a script) still lands right.
         if (s === "windows") return "windowmanager";
         if (s === "cursor") return "input";
         if (s === "autostart" || s === "environment") return "session";
-        if (s === "sidebar" || s === "sidebars-left" || s === "sidebars-right") return "sidebars";
+        if (s === "sidebar" || s === "sidebars-left" || s === "sidebars-right") return "desktop";
         if (s === "stage" || s === "visualizer" || s === "widgets"
                 || s === "desktop-scene-visualizer" || s === "desktop-scene-widgets")
             return "desktop-scene";
         return s;
     }
     function routeKeyFor(target) {
-        if (target === "sidebars-right") return "sidebars.right";
-        if (target === "sidebars-left" || target === "sidebar") return "sidebars.left";
         if (target === "visualizer" || target === "desktop-scene-visualizer") return "visualizer";
         if (target === "widgets" || target === "desktop-scene-widgets") return "widgets";
         if (target === "stage" || target === "desktop-scene") return "stage";
@@ -133,8 +129,7 @@ Rectangle {
             { key: "layerrules", name: "Layer Rules", adv: true, needs: { rows: true } } ] },
         { name: "DESKTOP", items: [
             { key: "bar-studio", name: "Bar Studio", wired: true }, { key: "desktop", name: "Desktop", wired: true },
-            { key: "sidebars", name: "Sidebars", wired: true }, { key: "desktop-scene", name: "Desktop Scene", wired: true },
-            { key: "launcher", name: "App Launcher" } ] },
+            { key: "desktop-scene", name: "Desktop Scene", wired: true }, { key: "launcher", name: "App Launcher" } ] },
         { name: "KEYS & APPS", items: [
             { key: "keybinds", name: "Keybinds" }, { key: "appoverrides", name: "App Overrides", adv: true },
             { key: "windowrules", name: "Window Rules", adv: true } ] },
@@ -154,7 +149,7 @@ Rectangle {
     readonly property var jpName: ({
         "profile": "横顔", "displays": "画面", "input": "入力", "keybinds": "操作",
         "connections": "接続", "gpu": "演算", "recording": "録画", "dictation": "音声",
-        "plugins": "補", "bar-studio": "帯", "desktop": "卓上", "sidebars": "側面", "desktop-scene": "舞台",
+        "plugins": "補", "bar-studio": "帯", "desktop": "卓上", "desktop-scene": "舞台",
         "launcher": "起動", "fastfetch": "情報", "lockscreen": "施錠", "animations": "動き",
         "addons": "拡張", "windowrules": "規則", "appoverrides": "上書", "layerrules": "階層",
         "session": "起動", "performance": "性能", "rashin": "羅針",
@@ -178,8 +173,7 @@ Rectangle {
         "windowmanager": "compositor window manager wm wayland switch change swap session provider window windows rounding corners softness gaps border borders thickness colour tiling layout opacity transparency transparent dim blur shadow float snap resize animation spread offset",
         "plugins": "plugin plugins hyprland compositor hyprpm title bar titlebar hyprbars glass hyprglass image border imgborders cursor motion dynamic cursors focus flash hyprfocus key sound sounds keyboard keysounds typing click clicky thock creamy cherry mx topre mechvibes switch version abi mismatch rebuild build update add git repository install",
         "bar-studio": "bar frame rails zones widgets menus surfaces style catalogue layout framebars sidebar dock dockapps pinned pin magnify autohide auto-hide media chip peek labels edge taskbar",
-        "desktop": "desktop brand logo mark name wallpaper picker clipboard",
-        "sidebars": "sidebar sidebars classic modern skin layout controls companion cards sections order move summary full width height fit fixed alignment keep open pinned motion plugin",
+        "desktop": "desktop brand logo mark name wallpaper picker clipboard sidebar sidebars controls today panel corner",
         "desktop-scene": "desktop stage scene depth parallax wallpaper cut layer model quality shadow edge visualizer spectrum widgets placement edit",
         "launcher": "launcher spotlight command palette greeting weather home",
         "fastfetch": "fetch neofetch terminal system info logo ascii emblem readout",
@@ -205,8 +199,7 @@ Rectangle {
     // compositor-driving classification, so the two cannot drift apart.
     readonly property var sectionRows: ({
         "bar-studio": BarStudioSchema.rows, "desktop": DesktopSchema.rows,
-        "sidebars": SidebarsSchema.rows, "desktop-scene": DesktopSceneSchema.rows,
-        "windowmanager": WindowSettingsSchema.rows, "plugins": PluginsSchema.rows,
+        "desktop-scene": DesktopSceneSchema.rows, "windowmanager": WindowSettingsSchema.rows, "plugins": PluginsSchema.rows,
         "input": InputSchema.rows, "keybinds": KeybindsSchema.rows,
         "displays": DisplaysSchema.rows, "gpu": GpuSchema.rows,
         "recording": RecordingSchema.rows, "dictation": DictationSchema.rows,
@@ -514,9 +507,21 @@ Rectangle {
         return (prov && prov.length) ? base.concat(prov) : base;
     }
     function pageFile(s) {
-        var map = { "plugins": "PluginsPage", "profile": "ProfilePage", "bar-studio": "BarStudioPage", "desktop": "DesktopPage",
-            "sidebars": "SidebarsPage", "desktop-scene": "DesktopScenePage",
-            "session": "SessionPage", "layerrules": "LayerRulesPage", "windowrules": "WindowRulesPage", "appoverrides": "AppOverridesPage", "animations": "AnimationsPage", "input": "InputPage", "keybinds": "KeybindsPage", "dictation": "DictationPage", "displays": "DisplaysPage", "connections": "ConnectionsPage", "gpu": "GpuPage", "updates": "UpdatesPage", "rashin": "RashinPage", "recording": "RecordingPage", "performance": "PerformancePage", "launcher": "LauncherPage", "lockscreen": "LockscreenPage", "fastfetch": "FastfetchPage", "addons": "AddonsPage", "credits": "CreditsPage" };
+        var map = {
+            "plugins": "PluginsPage", "profile": "ProfilePage",
+            "bar-studio": "BarStudioPage", "desktop": "DesktopPage",
+            "desktop-scene": "DesktopScenePage", "session": "SessionPage",
+            "layerrules": "LayerRulesPage", "windowrules": "WindowRulesPage",
+            "appoverrides": "AppOverridesPage", "animations": "AnimationsPage",
+            "input": "InputPage", "keybinds": "KeybindsPage",
+            "dictation": "DictationPage", "displays": "DisplaysPage",
+            "connections": "ConnectionsPage", "gpu": "GpuPage",
+            "updates": "UpdatesPage", "rashin": "RashinPage",
+            "recording": "RecordingPage", "performance": "PerformancePage",
+            "launcher": "LauncherPage", "lockscreen": "LockscreenPage",
+            "fastfetch": "FastfetchPage", "addons": "AddonsPage",
+            "credits": "CreditsPage"
+        };
         map.global = "GlobalPage";
         map["import"] = "ImportPage";
         map.windowmanager = "WindowManagerPage";

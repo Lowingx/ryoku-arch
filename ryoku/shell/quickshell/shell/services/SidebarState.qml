@@ -5,45 +5,17 @@ import QtQuick
 import Quickshell
 import Ryoku.Ui.Singletons
 import "lib/screens.js" as Screens
-import "../modules/sidebar/SidebarCatalog.js" as Catalog
 
 Singleton {
     id: root
 
-    property int intentRevision: 0
-
-    readonly property real motionMultiplier: Config.sidebars.motion === "quick" ? 0.6
-        : Config.sidebars.motion === "calm" ? 1.5 : 1.0
-    readonly property int enterDuration: (Motion.reduce || Tokens.reduceMotion)
-        ? 0 : Math.round(Tokens.swap * motionMultiplier)
-    readonly property int exitDuration: (Motion.reduce || Tokens.reduceMotion)
-        ? 0 : Math.round(Tokens.move * motionMultiplier)
+    readonly property int enterDuration: (Motion.reduce || Tokens.reduceMotion) ? 0 : Tokens.swap
+    readonly property int exitDuration: (Motion.reduce || Tokens.reduceMotion) ? 0 : Tokens.move
+    property string windowKind: ""
+    property var windowScreen: null
+    property string windowPage: ""
     readonly property var enterCurve: [0.16, 1, 0.3, 1, 1, 1]
     readonly property var exitCurve: [0, 0, 0.58, 1, 1, 1]
-
-    function motionOpening(screen) {
-        var slice = root.sliceFor(screen);
-        return slice ? slice.openingIntent : false;
-    }
-
-    function motionDuration(screen) {
-        return root.motionOpening(screen) ? root.enterDuration : root.exitDuration;
-    }
-
-    function motionCurve(screen) {
-        return root.motionOpening(screen) ? root.enterCurve : root.exitCurve;
-    }
-
-    readonly property bool anyOpen: {
-        var revision = root.intentRevision;
-        var list = states.instances;
-        for (var i = 0; i < list.length; ++i) {
-            if (list[i].leftOpen || list[i].rightOpen
-                    || list[i].leftProgress > 0.001 || list[i].rightProgress > 0.001)
-                return true;
-        }
-        return false;
-    }
 
     function screenName(screen) {
         if (typeof screen === "string")
@@ -66,23 +38,12 @@ Singleton {
     }
 
 
-    function sideEnabled(side) {
-        return root.validSide(side) && Config.sidebars[side].enabled;
-    }
     function isOpen(screen, side) {
         var slice = root.sliceFor(screen);
         if (!slice || !root.validSide(side))
             return false;
         return side === "left" ? slice.leftOpen : slice.rightOpen;
     }
-
-    function progress(screen, side) {
-        var slice = root.sliceFor(screen);
-        if (!slice || !root.validSide(side))
-            return 0;
-        return side === "left" ? slice.leftProgress : slice.rightProgress;
-    }
-
 
     function railClearances(screen) {
         var slice = root.sliceFor(screen);
@@ -125,72 +86,70 @@ Singleton {
     function closeSide(side, screen) {
         const slice = root.sliceFor(screen);
         if (!slice || !root.validSide(side)) return;
-        slice.openingIntent = false;
         if (side === "left") slice.leftOpen = false;
         else slice.rightOpen = false;
-        root.intentRevision++;
-    }
-
-    function setProgress(screen, side, value) {
-        var slice = root.sliceFor(screen);
-        if (!slice || !root.validSide(side))
-            return;
-        var next = Math.max(0, Math.min(1, Number(value) || 0));
-        if (side === "left")
-            slice.leftProgress = next;
-        else
-            slice.rightProgress = next;
     }
 
     function sideForTab(side, tab) {
-        const entry = Catalog.byTab(tab);
-        if (!entry) return side;
-        const other = side === "left" ? "right" : "left";
-        if (Config.sidebars[side].cards.indexOf(entry.id) >= 0) return side;
-        return Config.sidebars[other].cards.indexOf(entry.id) >= 0 && root.sideEnabled(other) ? other : side;
+        return tab === "notices" || tab === "notifications" || tab === "weather"
+            || tab === "media" || tab === "today" ? "right" : side;
+    }
+
+    function openWindow(kind, screen, page) {
+        if (kind !== "tools" && kind !== "chat" && kind !== "activity")
+            return;
+        const name = root.screenName(screen) || Wm.focusedOutput;
+        root.windowScreen = ShellState.screens.find(output => output.name === name)
+            || ShellState.screens[0] || null;
+        root.windowPage = page || "";
+        root.closeAll(screen);
+        root.windowKind = kind;
+    }
+
+    function closeWindow() {
+        root.windowKind = "";
+        root.windowPage = "";
     }
 
     function open(side, screen, tab) {
-        side = root.sideForTab(side, tab);
-        var slice = root.sliceFor(screen);
-        if (!slice || !root.sideEnabled(side))
+        if (tab === "tools" || tab === "compress" || tab === "install" || tab === "chat"
+                || tab === "overview" || tab === "usage") {
+            root.openWindow(tab === "chat" ? "chat" : tab === "overview" || tab === "usage" ? "activity" : "tools", screen, tab);
             return;
-        slice.openingIntent = true;
-        if (side === "left") {
-            if (!Config.sidebars.right.pinned) slice.rightOpen = false;
-            if (tab)
-                slice.leftTab = tab;
-            slice.leftOpen = true;
-        } else {
-            if (!Config.sidebars.left.pinned) slice.leftOpen = false;
-            if (tab)
-                slice.rightTab = tab;
-            slice.rightOpen = true;
         }
-        root.intentRevision++;
+        if (tab === "stage") {
+            root.closeAll(screen);
+            Spawn.run(["ryoku-shell", "hub", "open", "desktop-scene"]);
+            return;
+        }
+        side = root.sideForTab(side, tab);
+        const slice = root.sliceFor(screen);
+        if (!slice || !root.validSide(side))
+            return;
+        slice.leftOpen = side === "left";
+        slice.rightOpen = side === "right";
+        if (side === "left")
+            slice.leftTab = tab || "controls";
+        else
+            slice.rightTab = tab || "today";
     }
 
     function toggle(side, screen, tab) {
         side = root.sideForTab(side, tab);
-        var slice = root.sliceFor(screen);
-        if (!slice || !root.sideEnabled(side))
+        const slice = root.sliceFor(screen);
+        if (!slice || !root.validSide(side))
             return;
-        var opened = side === "left" ? slice.leftOpen : slice.rightOpen;
-        var currentTab = side === "left" ? slice.leftTab : slice.rightTab;
-        if (opened && tab && tab !== currentTab) {
-            root.selectTab(side, screen, tab);
-            return;
+        const isWindow = tab === "tools" || tab === "compress" || tab === "install"
+            || tab === "chat" || tab === "overview" || tab === "usage" || tab === "stage";
+        const opened = side === "left" ? slice.leftOpen : slice.rightOpen;
+        const currentTab = side === "left" ? slice.leftTab : slice.rightTab;
+        if (isWindow || (opened && tab && tab !== currentTab)) {
+            root.open(side, screen, tab);
+        } else if (opened) {
+            root.closeSide(side, screen);
+        } else {
+            root.open(side, screen, tab);
         }
-        if (opened) {
-            slice.openingIntent = false;
-            if (side === "left")
-                slice.leftOpen = false;
-            else
-                slice.rightOpen = false;
-            root.intentRevision++;
-            return;
-        }
-        root.open(side, screen, tab);
     }
 
     function closeAll(screen) {
@@ -199,10 +158,8 @@ Singleton {
             return;
         if (!slice.leftOpen && !slice.rightOpen)
             return;
-        slice.openingIntent = false;
         slice.leftOpen = false;
         slice.rightOpen = false;
-        root.intentRevision++;
     }
 
 
@@ -232,25 +189,6 @@ Singleton {
         }
     }
 
-    Connections {
-        target: Config
-        function onSidebarsChanged() {
-            var changed = false;
-            var list = states.instances;
-            for (var i = 0; i < list.length; ++i) {
-                if (!Config.sidebars.left.enabled && list[i].leftOpen) {
-                    list[i].leftOpen = false;
-                    changed = true;
-                }
-                if (!Config.sidebars.right.enabled && list[i].rightOpen) {
-                    list[i].rightOpen = false;
-                    changed = true;
-                }
-            }
-            if (changed)
-                root.intentRevision++;
-        }
-    }
 
     Variants {
         id: states
@@ -260,11 +198,8 @@ Singleton {
             required property var modelData
             property bool leftOpen: false
             property bool rightOpen: false
-            property bool openingIntent: false
-            property real leftProgress: 0
-            property real rightProgress: 0
             property string leftTab: "controls"
-            property string rightTab: "tools"
+            property string rightTab: "today"
             property real railTop: 0
             property real railLeft: 0
             property real railBottom: 0

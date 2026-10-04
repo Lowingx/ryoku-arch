@@ -3,6 +3,11 @@
 ## Unreleased
 
 ### Added
+- **`ryoku doctor` removes retired sidebar settings.** The compact Controls and
+  Today panels no longer use the `sidebars` object or the old frame-bar
+  quick-settings, stash, and system records. The migration removes those
+  records without changing neighbouring shell or frame-bar settings.
+  (`internal/doctor/reconcile_sidebar_rework.go`)
 - **`ryoku doctor` removes the retired Ryoku Motion package.** `ryomotion`, the
   screen-demo recorder, shipped as a hard depend once, so a box installed before
   it was dropped still carries it and pacman never removes it on its own. The new
@@ -67,6 +72,7 @@
   access points steer and the pin forces back, reading as "5 GHz keeps
   reconnecting". Every pinned Wi-Fi profile loses the pin, so it roams again
   inside its band (`internal/doctor/reconcile_wifi_bssid_pin.go`).
+
 - **`ryoku update` survives a private `/var/lib/ryoku`.** The power-cutover
   preflight statted the adoption marker as the user; with the state dir at
   0700 (a drifted mode the kill switch used to leave behind) the stat failed

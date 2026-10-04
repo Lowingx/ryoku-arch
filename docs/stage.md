@@ -12,7 +12,7 @@ Names, so the parts are findable:
 
 | Part | Name | Where |
 |---|---|---|
-| The feature, overview, and settings page | **Stage** (`stage` sidebar card; Desktop Scene in Hub) | `quickshell/shell/modules/stage/`, `sidebar/cards/StageCard.qml`, `ryoku/hub/quickshell/pages/DesktopScenePage.qml` |
+| The feature and settings page | **Stage** (Desktop Scene in Hub) | `quickshell/shell/modules/stage/`, `ryoku/hub/quickshell/pages/DesktopScenePage.qml` |
 | The cut-out engine helper | **`ryostage`** | `ryoku/shell/scripts/ryostage`, shipped to `/usr/bin` |
 | The daemon module | `stage` topic and verbs | `ryoku/shell/ipc/stage.go` |
 | The settings | `~/.config/ryoku/stage.json` | user-owned, GUI-managed, never materialized |
@@ -63,12 +63,9 @@ Plain, Depth, and Parallax are chosen in Hub's Scene view:
 Depth and Parallax use the same cut-outs. The first enable cuts the current
 wallpaper if necessary; progress and Stop stay visible in Hub while the engine runs.
 
-## Stage overview and Hub settings
+## Hub settings
 
-`modules/sidebar/cards/StageCard.qml` is an overview. Its wallpaper preview,
-scene mode, widget count, enabled-widget list, and visualizer status describe
-what is on the desktop. Edit scene, Visualizer, and Widgets open the matching
-Desktop Scene view in Hub.
+Open **Ryoku Hub > Desktop Scene** for the Scene, Visualizer, and Widgets views.
 
 `ryoku/hub/quickshell/pages/DesktopScenePage.qml` contains the editors. It uses
 two columns when there is room and one on smaller windows, with a scrolling

@@ -27,9 +27,7 @@ Item {
 
     readonly property var catalogEntry: SidebarCatalog.byId(root.cardId)
     readonly property bool pluginCard: root.pluginEntry !== null
-    readonly property string builtinSource: root.catalogEntry
-        ? Config.sidebars.layout === "classic" ? root.catalogEntry.classicSource : root.catalogEntry.source
-        : ""
+    readonly property string builtinSource: root.catalogEntry ? root.catalogEntry.source : ""
     readonly property var pluginManifest: root.pluginCard && root.pluginEntry.manifest
         ? root.pluginEntry.manifest : ({})
     readonly property string pluginName: {

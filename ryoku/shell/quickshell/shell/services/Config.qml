@@ -33,10 +33,6 @@ Singleton {
     property alias frameBars: adapter.frameBars
     readonly property var normalizedFrameBars: FrameBars.normalize(frameBars, BarCatalog, MenuCatalog)
 
-    // JsonAdapter's nested lists are QML sequences rather than JavaScript arrays.
-    property var _sidebars: ({})
-    readonly property var sidebars: Sidebars.normalize(_sidebars)
-
     // barStyle: which bar design renders. "qsbar" is the default QS Bar top bar
     // (a shipped folder style under modules/bar/barstyles/qsbar); "sumi" is the
     // built-in painted left rail; any other id is an installed store folder
@@ -158,20 +154,16 @@ Singleton {
     property var themePalette: null
     function refreshThemePalette() {
         var pal = null;
-        var sidebarOptions = ({});
         var t = file.text();
         if (t) {
             try {
                 var o = JSON.parse(t);
                 if (o && typeof o.themePalette === "object" && o.themePalette !== null)
                     pal = o.themePalette;
-                if (o && o.sidebars && typeof o.sidebars === "object")
-                    sidebarOptions = o.sidebars;
             } catch (e) {
             }
         }
         themePalette = pal;
-        _sidebars = sidebarOptions;
     }
 
     // brand: the desktop's mark + name, user-overridable from Ryoku Settings ->

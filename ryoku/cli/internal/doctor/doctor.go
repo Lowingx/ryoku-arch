@@ -166,9 +166,7 @@ func reconcilers() []reconciler {
 		{i18n.T("quick-settings stage tab"), reconcileStageModule},
 		{i18n.T("ryostage cache"), reconcileRyostageCache},
 		{i18n.T("stage migration leftovers"), reconcileStageLeftovers},
-		{i18n.T("retired system sidebar"), reconcileLegacySystemSidebar},
-		{i18n.T("stash features sidebar anchor"), reconcileStashSidebar},
-		{i18n.T("sidebar settings rework"), reconcileSidebarRework},
+		{i18n.T("retired sidebar settings"), reconcileSidebarRework},
 		{i18n.T("shipped app packages"), reconcileShippedApps},
 		{i18n.T("retired app packages"), reconcileRetiredApps},
 		{i18n.T("release control manifest"), reconcileManifest},
@@ -1819,8 +1817,8 @@ func normalizeFrameBars(v any) (map[string]any, []string) {
 
 // retiredShellKeys are shell.json keys no shipped surface reads any more: the
 // Atoll bar geometry and skins, its module/toggle lists, the island knobs, and
-// the retired sidebar controls. Current frame bars and sidebars replace that
-// state, so an upgrade sheds it rather than keeping dead settings forever.
+// the retired sidebar controls. Current frame bars and fixed corner panels
+// replace that state, so an upgrade sheds it rather than keeping dead settings.
 var retiredShellKeys = []string{
 	"atollVariant", "barEnabled", "barHeight", "barLayoutCentre", "barLayoutLeft",
 	"barLayoutRight", "barOccupiedWorkspaces", "barPosition", "barShowMedia",
@@ -1840,10 +1838,6 @@ func migrateShellConfig(raw []byte) ([]byte, []string, error) {
 	if _, present := cfg["frameBars"]; !present {
 		cfg["frameBars"] = defaultFrameBarsFromLegacy(cfg)
 		changes = append(changes, i18n.T("migrated Atoll settings to frame bars"))
-	}
-	if _, present := cfg["sidebars"]; !present {
-		cfg["sidebars"] = defaultSidebars()
-		changes = append(changes, i18n.T("seeded sidebar settings"))
 	}
 	retiredSidebarSettings := false
 	for _, key := range []string{"sidebarLeftPanes", "sidebarRightPanes", "sidebarWidth"} {

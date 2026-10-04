@@ -7,6 +7,7 @@ import Quickshell.Io
 Item {
     id: root
 
+    property bool active: false
     property var plugins: []
     property var availablePlugins: []
 
@@ -20,10 +21,14 @@ Item {
 
     width: 0
     height: 0
+    onActiveChanged: {
+        if (root.active) root.reload();
+        else discover.running = false;
+    }
 
     function reload() {
         discover.running = false;
-        discover.running = true;
+        discover.running = root.active;
     }
 
     function syncPlugins(all) {
@@ -71,7 +76,7 @@ Item {
     Process {
         id: discover
         command: ["bash", root.discoverScript, "--all"]
-        running: true
+        running: root.active
         stdout: StdioCollector {
             onStreamFinished: {
                 var parsed = [];
@@ -84,7 +89,7 @@ Item {
     FileView {
         path: (Quickshell.env("XDG_CONFIG_HOME") || (Quickshell.env("HOME") + "/.config"))
             + "/ryoku/plugins.json"
-        watchChanges: true
+        watchChanges: root.active
         atomicWrites: true
         printErrors: false
         onFileChanged: root.reload()
@@ -92,7 +97,7 @@ Item {
 
     FileView {
         path: root.stateHome + "/ryoku/store/revision.json"
-        watchChanges: true
+        watchChanges: root.active
         atomicWrites: true
         printErrors: false
         onFileChanged: root.reload()

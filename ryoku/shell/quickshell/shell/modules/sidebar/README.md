@@ -1,33 +1,24 @@
 # Sidebar module
 
-- `Sidebar.qml` owns both screen-edge overlays, screen bounds, input regions,
-  and outside-click dismissal.
-- `SidebarFrame.qml` draws the shared boundary with the selected Modern or
-  Classic theme treatment.
-- `SidebarChrome.qml` selects the layout's chrome and owns section navigation,
-  the shared content viewport, and the Customize in Hub action.
-- Sidebar customization lives in
-  `ryoku/hub/quickshell/pages/SidebarsPage.qml`; `SidebarWriter.qml` waits for
-  the daemon reply and settings-frame confirmation before accepting a save.
-- `SidebarButton.qml`, `SidebarToggle.qml`, and `SidebarSegments.qml` provide
-  the sidebar's labelled interaction controls.
-- `SidebarCatalog.js` registers the nine built-in sections.
-- `SidebarCardHost.qml` loads built-ins and plugins and binds their runtime
-  contract. Plugin `compact` and `viewportHeight` properties are optional.
-  Built-ins load their catalog `source` for Modern or `classicSource` for Classic.
-- `SidebarCardShell.qml` is the built-in heading and content-layout scaffold;
-  it does not paint an outer plate.
-- `ryoku/shell/framebars/Sidebars.js` normalizes the persisted settings through
-  the shared `Ryoku.FrameBars.Sidebars` module.
-- `SidebarPlugins.qml` discovers installed `sidebarCard` plugins.
-- `cards/` contains the Modern built-in views and shared detail pages.
-- `classic/` restores the original compact built-in views, reusing the same
-  services and Wi-Fi, Bluetooth, and per-source audio detail pages.
+Controls and Today are compact top-corner panels shared by all bar styles.
 
-To add a built-in section, create its Modern view in `cards/` and its Classic
-view in `classic/`. Declare the host properties and `requestClose()` signal,
-then register both sources in `SidebarCatalog.js`. Add its id to
-`ryoku/shell/framebars/Sidebars.js` defaults only when it should ship selected.
+- `Sidebar.qml` owns placement, the small content window, and click-away input.
+- `SidebarFrame.qml` and `SidebarChrome.qml` provide the shared surface and header.
+- `ControlsBoard.qml` arranges connectivity, sliders, actions, and detail pages;
+  `ControlsHero.qml` presents the native `SystemMonitor` and `SystemGraph`.
+- `TodayBoard.qml` arranges the calendar, weather, media, activity, and notices.
+- `CornerButton.qml`, `CornerConnection.qml`, and `CornerSlider.qml` are the
+  shared compact controls.
+- `UtilityWindow.qml` supplies normal-window chrome for Tools, Chat, and Activity.
+- `cards/` contains their reusable full views and the panels' detail pages.
+- `ExtensionsBoard.qml` uses `SidebarCardHost.qml` for installed plugins;
+  `SidebarPlugins.qml` discovers and orders them while the panel is open.
+- `shell/services/SidebarState.qml` owns per-display state and surface routing.
 
-Contributor plugins use the `sidebarCard` host documented in
-[`docs/plugins.md`](../../../../../../docs/plugins.md#4-sidebar-card---lives-in-a-global-sidebar).
+The root shell loads panels asynchronously and unloads them after closing.
+Keep live work gated by the owning surface's active state. Built-in layout is
+fixed; do not add style variants or sidebar settings to Hub.
+
+See [`docs/sidebars.md`](../../../../../../docs/sidebars.md) for behavior and the
+[`sidebarCard` contract](../../../../../../docs/plugins.md#4-sidebar-card---lives-in-a-global-sidebar)
+for contributor plugins. Plugin placement remains in Hub's Add-ons page.
