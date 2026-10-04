@@ -118,6 +118,7 @@ func runUpgradeCollecting(phase, why string, argv []string) ([]string, error) {
 		r = newUpgradeRenderer(os.Stdout, phase, sys.StdoutIsTTY())
 	}
 	var conflicts []string
+	var reasons []string
 	sc := bufio.NewScanner(pr)
 	sc.Buffer(make([]byte, 0, 64*1024), 1<<20)
 	sc.Split(scanLinesCR)
@@ -126,6 +127,9 @@ func runUpgradeCollecting(phase, why string, argv []string) ([]string, error) {
 		logRaw(line)
 		if p := conflictPath(line); p != "" {
 			conflicts = append(conflicts, p)
+		}
+		if msg := pacmanError(line); msg != "" {
+			reasons = append(reasons, msg)
 		}
 		if rendered {
 			r.feed(line)
@@ -138,7 +142,42 @@ func runUpgradeCollecting(phase, why string, argv []string) ([]string, error) {
 	if rendered {
 		r.finish(werr == nil)
 	}
+	// pacman exits 1 for every failure, so werr alone reads "exit status 1" and
+	// tells a user nothing: the reason lives in the `error:` lines it printed.
+	// Carrying them into the returned error is what makes the Hub's failure
+	// card, `ryoku update`'s own output, and the db-signature healing in
+	// healPackageUpgrade able to say what actually went wrong.
+	if werr != nil && len(reasons) > 0 {
+		werr = fmt.Errorf("%s: %w", strings.Join(dedupe(reasons), "; "), werr)
+	}
 	return conflicts, werr
+}
+
+// pacmanError pulls the message out of a pacman `error:` line. Empty for any
+// other line. pure.
+func pacmanError(line string) string {
+	trimmed := strings.TrimSpace(strings.TrimSuffix(line, "\r"))
+	for _, prefix := range []string{"error:", "erreur :"} {
+		if rest, ok := strings.CutPrefix(trimmed, prefix); ok {
+			return strings.TrimSpace(rest)
+		}
+	}
+	return ""
+}
+
+// dedupe keeps first occurrences, so a transaction that repeats one error per
+// package reports it once. pure.
+func dedupe(in []string) []string {
+	seen := make(map[string]bool, len(in))
+	out := make([]string, 0, len(in))
+	for _, s := range in {
+		if seen[s] {
+			continue
+		}
+		seen[s] = true
+		out = append(out, s)
+	}
+	return out
 }
 
 // conflictPath pulls the path from a pacman file-conflict line, e.g.
@@ -174,15 +213,24 @@ func logRaw(line string) {
 
 var updateLogFile *os.File
 
-// startUpdateLog opens the per-update raw log (overwritten each run) and points
-// rawLog at it, so a curated run still leaves the full firehose to read. Returns
-// the path, or "" when it cannot be created (logging is best-effort).
-func startUpdateLog() string {
-	path := filepath.Join(sys.Xdg("XDG_STATE_HOME", ".local/state"), "ryoku", "update-log.txt")
+// updateLogPath is where the per-update raw log lives.
+func updateLogPath() string {
+	return filepath.Join(sys.Xdg("XDG_STATE_HOME", ".local/state"), "ryoku", "update-log.txt")
+}
+
+// startUpdateLog opens the per-update raw log and points rawLog at it, so a
+// curated run still leaves the full firehose to read. The process that starts
+// the update truncates; the stage2 hand-off re-opens in append mode so the
+// packaged transaction's output survives into the deploy and doctor steps.
+// Returns the path, or "" when it cannot be created (logging is best-effort).
+func startUpdateLog(appendMode bool) string {
+	path := updateLogPath()
 	if os.MkdirAll(filepath.Dir(path), 0o755) != nil {
 		return ""
 	}
-	f, err := os.Create(path)
+	stopUpdateLog()
+	flags := os.O_CREATE | os.O_WRONLY | os.O_TRUNC
+	f, err := os.OpenFile(path, flags, 0o644)
 	if err != nil {
 		return ""
 	}

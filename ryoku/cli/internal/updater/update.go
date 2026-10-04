@@ -121,6 +121,13 @@ func Update(args []string) error {
 	stopKeepalive := sudoKeepalive()
 	defer stopKeepalive()
 
+	// The raw firehose lands in the per-update log on every path, packaged
+	// included: a curated run that fails must still leave the real pacman
+	// output behind for support to read (the terminal only ever shows the
+	// curated lines).
+	logPath := startUpdateLog(false)
+	defer stopUpdateLog()
+
 	checkout := sys.ResolveRepo() != ""
 	switch {
 	case checkout:
@@ -138,8 +145,6 @@ func Update(args []string) error {
 	// checkout: update through the git channel. packaged: pacman + a hand-off
 	// to the freshly installed binary (stage2).
 	if checkout {
-		logPath := startUpdateLog()
-		defer stopUpdateLog()
 		if err := channelUpdate(); err != nil {
 			progress.fail(err)
 			return err
@@ -223,6 +228,9 @@ func Update(args []string) error {
 					hint := i18n.T("no pre-update snapshot exists (snapper was unavailable), so `ryoku rollback` cannot revert this; recover with pacman directly")
 					if pre != "" {
 						hint = i18n.T("see `ryoku rollback` (pre-update snapshot ") + pre + ")"
+					}
+					if logPath != "" {
+						hint += i18n.T("; the full package output is in ") + logPath
 					}
 					e := fmt.Errorf(i18n.T("the Ryoku package upgrade failed; %s: %w"), hint, err)
 					progress.fail(e)
@@ -598,6 +606,11 @@ func updateStage2(pre string, withSystem bool) error {
 	primeSudo()
 	stopKeepalive := sudoKeepalive()
 	defer stopKeepalive()
+	// The exec handoff closed stage1's log handle, so re-open the same file in
+	// append mode: a deploy or doctor failure after the package transaction
+	// must land in the one log support asks for.
+	startUpdateLog(true)
+	defer stopUpdateLog()
 	// Re-begin the SAME step list stage1 published, or the island would lose
 	// the steps that already ran when a --system run hands over.
 	steps := pkgSteps

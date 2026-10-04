@@ -52,6 +52,15 @@
   `internal/sys/release.go`, `internal/updater/release.go`).
 
 ### Fixed
+- **`ryoku update` says what pacman actually failed on.** A failed Ryoku
+  transaction reported only "exit status 1": pacman's real reason (a signature
+  rejection, a package conflict, a broken dependency) lived in the rendered
+  stream and was thrown away, so the Hub's failure card and the terminal's
+  last line said nothing a support channel could act on. The
+  `error:` lines are now carried into the returned error, the raw firehose
+  lands in `~/.local/state/ryoku/update-log.txt` on the packaged path too
+  (stage2 appends to the same file), and the failure hint names that path
+  (`internal/updater/upgradelog.go`, `internal/updater/update.go`).
 - **`ryoku doctor` drops a Wi-Fi profile's access-point pin.** A profile saved
   by the old Hub band picker carried `802-11-wireless.bssid`, which locks the
   client to one AP; on a multi-AP 5 GHz network the association cycles as the
