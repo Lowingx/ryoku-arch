@@ -385,6 +385,16 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **The shell reloads again after the Bluetooth pairing agent shipped.** The
+  agent's command lives in a QML template string, and a shell comment inside it
+  wrapped the command name in backticks: the first one closed the template, so
+  BtLink.qml stopped parsing and every `ryoku reload` died with
+  "shell did not stay up: Expected token `;'". The comment no longer carries
+  backticks, and a file that cannot parse now fails CI: the QML lint job runs
+  on unstable-dev pushes and treats qmllint syntax findings as fatal (import
+  warnings stay advisory), and the local ryoku-dev-lint-qml gate learned the
+  same rule.
+
 - **No more color flicker while browsing live wallpapers and Workshop.** The
   picker's card atlas uploaded only the image's own pixels and left the rest of
   each tile slot to whatever the driver had there; machines that read that
