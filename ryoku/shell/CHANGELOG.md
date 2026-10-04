@@ -385,6 +385,23 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **No more color flicker while browsing live wallpapers and Workshop.** The
+  picker's card atlas uploaded only the image's own pixels and left the rest of
+  each tile slot to whatever the driver had there; machines that read that
+  memory back as garbage flashed arbitrary colors through the field while
+  scrolling. Tiles now fill their whole slot, a texture, render target, or
+  pipeline that fails to allocate is dropped and retried instead of drawn
+  through, and a card still animating out of a filter change re-resolves its
+  atlas slot instead of sampling a layer another wallpaper has taken. On the
+  daemon side, two wallpaper switches racing each other could stack two live
+  players on one screen, a transcode that finished after the user moved past
+  its clip could paint that clip's surface over the new wallpaper, and a
+  Workshop scene could start while a live clip still owned the desktop; the
+  switch generation is now serialized under one lock, a moved-past switch is
+  abandoned before it lands, and applying a scene or any still wallpaper stops
+  the players first. The desktop also no longer yields to a video surface
+  before that surface has committed a frame.
+  (`ryogami/picker/src/`, `ryogami/daemon/`).
 - **Ryogami's picker stops losing cards and stuttering.** A picker opened while
   the daemon was still scanning kept only the wallpapers it had seen so far until
   a relaunch; it now takes the full list when the scan ends. A texture array
