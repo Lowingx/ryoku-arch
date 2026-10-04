@@ -11,6 +11,8 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <limits>
+#include <utility>
 
 namespace {
 
@@ -24,6 +26,7 @@ constexpr int PointVertices = PointSegments * 3;
 constexpr int GridLines = 7;
 constexpr int GridVertices = GridLines * 6;
 constexpr qint64 ValueBlendMilliseconds = 420;
+constexpr float RateScaleFloor = 1024.0f * 1024.0f;
 
 qint64 monotonicMilliseconds() {
     return std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -50,6 +53,7 @@ public:
         Vertex* vertices = buffer->vertexDataAsColoredPoint2D();
         for (int i = 0; i < buffer->vertexCount(); ++i)
             vertices[i].set(0.0f, 0.0f, 0, 0, 0, 0);
+        usedVertices = 0;
         markDirty(QSGNode::DirtyGeometry);
     }
 
@@ -61,27 +65,50 @@ struct GraphNode final : QSGNode {
     GraphNode() {
         grid = new ColorNode(GridVertices);
         appendChildNode(grid);
-        for (int i = 0; i < 3; ++i) {
-            fills[i] = new ColorNode(MaxFillVertices);
-            appendChildNode(fills[i]);
+        fillGroup = new QSGNode;
+        lineGroup = new QSGNode;
+        pointGroup = new QSGNode;
+        appendChildNode(fillGroup);
+        appendChildNode(lineGroup);
+        appendChildNode(pointGroup);
+    }
+
+    void ensureTraceCount(int count) {
+        while (fills.size() < count) {
+            auto* fill = new ColorNode(MaxFillVertices);
+            auto* line = new ColorNode(MaxLineVertices);
+            auto* point = new ColorNode(PointVertices);
+            fillGroup->appendChildNode(fill);
+            lineGroup->appendChildNode(line);
+            pointGroup->appendChildNode(point);
+            fills.append(fill);
+            lines.append(line);
+            points.append(point);
         }
-        for (int i = 0; i < 3; ++i) {
-            lines[i] = new ColorNode(MaxLineVertices);
-            appendChildNode(lines[i]);
-        }
-        for (int i = 0; i < 3; ++i) {
-            points[i] = new ColorNode(PointVertices);
-            appendChildNode(points[i]);
+        while (fills.size() > count) {
+            ColorNode* fill = fills.takeLast();
+            ColorNode* line = lines.takeLast();
+            ColorNode* point = points.takeLast();
+            fillGroup->removeChildNode(fill);
+            lineGroup->removeChildNode(line);
+            pointGroup->removeChildNode(point);
+            delete fill;
+            delete line;
+            delete point;
         }
     }
 
     ColorNode* grid = nullptr;
-    std::array<ColorNode*, 3> fills{};
-    std::array<ColorNode*, 3> lines{};
-    std::array<ColorNode*, 3> points{};
+    QSGNode* fillGroup = nullptr;
+    QSGNode* lineGroup = nullptr;
+    QSGNode* pointGroup = nullptr;
+    QVector<ColorNode*> fills;
+    QVector<ColorNode*> lines;
+    QVector<ColorNode*> points;
     float gridWidth = -1.0f;
     float gridHeight = -1.0f;
     QColor gridColor;
+    bool gridVisible = false;
 };
 
 struct Point {
@@ -214,6 +241,16 @@ void buildPoint(ColorNode* node, const Point& center, float radius, const QColor
     clearRemainder(node, offset);
 }
 
+bool isRateChannel(const QString& channel) {
+    return channel == QStringLiteral("netRx") || channel == QStringLiteral("netTx")
+        || channel == QStringLiteral("diskRead") || channel == QStringLiteral("diskWrite");
+}
+
+bool isFixedChannel(const QString& channel) {
+    return channel == QStringLiteral("cpu") || channel == QStringLiteral("memory") || channel == QStringLiteral("gpu")
+        || channel == QStringLiteral("cpuTemp") || channel == QStringLiteral("gpuTemp");
+}
+
 } // namespace
 
 SystemGraph::SystemGraph(QQuickItem* parent)
@@ -272,27 +309,43 @@ void SystemGraph::setAnimated(bool animated) {
     markVisualDirty();
 }
 
-void SystemGraph::setCpuColor(const QColor& color) {
-    if (m_cpuColor == color)
+void SystemGraph::setChannels(const QStringList& channels) {
+    if (m_channels == channels)
         return;
-    m_cpuColor = color;
-    emit cpuColorChanged();
+    m_channels = channels;
+    syncFromSource();
+    emit channelsChanged();
+}
+
+void SystemGraph::setColors(const QVariantList& colors) {
+    if (m_colors == colors)
+        return;
+    m_colors = colors;
+    emit colorsChanged();
     markVisualDirty();
 }
 
-void SystemGraph::setMemoryColor(const QColor& color) {
-    if (m_memoryColor == color)
+void SystemGraph::setFill(bool fill) {
+    if (m_fill == fill)
         return;
-    m_memoryColor = color;
-    emit memoryColorChanged();
+    m_fill = fill;
+    emit fillChanged();
     markVisualDirty();
 }
 
-void SystemGraph::setGpuColor(const QColor& color) {
-    if (m_gpuColor == color)
+void SystemGraph::setShowGrid(bool showGrid) {
+    if (m_showGrid == showGrid)
         return;
-    m_gpuColor = color;
-    emit gpuColorChanged();
+    m_showGrid = showGrid;
+    emit showGridChanged();
+    markVisualDirty();
+}
+
+void SystemGraph::setDetailPoints(bool detailPoints) {
+    if (m_detailPoints == detailPoints)
+        return;
+    m_detailPoints = detailPoints;
+    emit detailPointsChanged();
     markVisualDirty();
 }
 
@@ -316,17 +369,50 @@ void SystemGraph::setLineWidth(qreal width) {
 int SystemGraph::windowSeconds() const {
     if (m_sampleCount < 2)
         return 10;
-    const qint64 observed = std::max<qint64>(
-        1000, m_samples[m_sampleCount - 1].monotonicMs - m_samples[0].monotonicMs + 1000);
+    const qint64 observed = std::max<qint64>(1000, m_sampleTimes[m_sampleCount - 1] - m_sampleTimes[0] + 1000);
     return std::clamp(static_cast<int>((observed + 999) / 1000), 10, 60);
+}
+
+QColor SystemGraph::colorForTrace(int trace) const {
+    if (m_colors.isEmpty())
+        return Qt::white;
+    const QVariant& value = m_colors[std::min<qsizetype>(trace, m_colors.size() - 1)];
+    const QColor color = value.value<QColor>();
+    return color.isValid() ? color : QColor(Qt::white);
 }
 
 void SystemGraph::syncFromSource() {
     const int previousCount = m_sampleCount;
     m_sampleCount = m_source ? m_source->m_historyCount : 0;
-    for (int i = 0; i < m_sampleCount; ++i) {
-        const SystemMonitor::HistorySample& sample = m_source->historyAtOldest(i);
-        m_samples[i] = {sample.monotonicMs, sample.cpu, sample.memory, sample.gpu};
+    m_traces.resize(m_channels.size());
+    for (qsizetype trace = 0; trace < m_channels.size(); ++trace)
+        m_traces[trace].channel = m_channels[trace];
+
+    for (int index = 0; index < m_sampleCount; ++index) {
+        const SystemMonitor::HistorySample& sample = m_source->historyAtOldest(index);
+        m_sampleTimes[index] = sample.monotonicMs;
+        for (TraceSamples& trace : m_traces) {
+            float value = std::numeric_limits<float>::quiet_NaN();
+            if (trace.channel == QStringLiteral("cpu"))
+                value = sample.cpu;
+            else if (trace.channel == QStringLiteral("memory"))
+                value = sample.memory;
+            else if (trace.channel == QStringLiteral("gpu"))
+                value = sample.gpu;
+            else if (trace.channel == QStringLiteral("netRx"))
+                value = sample.netRx;
+            else if (trace.channel == QStringLiteral("netTx"))
+                value = sample.netTx;
+            else if (trace.channel == QStringLiteral("diskRead"))
+                value = sample.diskRead;
+            else if (trace.channel == QStringLiteral("diskWrite"))
+                value = sample.diskWrite;
+            else if (trace.channel == QStringLiteral("cpuTemp"))
+                value = sample.cpuTemp;
+            else if (trace.channel == QStringLiteral("gpuTemp"))
+                value = sample.gpuTemp;
+            trace.values[index] = value;
+        }
     }
     if (previousCount != m_sampleCount)
         emit sampleCountChanged();
@@ -398,48 +484,66 @@ QSGNode* SystemGraph::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*) {
     auto* root = static_cast<GraphNode*>(oldNode);
     if (!root)
         root = new GraphNode;
+    root->ensureTraceCount(m_traces.size());
     m_frameCount.fetch_add(1, std::memory_order_relaxed);
 
     const float graphWidth = static_cast<float>(width());
     const float graphHeight = static_cast<float>(height());
-    if (root->gridWidth != graphWidth || root->gridHeight != graphHeight || root->gridColor != m_gridColor) {
-        buildGrid(root->grid, graphWidth, graphHeight, m_gridColor);
+    if (root->gridWidth != graphWidth || root->gridHeight != graphHeight || root->gridColor != m_gridColor
+        || root->gridVisible != m_showGrid) {
+        if (m_showGrid)
+            buildGrid(root->grid, graphWidth, graphHeight, m_gridColor);
+        else
+            root->grid->clear();
         root->gridWidth = graphWidth;
         root->gridHeight = graphHeight;
         root->gridColor = m_gridColor;
+        root->gridVisible = m_showGrid;
     }
 
     const float plotWindowMilliseconds = static_cast<float>(windowSeconds() * 1000);
     const qint64 now = monotonicMilliseconds();
-    for (int trace = 0; trace < 3; ++trace) {
-        const QColor& color = trace == 0 ? m_cpuColor : (trace == 1 ? m_memoryColor : m_gpuColor);
+    float rateScale = RateScaleFloor;
+    for (const TraceSamples& trace : std::as_const(m_traces)) {
+        if (!isRateChannel(trace.channel))
+            continue;
+        for (int index = 0; index < m_sampleCount; ++index) {
+            const qint64 age = std::max<qint64>(0, now - m_sampleTimes[index]);
+            if (age <= plotWindowMilliseconds && std::isfinite(trace.values[index]))
+                rateScale = std::max(rateScale, trace.values[index]);
+        }
+    }
+    for (qsizetype traceIndex = 0; traceIndex < m_traces.size(); ++traceIndex) {
+        const TraceSamples& trace = m_traces[traceIndex];
+        const QColor color = colorForTrace(traceIndex);
         const Rgba lineTransparent = premultiplied(color, 0.0f);
         const Rgba lineSolid = premultiplied(color, 0.96f);
         const Rgba fillTop = premultiplied(color, 0.15f);
         const Rgba fillBottom = premultiplied(color, 0.015f);
-        const float detailRadius = std::max(3.0f, static_cast<float>(m_lineWidth) * 2.1f);
-        const float plotWidth = std::max(0.0f, graphWidth - detailRadius * 2.0f);
-        const float plotHeight = std::max(0.0f, graphHeight - detailRadius * 2.0f);
-        ColorNode* fillNode = root->fills[trace];
-        ColorNode* lineNode = root->lines[trace];
+        const float pointRadius = std::max(3.0f, static_cast<float>(m_lineWidth) * 2.1f);
+        const float margin = m_detailPoints ? pointRadius : std::max(1.5f, static_cast<float>(m_lineWidth));
+        const float plotWidth = std::max(0.0f, graphWidth - margin * 2.0f);
+        const float plotHeight = std::max(0.0f, graphHeight - margin * 2.0f);
+        ColorNode* fillNode = root->fills[traceIndex];
+        ColorNode* lineNode = root->lines[traceIndex];
         Vertex* fillVertices = fillNode->buffer->vertexDataAsColoredPoint2D();
         Vertex* lineVertices = lineNode->buffer->vertexDataAsColoredPoint2D();
         int fillOffset = 0;
         int lineOffset = 0;
 
-        const auto rawValue = [this, trace](int index) {
-            if (trace == 0)
-                return m_samples[index].cpu;
-            if (trace == 1)
-                return m_samples[index].memory;
-            return m_samples[index].gpu;
+        const float scale = isFixedChannel(trace.channel) ? 100.0f : (isRateChannel(trace.channel) ? rateScale : 0.0f);
+        const auto normalizedValue = [&trace, scale](int index) {
+            const float value = trace.values[index];
+            if (scale <= 0.0f || !std::isfinite(value))
+                return std::numeric_limits<float>::quiet_NaN();
+            return std::clamp(value / scale * 100.0f, 0.0f, 100.0f);
         };
         const auto valueAt = [&](int index) {
-            float value = rawValue(index);
+            float value = normalizedValue(index);
             if (m_animated && index == m_sampleCount - 1 && index > 0 && std::isfinite(value)) {
-                const float previous = rawValue(index - 1);
+                const float previous = normalizedValue(index - 1);
                 if (std::isfinite(previous)) {
-                    const float progress = static_cast<float>(now - m_samples[index].monotonicMs)
+                    const float progress = static_cast<float>(now - m_sampleTimes[index])
                         / static_cast<float>(ValueBlendMilliseconds);
                     value = previous + (value - previous) * smoothStep(progress);
                 }
@@ -447,25 +551,23 @@ QSGNode* SystemGraph::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*) {
             return value;
         };
         const auto pointFor = [&](int index, float value) {
-            const qint64 age = std::max<qint64>(0, now - m_samples[index].monotonicMs);
-            const float x = detailRadius
-                + plotWidth * (1.0f - static_cast<float>(age) / plotWindowMilliseconds);
-            const float y = detailRadius
-                + plotHeight * (1.0f - std::clamp(value, 0.0f, 100.0f) / 100.0f);
+            const qint64 age = std::max<qint64>(0, now - m_sampleTimes[index]);
+            const float x = margin + plotWidth * (1.0f - static_cast<float>(age) / plotWindowMilliseconds);
+            const float y = margin + plotHeight * (1.0f - std::clamp(value, 0.0f, 100.0f) / 100.0f);
             return Point{x, y};
         };
 
-        for (int i = 0; i + 1 < m_sampleCount; ++i) {
-            const float p1Value = valueAt(i);
-            const float p2Value = valueAt(i + 1);
+        for (int index = 0; index + 1 < m_sampleCount; ++index) {
+            const float p1Value = valueAt(index);
+            const float p2Value = valueAt(index + 1);
             if (!std::isfinite(p1Value) || !std::isfinite(p2Value))
                 continue;
-            const float previousValue = i > 0 ? valueAt(i - 1) : p1Value;
-            const float followingValue = i + 2 < m_sampleCount ? valueAt(i + 2) : p2Value;
+            const float previousValue = index > 0 ? valueAt(index - 1) : p1Value;
+            const float followingValue = index + 2 < m_sampleCount ? valueAt(index + 2) : p2Value;
             const float p0Value = std::isfinite(previousValue) ? previousValue : p1Value;
             const float p3Value = std::isfinite(followingValue) ? followingValue : p2Value;
-            const Point p1 = pointFor(i, p1Value);
-            const Point p2 = pointFor(i + 1, p2Value);
+            const Point p1 = pointFor(index, p1Value);
+            const Point p2 = pointFor(index + 1, p2Value);
             if (p2.x < 0.0f || p1.x > graphWidth)
                 continue;
 
@@ -475,8 +577,9 @@ QSGNode* SystemGraph::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*) {
                 Point current;
                 current.x = std::clamp(p1.x + (p2.x - p1.x) * t, 0.0f, graphWidth);
                 const float value = std::clamp(catmullRom(p0Value, p1Value, p2Value, p3Value, t), 0.0f, 100.0f);
-                current.y = graphHeight * (1.0f - value / 100.0f);
-                appendFill(fillVertices, fillOffset, previous, current, graphHeight, fillTop, fillBottom);
+                current.y = margin + plotHeight * (1.0f - value / 100.0f);
+                if (m_fill)
+                    appendFill(fillVertices, fillOffset, previous, current, graphHeight - margin, fillTop, fillBottom);
                 appendAntialiasedLine(lineVertices, lineOffset, previous, current, static_cast<float>(m_lineWidth),
                                       lineTransparent, lineSolid);
                 previous = current;
@@ -487,14 +590,14 @@ QSGNode* SystemGraph::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*) {
 
         Point newest;
         bool newestVisible = false;
-        if (m_sampleCount > 0) {
+        if (m_detailPoints && m_sampleCount > 0) {
             const float newestValue = valueAt(m_sampleCount - 1);
             if (std::isfinite(newestValue)) {
                 newest = pointFor(m_sampleCount - 1, newestValue);
                 newestVisible = newest.x >= 0.0f && newest.x <= graphWidth;
             }
         }
-        buildPoint(root->points[trace], newest, detailRadius, color, newestVisible);
+        buildPoint(root->points[traceIndex], newest, pointRadius, color, newestVisible);
     }
 
     return root;

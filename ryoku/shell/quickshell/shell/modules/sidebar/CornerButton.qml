@@ -62,8 +62,6 @@ QQC.AbstractButton {
             horizontalAlignment: Text.AlignHCenter
         }
     }
-    QQC.ToolTip.visible: hovered && (text === "" || label.truncated)
-    QQC.ToolTip.text: Accessible.name
-    QQC.ToolTip.delay: 600
+    CornerTip { s: root.s; visible: root.hovered && (root.text === "" || label.truncated); text: root.Accessible.name }
     HoverHandler { cursorShape: Qt.PointingHandCursor }
 }

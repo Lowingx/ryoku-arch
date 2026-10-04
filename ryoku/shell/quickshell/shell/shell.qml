@@ -30,6 +30,7 @@ import Quickshell.Wayland
 import "modules/osd"
 import "modules/notifications"
 import "modules/capture"
+import "modules/ask"
 import "modules/confirm"
 import Ryoku.Ui.Singletons
 
@@ -247,7 +248,7 @@ ShellRoot {
 
             LazyLoader {
                 id: controlsLoader
-                property bool open: SidebarState.isOpen(perScreen.modelData, "left")
+                property bool open: SidebarState.isOpen(perScreen.modelData)
                 property bool showNow: false
                 activeAsync: open || controlsHold.running
                 onItemChanged: if (item) Qt.callLater(() => controlsLoader.showNow = controlsLoader.open)
@@ -257,28 +258,38 @@ ShellRoot {
                 }
                 Sidebar {
                     screen: perScreen.modelData
-                    side: "left"
                     active: controlsLoader.showNow
                 }
             }
             Timer { id: controlsHold; interval: SidebarState.exitDuration + 48 }
+
+
             LazyLoader {
-                id: todayLoader
-                property bool open: SidebarState.isOpen(perScreen.modelData, "right")
+                id: askLoader
+                property bool open: perScreen.st ? perScreen.st.askOpen : false
                 property bool showNow: false
-                activeAsync: open || todayHold.running
-                onItemChanged: if (item) Qt.callLater(() => todayLoader.showNow = todayLoader.open)
+                activeAsync: open || askHold.running
+                onItemChanged: if (item) Qt.callLater(() => askLoader.showNow = askLoader.open)
                 onOpenChanged: {
                     showNow = open && item !== null;
-                    if (!open && active) todayHold.restart();
+                    if (!open && active) askHold.restart();
                 }
-                Sidebar {
+                AskBar {
                     screen: perScreen.modelData
-                    side: "right"
-                    active: todayLoader.showNow
+                    active: askLoader.showNow
+                    mode: perScreen.st ? perScreen.st.askMode : "ask"
+                    tool: perScreen.st ? perScreen.st.askTool : ""
+                    onRequestClose: if (perScreen.st) perScreen.st.askOpen = false
+                    onModeChangeRequested: mode => ShellState.setAskMode(perScreen.modelData, mode)
                 }
             }
-            Timer { id: todayHold; interval: SidebarState.exitDuration + 48 }
+            Timer { id: askHold; interval: 15000 }
+
+            AskBubble {
+                screen: perScreen.modelData
+                enabled: Config.askBubble.enabled
+                    && Config.askBubble.screen === perScreen.modelData.name
+            }
 
             // The dock: a resident per-monitor surface on the edge opposite the
             // bar. Style-agnostic, so it lives here rather than inside a bar style;
@@ -508,32 +519,6 @@ ShellRoot {
         }
     }
 
-    LazyLoader {
-        activeAsync: SidebarState.windowKind === "tools"
-        ToolsWindow {
-            screen: SidebarState.windowScreen
-            page: SidebarState.windowPage
-            active: SidebarState.windowKind === "tools"
-            onRequestClose: SidebarState.closeWindow()
-        }
-    }
-    LazyLoader {
-        activeAsync: SidebarState.windowKind === "chat"
-        ChatWindow {
-            screen: SidebarState.windowScreen
-            page: SidebarState.windowPage
-            active: SidebarState.windowKind === "chat"
-            onRequestClose: SidebarState.closeWindow()
-        }
-    }
-    LazyLoader {
-        activeAsync: SidebarState.windowKind === "activity"
-        ActivityWindow {
-            screen: SidebarState.windowScreen
-            active: SidebarState.windowKind === "activity"
-            onRequestClose: SidebarState.closeWindow()
-        }
-    }
 
     // The single surface-toggle mapping. Every shell surface id resolves to one
     // transition here: a per-monitor ShellState flip, a global config toggle, or
@@ -578,17 +563,17 @@ ShellRoot {
             if (st)
                 st.clipboardOpen = !st.clipboardOpen;
             break;
-        case "stash":
-            ShellState.requestSurfaceActive("sidebar-right", undefined);
-            break;
         case "screenshot":
-            ShellState.requestSurfaceActive("sidebar-left#capture", undefined);
+            Quickshell.execDetached(["sh", "-c", "flock -n -o /tmp/ryoshot.lock qs -c ryoshot"]);
+            break;
+        case "ask":
+            ShellState.requestSurfaceActive("ask", undefined);
             break;
         case "compress":
-            ShellState.requestSurfaceActive("sidebar-right#compress", undefined);
+            ShellState.requestSurfaceActive("ask#tools/compress", undefined);
             break;
         case "install":
-            ShellState.requestSurfaceActive("sidebar-right#install", undefined);
+            ShellState.requestSurfaceActive("ask#tools/install", undefined);
             break;
         }
     }
@@ -605,6 +590,7 @@ ShellRoot {
             case "launcher":
             case "overview":
             case "clipboard":
+            case "screenshot":
             case "visualizer":
             case "visualizer-overlay":
             case "visualizer-place":
@@ -1011,6 +997,11 @@ ShellRoot {
         }
         function toggle(): void { Keypresses.toggle(); }
     }
+    IpcHandler {
+        target: "camera"
+        readonly property bool active: Camera.active
+        function toggle(): void { Camera.toggle(); }
+    }
     // Surface global shortcuts dispatch through the mapping above so compositor
     // global shortcuts and the `ryoku-shell <id>` fallback behave identically.
     CustomShortcut {
@@ -1029,14 +1020,9 @@ ShellRoot {
         onPressed: root.toggleSurface("clipboard")
     }
     CustomShortcut {
-        name: "stash"
-        description: I18n.tr("Open the right sidebar on the active monitor")
-        onPressed: root.toggleSurface("stash")
-    }
-    CustomShortcut {
-        name: "screenshot"
-        description: I18n.tr("Open the capture tab in the left sidebar")
-        onPressed: root.toggleSurface("screenshot")
+        name: "ask"
+        description: I18n.tr("Ask Rashin")
+        onPressed: root.toggleSurface("ask")
     }
     CustomShortcut {
         name: "compress"

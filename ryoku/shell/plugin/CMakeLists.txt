@@ -30,9 +30,12 @@ qt_add_qml_module(ryoku-blobs
         blobrect.cpp blobrect.hpp
         blobinvertedrect.cpp blobinvertedrect.hpp
         blobmaterial.cpp blobmaterial.hpp
+        borderbeam.cpp borderbeam.hpp
+        bordermaterial.cpp bordermaterial.hpp
         camerafeed.cpp camerafeed.hpp
         systemmonitor.cpp systemmonitor.hpp
         systemgraph.cpp systemgraph.hpp
+        thinkingorb.cpp thinkingorb.hpp
 )
 
 # QQuickItems use scene-graph materials, CameraFeed uses Multimedia, and
@@ -56,4 +59,6 @@ qt_add_shaders(ryoku-blobs "blob_shaders"
     FILES
         shaders/blob.vert
         shaders/blob.frag
+        shaders/beam.vert
+        shaders/beam.frag
 )

@@ -9,7 +9,6 @@ import shell.services
 Scope {
     id: root
     required property var screen
-    required property string side
     property bool active: false
     readonly property real s: Tokens.uiScaleFor(screen ? screen.name : "")
     readonly property var clearances: SidebarState.railClearances(screen)
@@ -18,9 +17,9 @@ Scope {
     readonly property real screenHeight: screen && screen.height > 0 ? screen.height : 800
     readonly property real availableWidth: Math.max(1, screenWidth - clearances.left - clearances.right - gap * 2)
     readonly property real availableHeight: Math.max(1, screenHeight - clearances.top - clearances.bottom - gap * 2)
-    readonly property real wantedWidth: Math.min(availableWidth, (side === "left" ? 688 : 640) * s)
+    readonly property real wantedWidth: Math.min(availableWidth, 688 * s)
     readonly property real wantedHeight: Math.min(availableHeight, chrome.fittedHeight)
-    readonly property real panelX: side === "right" ? screenWidth - clearances.right - gap - wantedWidth : clearances.left + gap
+    readonly property real panelX: clearances.left + gap
     readonly property real panelY: clearances.top + gap
     property real reveal: active ? 1 : 0
 
@@ -58,9 +57,9 @@ Scope {
         MouseArea {
             anchors.fill: parent
             focus: root.active
-            Keys.onEscapePressed: SidebarState.closeSide(root.side, root.screen)
+            Keys.onEscapePressed: SidebarState.close(root.screen)
             acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-            onPressed: Qt.callLater(() => SidebarState.closeSide(root.side, root.screen))
+            onPressed: Qt.callLater(() => SidebarState.close(root.screen))
         }
     }
     PanelWindow {
@@ -70,34 +69,32 @@ Scope {
         color: "transparent"
         exclusionMode: ExclusionMode.Ignore
         exclusiveZone: 0
-        anchors { top: true; left: root.side === "left"; right: root.side === "right" }
+        anchors { top: true; left: true }
         margins.top: root.panelY
         margins.left: root.clearances.left + root.gap
-        margins.right: root.clearances.right + root.gap
         implicitWidth: root.wantedWidth
         implicitHeight: root.wantedHeight
         WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.namespace: "ryoku-sidebar-" + root.side
+        WlrLayershell.namespace: "ryoku-sidebar-left"
         WlrLayershell.keyboardFocus: root.active ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
         FocusScope {
             id: surface
             anchors.fill: parent
             opacity: root.reveal
             scale: 0.985 + root.reveal * 0.015
-            transformOrigin: root.side === "left" ? Item.TopLeft : Item.TopRight
-            transform: Translate { y: (1 - root.reveal) * -8 * root.s }
+            transformOrigin: Item.TopLeft
+            transform: Translate { y: (1 - root.reveal) * -Tokens.s2 * root.s }
             focus: root.active
-            Keys.onEscapePressed: SidebarState.closeSide(root.side, root.screen)
+            Keys.onEscapePressed: SidebarState.close(root.screen)
             onFocusChanged: if (focus) Qt.callLater(() => surface.forceActiveFocus())
             SidebarFrame { anchors.fill: parent; s: root.s }
             SidebarChrome {
                 id: chrome
                 anchors.fill: parent
                 screen: root.screen
-                side: root.side
                 s: root.s
                 active: root.active
-                onCloseRequested: SidebarState.closeSide(root.side, root.screen)
+                onCloseRequested: SidebarState.close(root.screen)
             }
         }
     }

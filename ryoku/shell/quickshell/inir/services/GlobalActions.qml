@@ -599,13 +599,13 @@ Singleton {
             execute: () => { GlobalStates.openSidebarLeft("") }
         },
         {
-            id: "open-sidebar-right",
-            name: Translation.tr("Open Today Panel"),
-            description: Translation.tr("The right side panel"),
-            icon: "right_panel_open",
+            id: "open-ask",
+            name: Translation.tr("Ask Rashin"),
+            description: Translation.tr("Quick ask and chat"),
+            icon: "auto_awesome",
             category: "settings",
-            keywords: ["sidebar", "today", "right", "panel"],
-            execute: () => { GlobalStates.openSidebarRight("") }
+            keywords: ["ask", "chat", "Rashin", "web", "tools"],
+            execute: () => { Quickshell.execDetached(["ryoku-shell", "ask"]) }
         },
         {
             id: "zoom-in",

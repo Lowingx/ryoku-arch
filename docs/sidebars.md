@@ -1,108 +1,153 @@
-# Sidebars
+# Controls, ryoshot, and Ask
 
-Ryoku has one pair of compact corner panels, shared by every bar style and both
-supported compositors:
+Three global tools are available under every bar style and on both Hyprland and
+niri:
 
-- `Super+Escape` opens **Controls** in the top-left corner.
-- `Super+S` opens **Today** in the top-right corner.
+- `Super+Escape` opens **Controls** at the top-left of the focused display.
+- `Super+Shift+S` opens the floating **ryoshot** capture bar.
+- `Alt+Space` opens **Ask** near the top third of the focused display.
 
-They open on the focused display and stay clear of its bar and other screen
-rails. Opening either closes the other. Repeat the shortcut, press Escape, use
-the close button, or click outside to dismiss the panel. They do not reserve
-screen space or move windows.
+Controls and Ask close with Escape, their close button, or a click outside.
+ryoshot has its own close control. The shortcuts are editable in
+**Ryoku Hub > Keybinds**.
 
 ## Controls
 
-The header shows the user, time, uptime, and root-disk usage alongside a live
-CPU, memory, and GPU graph. Wi-Fi and Bluetooth tiles open their device lists.
-Volume and brightness have labelled sliders; the action row contains the audio
-mixer, night light, keep awake, do-not-disturb, and microphone mute.
+Controls is a 688-logical-pixel panel with four sections.
 
-The mixer provides separate output-device, microphone, playback-app, and
-recording-app controls. Each source has mute, a slider, an editable percentage,
-and 1% steps. Changing a level preserves mute; **Use** selects a default device.
+### Vitals
 
-Lock, sleep, logout, restart, and power off sit in a separate bottom row. Session
-confirmation uses the shell's existing confirmation dialog. The camera button
-opens screenshot and recording controls. Gaming mode appears only when the
-running provider supports it, or when it is already enabled.
+The hero is a compact system monitor. It shows the user and host, uptime and
+load average, total CPU load with a per-core grid, CPU frequency and
+temperature, memory and swap, GPU load, temperature and VRAM, network traffic,
+disk traffic with root usage and drive temperature, and battery state. Missing
+sensors are omitted rather than shown as zero.
 
-## Today
+`SystemMonitor` samples once per second on a worker thread while the panel is
+active. `SystemGraph` draws bounded native histories for CPU, memory, GPU,
+network, disk, and temperatures. Sampling and graph animation stop when the
+panel is inactive.
 
-The calendar anchors the left column. Current weather and the next hours sit
-above the media player on the right, followed by today's activity and
-notifications. Forecast and notification buttons open their detailed views.
+### Connections
 
-**Tools**, **Chat**, and **View activity** open normal, resizable windows rather
-than expanding the corner panel. Tools retains downloads, compression,
-installation, and their file pickers. Chat uses the existing Rashin conversation
-view; Activity shows the full usage history.
+Wi-Fi and Bluetooth tiles show useful connection state at a glance and open
+their device lists in the same panel. Ethernet and VPN appear as presence chips
+when available. The Extensions view holds every installed `sidebarCard` plugin.
 
-Installed `sidebarCard` plugins appear under the Extensions button on their
-chosen side. Enable and place them in **Ryoku Hub > Add-ons**. The built-in panel
-layout is fixed: there is no sidebar style, size, pinning, or contents editor.
-Wallpaper, widget, and visualizer editing remains in **Ryoku Hub > Desktop Scene**.
+### Levels
+
+Volume and brightness stay available as fine sliders with direct value entry and
+small step controls. Expanding Volume opens an inline drawer for output devices,
+playback apps, recording apps, microphones, mute controls, and default-device
+selection. Expanding Brightness opens a drawer with one control per display.
+Changing a level does not silently change its mute state.
+
+### Bottom bar
+
+Lock, Sleep, Log out, Restart, and Power off are hold-to-activate actions. Hold a
+button until its fill completes; releasing early cancels it. Keyboard users can
+hold Space or Enter. The completed hold is the confirmation, so there is no
+second dialog.
+
+The same bar carries Night light when supported, Keep awake, Do not disturb,
+Mic mute, and Gaming mode when supported. The gear opens a small popup for the
+remaining Controls settings. Unsupported controls are not shown as dead options.
+
+## ryoshot
+
+ryoshot is the capture UI. Its floating bar offers Shot, Edit, OCR, Search, and
+Record, alongside colour picking, monitor capture, and close controls. Shot can
+select a region, window, or monitor; Edit opens the result directly in the
+annotation editor.
+
+The bar also carries a delay timer (0, 1, 3, 5, or 10 seconds, shown as a badge)
+that captures the live region after the wait, and the screenshots folder. With
+Record selected it adds desktop audio, microphone, key-press overlay, and webcam
+overlay toggles. The delay and microphone choices persist in `ryoshot.json`.
+The settings popover keeps the save behaviour and links to **Ryoku Hub >
+Recording**.
+
+## Ask
+
+Ask is a compact Rashin surface with four modes:
+
+- **Ask** streams a quick answer and offers Copy, Continue in chat, and Pin bubble.
+- **Chat** opens the current Rashin conversation with model and permission controls.
+- **Tools** handles downloads, compression, package installation, recent work,
+  and active jobs.
+- **Web** searches with the existing engines, bangs, and instant answers.
+
+A dotted monochrome orb in the field narrates what Rashin is doing (connecting,
+searching, thinking, writing) and a light beam travels the field while a request
+runs. Type `\` for Ask, `?` for Web, or `/` for Tools. Tab cycles modes. Up,
+Down, Left, and Right move through actions; Enter submits or activates the
+selected action; Ctrl+N starts a new chat in Chat mode.
+
+Pin bubble creates a draggable 56-pixel chat orb on the desktop. It snaps to the
+nearest horizontal edge, expands to a compact chat on click, and closes when
+dragged onto the bottom dismiss target. Its enabled state and position persist
+in `shell.json` under `ask.bubble`.
+
+## Commands
+
+```text
+ryoku-shell quicksettings
+ryoku-shell screenshot
+ryoku-shell ask
+ryoku-shell ask chat
+ryoku-shell ask tools
+ryoku-shell compress
+ryoku-shell install
+```
+
+`quicksettings` opens Controls, `screenshot` launches ryoshot, and the Ask
+commands open the matching mode or tool. The compositor providers expose the
+same actions without putting compositor-specific QML in the shell.
 
 ## Rendering and lifecycle
 
-`Sidebar.qml` owns a small layer-shell content window and a transparent
-click-away window. Both use overlay-layer keyboard focus so clicks inside and
-outside work consistently. Their namespaces are `ryoku-sidebar-left`,
-`ryoku-sidebar-right`, and `ryoku-corner-dismiss`; their exclusive zone is zero.
-The click-away input region excludes the panel and the display's rails.
+`Sidebar.qml` owns the Controls content window and its click-away window.
+`AskBar.qml` is one full-screen overlay surface that holds the bar and its
+click-away area, so the keyboard always stays with the bar on both compositors.
+They use overlay-layer keyboard focus while open and reserve no window space.
+Per-display UI scale is applied to every dimension, and reduced-motion settings
+remove decorative movement without removing required hold gestures.
 
-Controls is 688 logical pixels wide and Today is 640 before per-display UI
-scaling. Each fits its content and clamps to the space available on its display.
-They share the current wallpaper palette and shell typography. Opening fades
-and settles the panel from its top corner; reduced motion disables that animation.
-
-The root shell asynchronously loads a panel on first use and unloads it after
-its closing animation. Detailed pages load only when selected. Plugin discovery
-and its file watches run only while the owning panel is active.
-
-`SystemMonitor` and `SystemGraph`, in `Ryoku.Blobs`, own the native graph.
-The monitor samples once per second on a worker thread and keeps a bounded
-history. The scene graph animates those real samples in a 10–60 second window,
-without QML Canvas or per-frame subprocesses. Unavailable metrics are not drawn
-as fabricated zero readings. Sampling stops when inactive; graph frames stop
-when inactive, hidden, unexposed, or reduced-motion animation is disabled.
-
-## Commands and migration
-
-`quicksettings` still routes to the left panel and `stash` to the right. These
-are the compositor keybind commands, not layout choices. Screenshot requests
-open Capture; compress and install requests open Tools on their file picker.
-
-`SidebarState.qml` owns per-display open state, selected details, and utility
-window routing. The shell daemon remains the only writer of persistent shell
-settings. `ryoku doctor` removes the retired `sidebars` object and the old
-`frameBars.menus.quick-settings` and `frameBars.surfaces.stash/system` records,
-without changing neighbouring settings.
+The root shell loads its heavy surfaces on demand and unloads them after
+closing. ryoshot is a separate on-demand Quickshell process, so capture work is
+not resident in the shell.
+Detail pages, plugin discovery, file watches, native sampling, audio enumeration,
+and display probing run only while their owning surface is active.
 
 ## Contributor map
 
-All panel components below live under
+Controls components live under
 `ryoku/shell/quickshell/shell/modules/sidebar/`:
 
 | File | Responsibility |
 |---|---|
-| `Sidebar.qml` | Corner placement, screen bounds, input regions, and dismissal |
-| `SidebarFrame.qml` | Shared palette-matched surface |
-| `SidebarChrome.qml` | Header, navigation, and lazy board selection |
-| `ControlsBoard.qml`, `ControlsHero.qml` | Controls layout and native graph presentation |
-| `TodayBoard.qml`, `Today*.qml` | Calendar, weather, media, activity, and notifications |
-| `CornerButton.qml`, `CornerConnection.qml`, `CornerSlider.qml` | Shared compact controls |
-| `UtilityWindow.qml` | Normal window sizing and shared header |
-| `ToolsWindow.qml`, `ChatWindow.qml`, `ActivityWindow.qml` | Full utility views |
-| `cards/` | Reusable detail views and their controls |
-| `ExtensionsBoard.qml`, `SidebarCardHost.qml`, `SidebarPlugins.qml` | Plugin discovery, ordering, and runtime contract |
+| `Sidebar.qml` | Top-left placement, focus, input region, and click-away dismissal |
+| `SidebarFrame.qml`, `SidebarChrome.qml` | Shared surface, header, and board routing |
+| `ControlsBoard.qml` | Vitals, Connections, Levels, and bottom-bar composition |
+| `ControlsHero.qml`, `Vital*.qml` | Native activity graphs and individual system readings |
+| `ControlsConnections.qml`, `ConnectionTile.qml` | Wi-Fi, Bluetooth, Ethernet, and VPN summaries |
+| `ControlsLevels.qml`, `LevelSlider.qml` | Volume and brightness controls |
+| `MixerDrawer.qml`, `MixerRow.qml` | Per-device and per-application audio controls |
+| `BrightnessDrawer.qml` | Per-display brightness controls |
+| `ControlsBar.qml`, `HoldButton.qml`, `ControlsSettingsPopup.qml` | Session actions, toggles, and gear popup |
+| `ExtensionsBoard.qml`, `SidebarCardHost.qml`, `SidebarPlugins.qml` | Plugin discovery, ordering, and hosting |
+| `cards/SystemWifiPage.qml`, `cards/SystemBluetoothPage.qml` | Connection detail pages |
 
-The state owner is
-`ryoku/shell/quickshell/shell/services/SidebarState.qml`. Native sampling and
-rendering live in `ryoku/shell/plugin/systemmonitor.{hpp,cpp}` and
-`ryoku/shell/plugin/systemgraph.{hpp,cpp}`. New built-in views belong in the
-appropriate board or utility window; do not add another layout catalogue or
-persist panel geometry.
+ryoshot lives in `ryoku/shell/quickshell/ryoshot/`. The shell keeps only the
+shared recording, key-press, and webcam overlay services under
+`shell/modules/capture/`. Ask components live under
+`ryoku/shell/quickshell/shell/modules/ask/`, including `AskBar.qml`, its mode
+views, and `AskBubble.qml`.
 
-Contributor plugins use the public
+Shared state is owned by `shell/services/SidebarState.qml`, `ShellState`, and the
+Ask and chat services. Native sampling and rendering live in
+`ryoku/shell/plugin/systemmonitor.{hpp,cpp}` and
+`ryoku/shell/plugin/systemgraph.{hpp,cpp}`; the Ask orb and the field beam are
+`ryoku/shell/plugin/thinkingorb.{hpp,cpp}` and
+`ryoku/shell/plugin/borderbeam.{hpp,cpp}`. Contributor plugins use the public
 [`sidebarCard` contract](plugins.md#4-sidebar-card---lives-in-a-global-sidebar).

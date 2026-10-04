@@ -10,7 +10,7 @@ import "lib/screens.js" as Screens
 // recorder-status.json the backend writes for the live audio mode. Control goes
 // through the one command API -- `ryoku-shell record start|stop|pause|resume` and
 // `record settings` -- so nothing here builds a recorder invocation of its own.
-// The capture card and the floating record island share this single source of truth.
+// The capture popout and the floating record island share this single source of truth.
 Singleton {
     id: root
 
@@ -20,7 +20,7 @@ Singleton {
     property int elapsedSec: 0
     readonly property string elapsedText: fmt(elapsedSec)
 
-    // The record island and capture card watch anyActive and its changed signal;
+    // The record island and capture popout watch anyActive and its changed signal;
     // with the standalone editor gone it tracks the one live capture directly.
     readonly property bool anyActive: root.active
 
@@ -91,7 +91,7 @@ Singleton {
     }
 
     // Read-only mirror of the daemon-owned recording settings. The daemon is the
-    // sole writer (ryoku-shell record settings); the capture card shows these and
+    // sole writer (ryoku-shell record settings); the capture popout shows these and
     // edits them through setSetting(), never by writing the file here. watchChanges
     // picks up the daemon's writes so the chips stay in sync. Defaults match the
     // daemon's so a missing file still reads sensibly.
@@ -159,7 +159,7 @@ Singleton {
         onFileChanged: reload()
     }
 
-    // pre-record countdown: the capture card can arm a delay (Capture.delay,
+    // pre-record countdown: the capture popout can arm a delay (Capture.delay,
     // 0/1/3/5/10s) so the desktop is framed before capture begins. startAfter ticks
     // that delay down -- the island renders it -- then calls start(), so the count
     // is honest. args are latched so a mid-count option change can't retarget it.

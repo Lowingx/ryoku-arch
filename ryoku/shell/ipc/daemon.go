@@ -1207,11 +1207,9 @@ func (d *daemon) handle(conn net.Conn) {
 }
 
 var surfaceCommands = map[string]string{
-	// One bare kebab verb per shell surface, spelled to match its CustomShortcut
-	// id, so a compositor keybind reaches any surface as `ryoku-shell <id>` where
-	// no global-shortcuts protocol exists (niri). Flag surfaces land on ShellState,
-	// sidebar surfaces on SidebarState, and frame menus on FrameMenuManager. Each
-	// is the same transition a CustomShortcut press runs in-process.
+	// Surface verbs resolve to ids handled by the shell's openSurface route.
+	// Ask subcommands deep-link into a mode; menu aliases preserve established
+	// command spellings.
 	"bar-toggle":         "barToggle",
 	"launcher":           "launcher",
 	"overview":           "overview",
@@ -1221,14 +1219,13 @@ var surfaceCommands = map[string]string{
 	"quicksettings":      "sidebar-left",
 	"wallpaper-menu":     "wallpaper",
 	"clipboard":          "clipboard",
-	"stash":              "sidebar-right",
-	"screenshot":         "sidebar-left#capture",
-	"compress":           "sidebar-right#compress",
-	"install":            "sidebar-right#install",
-	// Preserve established command spellings while routing retired quick-settings
-	// and stash chrome into their replacement sidebars.
+	"screenshot":         "screenshot",
+	"ask":                "ask",
+	"ask chat":           "ask#chat",
+	"ask tools":          "ask#tools",
+	"compress":           "ask#tools/compress",
+	"install":            "ask#tools/install",
 	"menu quick-settings": "sidebar-left",
-	"menu stash":          "sidebar-right",
 	"menu screenshot":     "screenshot",
 	"menu app-launcher":   "launcher",
 }
@@ -1275,7 +1272,7 @@ func (d *daemon) dispatch(line string) string {
 		switch {
 		case len(args) == 1 && args[0] == "close":
 			return d.menuClose()
-		case len(args) == 1 && (args[0] == "app-launcher" || args[0] == "quick-settings" || args[0] == "screenshot" || args[0] == "stash"):
+		case len(args) == 1 && (args[0] == "app-launcher" || args[0] == "quick-settings" || args[0] == "screenshot"):
 			routeCmd = line
 		default:
 			if _, ok := menuID(line); !ok {
@@ -1283,6 +1280,15 @@ func (d *daemon) dispatch(line string) string {
 			}
 			routeCmd = line
 		}
+	case "ask":
+		if len(args) == 0 {
+			break
+		}
+		if len(args) == 1 && (args[0] == "chat" || args[0] == "tools") {
+			routeCmd = line
+			break
+		}
+		return "err ask: expected chat or tools"
 	case "bar":
 		// The data-layout verbs (list/catalog/move/show/hide/set/position/form/
 		// defaults/settings) take a verb first; the reveal grammar takes an edge

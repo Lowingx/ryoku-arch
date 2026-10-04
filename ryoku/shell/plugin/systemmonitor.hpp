@@ -2,6 +2,8 @@
 
 #include <QObject>
 #include <QString>
+#include <QVariantList>
+#include <QVector>
 #include <qqmlregistration.h>
 
 #include <array>
@@ -34,12 +36,38 @@ class SystemMonitor : public QObject {
     Q_PROPERTY(qreal storageUsedGiB READ storageUsedGiB NOTIFY samplesChanged)
     Q_PROPERTY(qreal storageTotalGiB READ storageTotalGiB NOTIFY samplesChanged)
     Q_PROPERTY(int sampleCount READ sampleCount NOTIFY samplesChanged)
+    Q_PROPERTY(QVariantList coreLoads READ coreLoads NOTIFY samplesChanged)
+    Q_PROPERTY(int coreCount READ coreCount NOTIFY samplesChanged)
+    Q_PROPERTY(double cpuFrequencyGhz READ cpuFrequencyGhz NOTIFY samplesChanged)
+    Q_PROPERTY(double loadAverage READ loadAverage NOTIFY samplesChanged)
+    Q_PROPERTY(int processCount READ processCount NOTIFY samplesChanged)
+    Q_PROPERTY(double swapUsedGiB READ swapUsedGiB NOTIFY samplesChanged)
+    Q_PROPERTY(double swapTotalGiB READ swapTotalGiB NOTIFY samplesChanged)
+    Q_PROPERTY(double cpuTemp READ cpuTemp NOTIFY samplesChanged)
+    Q_PROPERTY(bool cpuTempAvailable READ cpuTempAvailable NOTIFY samplesChanged)
+    Q_PROPERTY(QString cpuTempLabel READ cpuTempLabel NOTIFY samplesChanged)
+    Q_PROPERTY(double gpuTemp READ gpuTemp NOTIFY samplesChanged)
+    Q_PROPERTY(bool gpuTempAvailable READ gpuTempAvailable NOTIFY samplesChanged)
+    Q_PROPERTY(double gpuMemoryUsedGiB READ gpuMemoryUsedGiB NOTIFY samplesChanged)
+    Q_PROPERTY(double gpuMemoryTotalGiB READ gpuMemoryTotalGiB NOTIFY samplesChanged)
+    Q_PROPERTY(bool gpuMemoryAvailable READ gpuMemoryAvailable NOTIFY samplesChanged)
+    Q_PROPERTY(double storageTemp READ storageTemp NOTIFY samplesChanged)
+    Q_PROPERTY(bool storageTempAvailable READ storageTempAvailable NOTIFY samplesChanged)
+    Q_PROPERTY(double networkRxBytesPerSec READ networkRxBytesPerSec NOTIFY samplesChanged)
+    Q_PROPERTY(double networkTxBytesPerSec READ networkTxBytesPerSec NOTIFY samplesChanged)
+    Q_PROPERTY(bool networkAvailable READ networkAvailable NOTIFY samplesChanged)
+    Q_PROPERTY(QString networkInterface READ networkInterface NOTIFY samplesChanged)
+    Q_PROPERTY(double diskReadBytesPerSec READ diskReadBytesPerSec NOTIFY samplesChanged)
+    Q_PROPERTY(double diskWriteBytesPerSec READ diskWriteBytesPerSec NOTIFY samplesChanged)
+    Q_PROPERTY(bool diskAvailable READ diskAvailable NOTIFY samplesChanged)
+    Q_PROPERTY(double batteryPercent READ batteryPercent NOTIFY samplesChanged)
+    Q_PROPERTY(bool batteryCharging READ batteryCharging NOTIFY samplesChanged)
+    Q_PROPERTY(bool batteryAvailable READ batteryAvailable NOTIFY samplesChanged)
 
 public:
     explicit SystemMonitor(QObject* parent = nullptr);
     ~SystemMonitor() override;
     static constexpr int HistoryCapacity = 60;
-
 
     bool active() const { return m_active; }
     void setActive(bool active);
@@ -60,6 +88,33 @@ public:
     qreal storageUsedGiB() const { return m_storageUsedGiB; }
     qreal storageTotalGiB() const { return m_storageTotalGiB; }
     int sampleCount() const { return m_historyCount; }
+    const QVariantList& coreLoads() const { return m_coreLoads; }
+    int coreCount() const { return m_coreCount; }
+    double cpuFrequencyGhz() const { return m_cpuFrequencyGhz; }
+    double loadAverage() const { return m_loadAverage; }
+    int processCount() const { return m_processCount; }
+    double swapUsedGiB() const { return m_swapUsedGiB; }
+    double swapTotalGiB() const { return m_swapTotalGiB; }
+    double cpuTemp() const { return m_cpuTemp; }
+    bool cpuTempAvailable() const { return m_cpuTempAvailable; }
+    const QString& cpuTempLabel() const { return m_cpuTempLabel; }
+    double gpuTemp() const { return m_gpuTemp; }
+    bool gpuTempAvailable() const { return m_gpuTempAvailable; }
+    double gpuMemoryUsedGiB() const { return m_gpuMemoryUsedGiB; }
+    double gpuMemoryTotalGiB() const { return m_gpuMemoryTotalGiB; }
+    bool gpuMemoryAvailable() const { return m_gpuMemoryAvailable; }
+    double storageTemp() const { return m_storageTemp; }
+    bool storageTempAvailable() const { return m_storageTempAvailable; }
+    double networkRxBytesPerSec() const { return m_networkRxBytesPerSec; }
+    double networkTxBytesPerSec() const { return m_networkTxBytesPerSec; }
+    bool networkAvailable() const { return m_networkAvailable; }
+    const QString& networkInterface() const { return m_networkInterface; }
+    double diskReadBytesPerSec() const { return m_diskReadBytesPerSec; }
+    double diskWriteBytesPerSec() const { return m_diskWriteBytesPerSec; }
+    bool diskAvailable() const { return m_diskAvailable; }
+    double batteryPercent() const { return m_batteryPercent; }
+    bool batteryCharging() const { return m_batteryCharging; }
+    bool batteryAvailable() const { return m_batteryAvailable; }
 
 signals:
     void activeChanged();
@@ -68,12 +123,17 @@ signals:
 private:
     friend class SystemGraph;
 
-
     struct HistorySample {
         qint64 monotonicMs = 0;
         float cpu = std::numeric_limits<float>::quiet_NaN();
         float memory = std::numeric_limits<float>::quiet_NaN();
         float gpu = std::numeric_limits<float>::quiet_NaN();
+        float netRx = std::numeric_limits<float>::quiet_NaN();
+        float netTx = std::numeric_limits<float>::quiet_NaN();
+        float diskRead = std::numeric_limits<float>::quiet_NaN();
+        float diskWrite = std::numeric_limits<float>::quiet_NaN();
+        float cpuTemp = std::numeric_limits<float>::quiet_NaN();
+        float gpuTemp = std::numeric_limits<float>::quiet_NaN();
     };
 
     struct IdentityResult {
@@ -93,9 +153,36 @@ private:
         double storageUsedGiB = 0.0;
         double storageTotalGiB = 0.0;
         qulonglong uptimeSeconds = 0;
+        QVector<double> coreLoads;
+        int coreCount = 0;
+        double cpuFrequencyGhz = 0.0;
+        double loadAverage = 0.0;
+        int processCount = 0;
+        double swapUsedGiB = 0.0;
+        double swapTotalGiB = 0.0;
+        double cpuTemp = 0.0;
+        QString cpuTempLabel;
+        double gpuTemp = 0.0;
+        double gpuMemoryUsedGiB = 0.0;
+        double gpuMemoryTotalGiB = 0.0;
+        double storageTemp = 0.0;
+        double networkRxBytesPerSec = 0.0;
+        double networkTxBytesPerSec = 0.0;
+        QString networkInterface;
+        double diskReadBytesPerSec = 0.0;
+        double diskWriteBytesPerSec = 0.0;
+        double batteryPercent = 0.0;
         bool cpuAvailable = false;
         bool memoryAvailable = false;
         bool gpuAvailable = false;
+        bool cpuTempAvailable = false;
+        bool gpuTempAvailable = false;
+        bool gpuMemoryAvailable = false;
+        bool storageTempAvailable = false;
+        bool networkAvailable = false;
+        bool diskAvailable = false;
+        bool batteryCharging = false;
+        bool batteryAvailable = false;
     };
 
     const HistorySample& historyAtOldest(int index) const;
@@ -127,6 +214,33 @@ private:
     qreal m_memoryTotalGiB = 0.0;
     qreal m_storageUsedGiB = 0.0;
     qreal m_storageTotalGiB = 0.0;
+    QVariantList m_coreLoads;
+    int m_coreCount = 0;
+    double m_cpuFrequencyGhz = 0.0;
+    double m_loadAverage = 0.0;
+    int m_processCount = 0;
+    double m_swapUsedGiB = 0.0;
+    double m_swapTotalGiB = 0.0;
+    double m_cpuTemp = 0.0;
+    bool m_cpuTempAvailable = false;
+    QString m_cpuTempLabel;
+    double m_gpuTemp = 0.0;
+    bool m_gpuTempAvailable = false;
+    double m_gpuMemoryUsedGiB = 0.0;
+    double m_gpuMemoryTotalGiB = 0.0;
+    bool m_gpuMemoryAvailable = false;
+    double m_storageTemp = 0.0;
+    bool m_storageTempAvailable = false;
+    double m_networkRxBytesPerSec = 0.0;
+    double m_networkTxBytesPerSec = 0.0;
+    bool m_networkAvailable = false;
+    QString m_networkInterface;
+    double m_diskReadBytesPerSec = 0.0;
+    double m_diskWriteBytesPerSec = 0.0;
+    bool m_diskAvailable = false;
+    double m_batteryPercent = 0.0;
+    bool m_batteryCharging = false;
+    bool m_batteryAvailable = false;
 
     std::array<HistorySample, HistoryCapacity> m_history{};
     int m_historyStart = 0;

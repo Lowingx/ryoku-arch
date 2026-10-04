@@ -170,9 +170,9 @@ Dropped in the **middle** of that screen instead, the popout becomes a centred
 surface: it floats in the middle of the display, all four corners rounded, with
 no hover edge. A centred popout opens only when it is asked for, by
 `ryoku-shell plugin <id>` or a click, which makes it the placement
-for a modal view. It shares the middle of the screen with quick settings
-(`Super+Escape`) and the stash (`Super+S`), but the shell only ever shows one
-surface at a time, so they take turns rather than overlap.
+for a modal view. It shares the modal layer with Ryoku's global shell surfaces,
+but the shell only ever shows one modal surface at a time, so they take turns
+rather than overlap.
 
 - Ryoku handles the **hover trigger, the open/close animation, and the fuse into
   the frame**.
@@ -246,8 +246,8 @@ manage it from a terminal; see "Share it" below for export and share.
 
 ### 4. Sidebar card - lives in a global sidebar
 
-A `sidebarCard` plugin lives in Extensions inside Controls or Today. It uses
-the same entry points as every other plugin: `service/Main.qml` for logic and
+A `sidebarCard` plugin lives in Extensions inside Controls. It uses the same
+entry points as every other plugin: `service/Main.qml` for logic and
 `content/Widget.qml` for the view. There is no `content/Sidebar.qml`. Ryoku owns
 the surface frame, navigation, width, placement, and motion.
 
@@ -299,10 +299,10 @@ the backend rather than a hidden QML view.
 
 Sidebar placement is stored under the plugin's `sidebarCard` placement object:
 
-- `side`: `"left"` for Controls or `"right"` for Today;
-- `order`: numeric order within that side's Extensions view;
-- `label`: the displayed label; and
-- `glyph`: a Material Symbols Rounded ligature, default `"extension"`.
+- `side` is accepted for existing manifests, normalized to `"left"`, and otherwise ignored;
+- `order` is the numeric order in the Extensions view;
+- `label` is the displayed label; and
+- `glyph` is a Material Symbols Rounded ligature, default `"extension"`.
 
 Manifest suggestions use `"defaults": { "host": "sidebarCard", "sidebar": {
 "side": "left", "order": 10 } }`. The manifest declares `sidebarCard` in
@@ -525,9 +525,9 @@ value for it, and `undefined` must not become your poll interval.
   widget's defaults are just `{ "host": "topbarGlyph", "icon": "...", "label":
   "..." }`, plus an optional `"bar": { "section": "left|center|right" }` for
   the lane it first lands in. A sidebar card uses `{ "host": "sidebarCard",
-  "sidebar": { "side": "left|right", "tab": "Plugins", "order": 10 } }`.
-  `icon` and sidebar `glyph` values are Material Symbols Rounded ligature names
-  (`vpn_lock`, `extension`, ...).
+  "sidebar": { "side": "left", "tab": "Plugins", "order": 10 } }`; the host
+  normalizes any other `side` value to `"left"`. `icon` and sidebar `glyph`
+  values are Material Symbols Rounded ligature names (`vpn_lock`, `extension`, ...).
 - `official` - leave `false`. Only first-party Ryoku plugins set `true`; every
   other plugin lists under QS Bar Settings > Community and carries the store's
   community warning.
@@ -588,8 +588,8 @@ unsandboxed with your permissions. R1..R11 are what keep it honest.
   it), or install it from Ryostore itself. Never hand-copy into
   `~/.local/share/ryoku/plugins/`: a folder without a receipt is not loaded.
 - **Enable & place**: Ryoku Settings → Plugins. The user toggles it on, picks a
-  host, and sets the host placement: edge for a frame popout, or side, tab and
-  order for a sidebar card. Placement saves to
+  host, and sets the host placement: edge for a frame popout, or order in
+  Controls > Extensions for a sidebar card. Placement saves to
   `~/.config/ryoku/plugins.json`; the shell watches that file and retunes live -
   no restart.
 - **Desktop widgets** are then moved/resized/hidden directly on the wallpaper

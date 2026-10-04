@@ -221,7 +221,7 @@ credential sources, names only), `GET /api/hermes/skills`,
 cached for two minutes; `?refresh=1` reruns it), `POST /api/fix` (Fix with AI,
 below: opens the agent in a terminal; JSON only, and refused unless the request
 comes from this dashboard or a local process), and `WS /ws/chat`, the shared
-agent session behind the Super+S chat. Vitals come from `/proc` and `statfs`,
+agent session behind the Alt+Space Ask chat. Vitals come from `/proc` and `statfs`,
 with GPU via `nvidia-smi` when present.
 
 ## Quick asks: two lanes
@@ -282,7 +282,7 @@ non-runnable backtick spans are dropped, so a chip never lies.
 ### Continue while it works, and cancel
 
 While the agent is still working, two options sit under the pulsing strip:
-**CONTINUE IN CHAT** opens the Super+S chat, where the same turn is
+**CONTINUE IN CHAT** opens the Alt+Space Ask chat, where the same turn is
 streaming live (the daemon runs each turn on a background context, so it keeps
 going even after the launcher closes), and **CANCEL** stops it. Escape cancels
 a working ask; the daemon interrupts both the fast lane and any session-lane
@@ -304,7 +304,7 @@ for pngs and move them to Pictures` returns the one-liner (it knows the
 directory is `Pictures`, from `habits.md`). It never runs anything itself, the
 buffer is the confirmation, and every command carries a danger tier
 (read/write/system/danger). It shares the daemon, the vault, and the ask
-history with the launcher and the Super+S chat, so `\resume`, `rashin --resume`,
+history with the launcher and the Ask chat, so `\resume`, `rashin --resume`,
 and "continue in chat" all see one conversation. Repeated asks become saved
 recipes (`rr-<name>` fish abbreviations). Full design and UX in
 `docs/rashin-terminal.md`.
@@ -343,9 +343,9 @@ bars sweep) and yields to the OS reduced-motion setting and to
 | Models | The consolidated provider directory (free, credits, paid) from Prowl's shipped catalogue, with signup friction, model counts, and a key-on-box mark joined from the harness scan |
 | About | What Rashin is, the pieces with live facts, quick start, a command crib (`hermes -h`, `hermes gateway`, `hermes model`, `hermes tools`, `prowl overview`), and the privacy note |
 
-### The Super+S chat
+### The Ask chat
 
-The one GUI chat is the Super+S sidebar, a live view of the shared agent
+The one GUI chat is Chat mode of the Alt+Space Ask bar, a live view of the shared agent
 session over `/ws/chat`. Thinking streams in the open while the agent works and
 then folds to a line the reader can reopen; each tool call is one row with a
 peek at its output; approvals sit inline on the row that asked, governed by the
@@ -540,4 +540,4 @@ echo '- tried the vault, it works' >> journal/$(date +%F).md
 ```
 
 Reopen the dashboard's Vault panel and the new journal entry is there, because the
-terminal and the Super+S chat share one workspace.
+terminal and the Ask chat share one workspace.

@@ -3,11 +3,12 @@
 ## Unreleased
 
 ### Added
-- **`ryoku doctor` removes retired sidebar settings.** The compact Controls and
-  Today panels no longer use the `sidebars` object or the old frame-bar
-  quick-settings, stash, and system records. The migration removes those
-  records without changing neighbouring shell or frame-bar settings.
-  (`internal/doctor/reconcile_sidebar_rework.go`)
+- **`ryoku doctor` cleans up the retired panel state and shortcut.** The
+  sidebar migration removes obsolete layout records, and the Ask-keybind
+  migration removes only the orphaned retired-surface rebind while preserving
+  every current custom shortcut and neighbouring shell setting.
+  (`internal/doctor/reconcile_sidebar_rework.go`,
+  `internal/doctor/reconcile_ask_keybind.go`)
 - **`ryoku doctor` removes the retired Ryoku Motion package.** `ryomotion`, the
   screen-demo recorder, shipped as a hard depend once, so a box installed before
   it was dropped still carries it and pacman never removes it on its own. The new
@@ -183,8 +184,8 @@
   and points the override back at your real account shell, refreshing the
   running session so it takes effect without a logout
   (`internal/doctor/reconcile_login_shell.go`).
-- **The Rashin AI assistant is on by default now.** The needle (Super+S) and its
-  dashboard used to sit dormant until you found the switch in the Hub; a fresh
+- **The Rashin AI assistant is on by default now.** Ask and the dashboard used
+  to sit dormant until you found the switch in the Hub; a fresh
   box now brings the daemon up at boot. `ryoku-rashin disable` turns it off for
   good (recorded as `optedOut`, so an update never flips it back on), `enable`
   turns it back on. A new `ryoku-rashin ensure` is the quiet default-on
@@ -862,9 +863,9 @@
 - **Flatpak works out of the box, and its apps update with everything else.**
   Ryoku already shipped the `flatpak` client in `base.packages`, which means it
   is in the ISO's offline closure and installs with no network. What it never
-  shipped was a configured remote: the only thing that ever added flathub was
-  `stash-install.sh`, per-user, and only while installing a `.flatpak` bundle the
-  user had already downloaded. So a fresh box had the client and no catalogue, and
+  shipped was a configured remote: only the legacy bundle installer added
+  flathub, per-user, and only while installing a `.flatpak` bundle the user had
+  already downloaded. So a fresh box had the client and no catalogue, and
   `flatpak install` had nothing to search. A new reconciler adds the system
   flathub remote, and `ryoku update` gained a Flatpak pass so those apps stop
   rotting a release behind.
@@ -1146,12 +1147,6 @@
   restart` reported success while starting nothing, so doctor's shell-daemon
   reconciler pushed a restart into a void. It now imports the live session's
   env into the user manager first (`internal/doctor/doctor.go`).
-- **Doctor moves a persisted Stash sidebar to the right.** The Stash board is now
-  the floating Features page on the right, but a box that persisted frameBars
-  still carried `surfaces.stash.anchor: "left"` (the old full-span default), which
-  normalize keeps, so the page would grow from the wrong edge. Doctor flips that
-  one leaf to `right` in place, leaving every other key untouched
-  (`internal/doctor/reconcile_stash_sidebar.go`, `internal/doctor/doctor.go`).
 - **Doctor installs the missing in-session lockscreen.** Only the ISO installer
   ever laid down the qylock lock, so a box that predates the step (or where it
   failed) had a dead lock button and suspended without locking, silently:

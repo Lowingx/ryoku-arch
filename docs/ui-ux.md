@@ -488,7 +488,7 @@ and per-monitor visibility from `ShellState`.
   `shell/modules/bar/popouts/`: clicking a status widget (network, Bluetooth,
   battery, audio, system monitor, recording, music, voice) grows its live
   controls out of the bar. The monitor-local menu manager owns those cards and
-  the bounded frame menus. The global left and right sidebars live in
+  the bounded frame menus. The global Controls panel lives in
   `ryoku/shell/quickshell/shell/modules/sidebar/`; see `docs/sidebars.md`.
 - **dock** an app island cluster on a screen edge, its own shell surface
   (`shell/modules/dock/DockSurface.qml`, one per monitor) rather than a part of
@@ -537,11 +537,11 @@ and per-monitor visibility from `ShellState`.
 |---|---|---|
 |**launcher**|`Super+Space`|the app launcher and command palette|
 |**overview**|`Super+Tab`|the full-screen workspace expo|
-|**left sidebar**|`Super+Escape`|desktop controls, notices, weather, media, capture, and stage|
-|**right sidebar**|`Super+S`|usage, tools, and Rashin chat|
+|**Controls**|`Super+Escape`|live system activity, connections, levels, and session actions|
+|**ryoshot capture bar**|`Super+Shift+S`|Shot, Edit, OCR, Search, Record, and capture options in one floating bar|
+|**Ask**|`Alt+Space`|quick Rashin answers, chat, tools, web search, and the optional desktop bubble|
 |**clipboard**|`Super+V`|clipboard history at the bottom edge, with fuzzy search and a starred pane|
 |**wallpaper and theme menu**|`Super+W`|the wallpaper carousel and theme picker|
-|**ryoshot**|`Super+Shift+S`|capture, annotate, pin|
 |**visualiser placement**|`Super+Alt+M`|grab the spectrum box and aim it|
 |**voice**|`Super+grave`|speech to text with a live mic wave|
 |**Ryoku Settings**|`Super+,`|the Hub|
@@ -571,19 +571,21 @@ type.*
   ten workspace ids, so each desktop keeps its own 01..10; the same grouping
   drives the desktop-relative `Super+N` binds (`scripts/ryoku-workspace`). The
   gesture legend sits along the bottom margin as marginalia, not as buttons.
-- **Controls** a left-edge overlay with **System**, **Notifications**,
-  **Weather**, **Media**, **Capture**, and **Stage** selected by default. System
-  holds session actions, connectivity, audio, brightness, battery, and power
-  controls; the other sections keep related work in the same quiet paper/ink
-  frame.
-- **Companion** a right-edge overlay with **Usage**,
-  **Tools**, and **Chat** selected by default. Usage shows local screen time.
-  Tools handles downloads, recent work, compression, and package installation
-  with an in-shell file picker. Chat keeps its Rashin conversation across close
-  and reopen. Both surfaces are vertically centered by default, above normal
-  and fullscreen windows, and work under every bar style. Settings has Contents
-  and Layout & behavior pages, with Summary or Full controls for each built-in
-  and `sidebarCard` plugin. See `docs/sidebars.md`.
+- **Controls** is a compact top-left panel. Vitals is a native mini system
+  monitor with per-core load, temperatures, memory, GPU, network and disk.
+  Connections summarizes Wi-Fi, Bluetooth, Ethernet and VPN. Levels keeps fine
+  volume and brightness controls with inline per-application audio and
+  per-display brightness drawers. Its bottom bar combines hold-to-activate
+  session actions, quick toggles, Extensions, and a gear popup.
+- **ryoshot capture bar** is the single entry point for screenshots and screen
+  recording. Its settings popover owns the 0/1/3/5/10-second delay,
+  clipboard/file/both saving, editor handoff, desktop and microphone audio,
+  key-press and webcam overlays, the screenshots folder, and the link to Hub >
+  Recording. Controls does not duplicate any of these capture options.
+- **Ask** is a Raycast-style Rashin bar for quick streaming answers, full chat,
+  tools and web search. `\`, `?` and `/` select Ask, Web and Tools; Tab cycles
+  modes. A pinned chat bubble can be dragged, edge-snapped and dismissed, with
+  its position stored under `ask.bubble`. See `docs/sidebars.md`.
 - **wallpaper and theme menu** a carousel of the wallpaper library (four layouts:
   strips, grid, drift, hearthstone) with the current wall large and named, a
   colour-filter strip, a live tab for animated walls, and a bottom-centre frame
@@ -854,13 +856,13 @@ which process you are in.
   opening) and `effects` (200ms). A curve is a `cubic-bezier` control-point array
   handed to `easing.bezierCurve` beside a bezier `easing.type`; the shared
   expressive family keeps indicator, popout and frame-bar reveal motion coherent.
-- **The sidebar surfaces move in small, local steps.** `SidebarState` scales
+- **The Controls surface moves in small, local steps.** `SidebarState` scales
   `Tokens.swap` for opening and `Tokens.move` for closing; `quick`, `standard`,
-  and `calm` apply multipliers of 0.6, 1, and 1.5. Both overlays fade in
-  and settle a short distance from their screen edge. Section pages crossfade;
-  selected navigation rows use a quiet bone plate. Hover, focus, and save
-  states ease between colours or opacity. Both `Motion.reduce`
-  and `Tokens.reduceMotion` remove every surface and chrome animation.
+  and `calm` apply multipliers of 0.6, 1, and 1.5. The panel fades in and settles
+  a short distance from its screen edge. Detail pages crossfade; selected rows
+  use a quiet bone plate. Hover, focus, and save states ease between colours or
+  opacity. Both `Motion.reduce` and `Tokens.reduceMotion` remove every surface
+  and chrome animation.
 - **Every shell token is already scaled.** Each one is defined as `dur(ms)`,
   which multiplies by `Perf.motionSpeed` (the user's tempo, `motionSpeed` in
   `performance.json`) and collapses to zero under reduce-motion, so the whole

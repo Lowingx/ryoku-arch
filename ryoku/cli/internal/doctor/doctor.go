@@ -167,6 +167,7 @@ func reconcilers() []reconciler {
 		{i18n.T("ryostage cache"), reconcileRyostageCache},
 		{i18n.T("stage migration leftovers"), reconcileStageLeftovers},
 		{i18n.T("retired sidebar settings"), reconcileSidebarRework},
+		{i18n.T("retired panel keybind"), reconcileAskKeybind},
 		{i18n.T("shipped app packages"), reconcileShippedApps},
 		{i18n.T("retired app packages"), reconcileRetiredApps},
 		{i18n.T("release control manifest"), reconcileManifest},
