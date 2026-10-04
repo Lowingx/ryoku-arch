@@ -11,6 +11,14 @@
   `tests/monitor-custom-mode.sh`.
 
 ### Fixed
+- `power/ryoku-clamshell`: **a refused lid suspend now says why in the
+  journal.** The close path runs detached from the compositor, so the
+  rejection reason `ryoku-shell` printed died with the process and a laptop
+  that locked but never suspended gave support nothing to read. The reason is
+  captured and journalled once per distinct message (`logger -t
+  ryoku-clamshell`), so `journalctl -t ryoku-clamshell` names the suspect
+  while a retry loop cannot flood the journal. Covered by
+  `tests/clamshell-policy.sh`.
 - `power/ryoku-power-cutover`: **a failed cutover never strands its sleep
   guard.** The session cutover and the login startup take a durable sleep
   inhibitor before they stop the lid and idle owners, and only the success

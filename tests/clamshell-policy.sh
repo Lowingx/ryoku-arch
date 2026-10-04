@@ -51,8 +51,11 @@ if [[ ${1:-} == suspend && ${2:-} == transaction ]]; then
     while [[ ! -e $RYOKU_SHELL_BLOCK_DIR/cancelled-$3 ]]; do sleep 0.01; done
     exit 1
   fi
-  [[ ${RYOKU_SHELL_FAIL:-0} != 1 ]]
-  exit
+  if [[ ${RYOKU_SHELL_FAIL:-0} == 1 ]]; then
+    printf 'ryoku-shell: %s\n' "${RYOKU_SHELL_FAIL_REASON:-sleep guard is unavailable}" >&2
+    exit 1
+  fi
+  exit 0
 fi
 printf 'shell %s\n' "$*" >>"$CLAMSHELL_EVENTS"
 [[ ${RYOKU_SHELL_FAIL:-0} != 1 ]]
@@ -93,6 +96,10 @@ cat >"$bin/loginctl" <<'EOF'
 [[ ${SESSION_ACTIVE_QUERY_FAIL:-0} != 1 ]] || exit 1
 [[ ${1:-} == show-session && ${3:-} == -p && ${4:-} == Active ]] || exit 1
 printf '%s\n' "${SESSION_ACTIVE_VALUE:-yes}"
+EOF
+cat >"$bin/logger" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >>"${JOURNAL_STUB:-/dev/null}"
 EOF
 cat >"$bin/busctl" <<'EOF'
 #!/usr/bin/env bash
@@ -339,6 +346,37 @@ fi
 set_lid open
 wait "$policy_pid"
 policy_pid=""
+
+# The rejection reason reaches the journal, and identical consecutive reasons
+# are journalled once: a retry loop must not flood the journal while the lid
+# stays closed.
+reset_case
+set_ac 0
+set_external disconnected
+set_lid closed
+export RYOKU_SHELL_FAIL=1
+export RYOKU_SHELL_FAIL_REASON='daemon not reachable at /run/user/9/ryoku-shell.sock'
+export RYOKU_CLAMSHELL_RETRY=0.01
+journal="$tmp/journal"
+export JOURNAL_STUB="$journal"
+run_helper policy close &
+policy_pid=$!
+for _ in {1..100}; do
+  [[ $(grep -c '^shell suspend$' "$events" 2>/dev/null || true) -ge 3 ]] && break
+  sleep 0.01
+done
+set_lid open
+wait "$policy_pid"
+policy_pid=""
+grep -q 'daemon not reachable' "$journal" || {
+  printf 'the suspend rejection reason never reached the journal\n' >&2
+  exit 1
+}
+reasons=$(grep -c 'daemon not reachable' "$journal" || true)
+if (( reasons != 1 )); then
+  printf 'the identical rejection reason was journalled %s times, want 1\n' "$reasons" >&2
+  exit 1
+fi
 
 # A compositor close event remains authoritative when ACPI exposes no readable
 # lid state. A rejected transaction retries until the matching open event
