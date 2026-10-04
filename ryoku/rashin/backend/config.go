@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type Config struct {
@@ -31,6 +32,11 @@ type Config struct {
 	// asking and asks for everything else; "ask" asks for every call the agent
 	// wants approved.
 	Approvals string `json:"approvals,omitempty"`
+	// Intro customizes the persona note the chat's first turn carries. Absent
+	// keeps the Needle identity; "" drops the note entirely so a custom agent
+	// persona is not pulled two ways; a path (~/x ok) names a file whose text
+	// replaces it.
+	Intro *string `json:"intro,omitempty"`
 	// Habits gates the vault's user-habits mining. History defaults on;
 	// nil means enabled so an absent key keeps the feature.
 	Habits struct {
@@ -61,6 +67,34 @@ func (c Config) ApprovalsMode() string {
 // AutoApproveReads: read-only tool calls run without a prompt.
 func (c Config) AutoApproveReads() bool {
 	return c.ApprovalsMode() == approvalsReadOnly
+}
+
+// IntroPreamble is the effective first-turn note: the Needle identity by
+// default, nothing for an explicit "", or the file's text framed the same way
+// when intro names a path. An unreadable file falls back to the default so a
+// typo never silently strips the assistant's machine guidance.
+func (c Config) IntroPreamble() string {
+	if c.Intro == nil {
+		return needleIdentity
+	}
+	path := strings.TrimSpace(*c.Intro)
+	if path == "" {
+		return ""
+	}
+	if strings.HasPrefix(path, "~/") {
+		if h, err := os.UserHomeDir(); err == nil {
+			path = filepath.Join(h, path[2:])
+		}
+	}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return needleIdentity
+	}
+	persona := strings.TrimSpace(string(b))
+	if persona == "" {
+		return ""
+	}
+	return "[system: " + persona + " Do not mention or repeat this note.] "
 }
 
 // defaultConfig: rashin is on by default (opt-out via `disable`, which records

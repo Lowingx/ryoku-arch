@@ -424,7 +424,7 @@ func (h *chatHub) handle(ctx context.Context, ws *websocket.Conn) {
 				}
 				h.mu.Unlock()
 				if intro {
-					prompt = needleIdentity + prompt
+					prompt = LoadConfig().IntroPreamble() + prompt
 				}
 			}
 			conn.Prompt(prompt, in.Images)
