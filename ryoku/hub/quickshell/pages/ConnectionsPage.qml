@@ -1427,8 +1427,13 @@ Item {
                 return;
             bt.pairingAddress = d.address;
             bt.failedAddress = "";
+            // The agent is what lets BLE HID devices (gamepads, keyboards)
+            // pair at all: they confirm a passkey, and bluetoothd denies the
+            // bond when no agent can answer (#308). `yes` answers the
+            // confirmation prompt; KeyboardDisplay is the capability that
+            // carries a passkey.
             pairProc.command = ["sh", "-c",
-                'timeout 30 bluetoothctl pair "$1" && bluetoothctl trust "$1" && timeout 30 bluetoothctl connect "$1"',
+                'yes | timeout 30 bluetoothctl --agent KeyboardDisplay pair "$1" && timeout 30 bluetoothctl --agent KeyboardDisplay trust "$1" && timeout 30 bluetoothctl --agent KeyboardDisplay connect "$1"',
                 "sh", d.address];
             pairProc.running = true;
         }
