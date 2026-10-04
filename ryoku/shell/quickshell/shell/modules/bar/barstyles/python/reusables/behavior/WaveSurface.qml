@@ -27,5 +27,8 @@ ShaderEffect {
     property color colorBottom
 
     blending: true
-    fragmentShader: "../../shaders/wave.frag.qsb"
+    // Resolved here, not in the caller: a bare relative path would bind
+    // against whichever file instantiates the surface, and the consumers sit
+    // at three different depths under the style root.
+    fragmentShader: Qt.resolvedUrl("../../shaders/wave.frag.qsb")
 }
