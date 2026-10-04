@@ -122,7 +122,61 @@ type acpConn struct {
 	// models as ACP configOptions (omp) instead of the legacy models block.
 	modelOption string
 
+	// errTail holds the agent's own stderr, bounded. An ACP error like
+	// session/new's bare "Internal error" carries no cause; the agent always
+	// writes the real reason to its log stream. The tail rides on the failure
+	// so `ryoku-rashin logs` and the banner show what actually broke.
+	errTail *tailBuffer
+
 	events chan AcpEvent
+}
+
+// acpStderrTailBytes bounds the agent-stderr tail kept per connection.
+const acpStderrTailBytes = 8192
+
+// tailBuffer is a goroutine-safe ring of the last bytes written to it.
+type tailBuffer struct {
+	mu  sync.Mutex
+	buf []byte
+	max int
+}
+
+func newTailBuffer(max int) *tailBuffer {
+	return &tailBuffer{max: max}
+}
+
+func (t *tailBuffer) Write(p []byte) (int, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.buf = append(t.buf, p...)
+	if over := len(t.buf) - t.max; over > 0 {
+		t.buf = t.buf[over:]
+	}
+	return len(p), nil
+}
+
+func (t *tailBuffer) String() string {
+	if t == nil {
+		return ""
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return strings.TrimSpace(string(t.buf))
+}
+
+// reason condenses the tail to its last line, short enough to ride inside a
+// one-line error banner.
+func (t *tailBuffer) reason() string {
+	lines := strings.Split(t.String(), "\n")
+	for i := len(lines) - 1; i >= 0; i-- {
+		if l := strings.TrimSpace(lines[i]); l != "" {
+			if len(l) > 200 {
+				l = l[:200]
+			}
+			return l
+		}
+	}
+	return ""
 }
 
 // hermesConfigStamp fingerprints the files hermes loads at startup.
@@ -190,7 +244,14 @@ func (c *acpConn) request(method string, params any) (json.RawMessage, error) {
 		return nil, errors.New("acp connection closed")
 	}
 	if resp.Error != nil {
-		return nil, fmt.Errorf("acp %s: %s", method, resp.Error.Message)
+		msg := resp.Error.Message
+		// Hermes answers a failed session/new with a bare "Internal error";
+		// its log stream carries the real cause. Ride the last line along so
+		// the banner and `ryoku-rashin logs` can name what broke.
+		if why := c.errTail.reason(); why != "" {
+			msg += ": " + why
+		}
+		return nil, fmt.Errorf("acp %s: %s", method, msg)
 	}
 	return resp.Result, nil
 }
@@ -838,11 +899,16 @@ func startACP(vault string) (*acpConn, error) {
 	if err != nil {
 		return nil, err
 	}
-	cmd.Stderr = nil // hermes logs to stderr; silence rather than corrupt ndjson
+	// Hermes logs to its own stderr, never the ndjson stream; keep a bounded
+	// tail so a bare agent error (session/new's "Internal error") can carry
+	// the cause the agent actually wrote.
+	tail := newTailBuffer(acpStderrTailBytes)
+	cmd.Stderr = tail
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
 	c := newACPConn(stdin, stdout, stdin)
+	c.errTail = tail
 	c.configStamp = stamp
 	c.agentName = b.Name
 	go func() { _ = cmd.Wait() }()
