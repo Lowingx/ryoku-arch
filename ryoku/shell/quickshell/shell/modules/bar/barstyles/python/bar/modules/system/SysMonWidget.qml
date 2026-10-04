@@ -80,7 +80,11 @@ Rectangle {
         property color accentColor: ThemeBackend.mauve
         property bool initAnimTrigger: false
 
-        property real animValue: value
+        // The slide exists to make a visible change readable; a 1% sensor
+        // flicker moves the crest a third of a pixel, so the animated value
+        // carries a five-percent deadband. An unquantized slide restarts on
+        // every fetch and keeps the whole bar window animating at vsync.
+        property real animValue: Math.round(value * 20) / 20
         Behavior on animValue { NumberAnimation { duration: 600; easing.type: Easing.OutQuint } }
 
         property real fillRatio: Math.max(0.0, Math.min(1.0, isNaN(animValue) ? 0.0 : animValue))
@@ -192,21 +196,21 @@ Rectangle {
         property int pillWidth: barWindow ? barWindow.s(sysMonWidgetRoot.isCompact ? 48 : 52) : (sysMonWidgetRoot.isCompact ? 48 : 52)
 
         SysMonPill {
-            value: isNaN(SysData.cpu) ? 0 : SysData.cpu / 100.0
+            value: isNaN(SysData.cpu) ? 0 : Math.round(SysData.cpu) / 100.0
             textVal: (isNaN(SysData.cpu) ? 0 : Math.round(SysData.cpu)) + "%"
             icon: "\uF2DB"
             accentColor: ThemeBackend.mauve
         }
 
         SysMonPill {
-            value: isNaN(SysData.ramPercent) ? 0 : SysData.ramPercent / 100.0
+            value: isNaN(SysData.ramPercent) ? 0 : Math.round(SysData.ramPercent) / 100.0
             textVal: (isNaN(SysData.ramPercent) ? 0 : Math.round(SysData.ramPercent)) + "%"
             icon: "󰍛"
             accentColor: ThemeBackend.sapphire
         }
 
         SysMonPill {
-            value: isNaN(SysData.temp) ? 0 : Math.max(0, Math.min(1, SysData.temp / 100.0))
+            value: isNaN(SysData.temp) ? 0 : Math.round(Math.max(0, Math.min(100, SysData.temp))) / 100.0
             textVal: (isNaN(SysData.temp) ? 0 : Math.round(SysData.temp)) + "°"
             icon: "\uF2C9"
             accentColor: ThemeBackend.red

@@ -84,7 +84,7 @@ Rectangle {
         property color accentColor: ThemeBackend.mauve
         property bool initAnimTrigger: false
 
-        property real animValue: value
+        property real animValue: Math.round(value * 20) / 20
         Behavior on animValue { NumberAnimation { duration: 600; easing.type: Easing.OutQuint } }
 
         property real fillRatio: Math.max(0.0, Math.min(1.0, isNaN(animValue) ? 0.0 : animValue))
