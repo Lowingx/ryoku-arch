@@ -1,6 +1,11 @@
 # Changelog: ryoku/hub/
 
 ### Added
+- **Choose Classic or Modern sidebars.** Sidebars > Layout & behavior now
+  offers the original compact sidebars alongside the redesigned layout.
+  The choice applies to both sides, survives reloads and updates, and keeps
+  each layout's widths without resetting contents or behavior.
+  (`quickshell/pages/SidebarsPage.qml`)
 - **Sidebars has its own page.** Contents, ordering, Summary/Full controls,
   placement, size, and opening behavior are edited in Hub rather than inside
   sidebar tabs. Saves wait for the daemon's reply and settings-frame confirmation

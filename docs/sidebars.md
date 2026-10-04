@@ -29,9 +29,23 @@ content. **Keep open** limits the input region to the visible panel instead, so
 the rest of the desktop remains usable. Screen rails remain outside the input
 region in either mode.
 
-Both surfaces use `SidebarFrame.qml`: a rounded paper-and-ink boundary, larger
-headings, readable controls, and a vertical section rail. Neither is a native
-floating window. Size, placement, and contents are edited in Ryoku Hub.
+Both surfaces use `SidebarFrame.qml` and a vertical section rail. Neither is a
+native floating window. Size, placement, and contents are edited in Ryoku Hub.
+
+## Layouts
+
+**Ryoku Hub > Sidebars > Layout & behavior** offers two layouts for both sides:
+
+- **Modern** is the default: larger headings, labelled controls, and the
+  redesigned Control center and Companion.
+- **Classic** restores the compact sidebars from `main`, with the circular
+  Controls rail, Companion's activity rail, and the original theme treatment.
+  It does not use the intermediate grain design.
+
+Both layouts use the same selected sections, ordering, Summary/Full controls
+choices, and plugins. Widths are remembered separately; height, placement, and
+opening behavior are shared. Switching layouts does not reset those choices.
+Classic also keeps the newer Wi-Fi, Bluetooth, and per-source audio controls.
 
 ## Contents and customization
 
@@ -90,6 +104,7 @@ and **Widgets** open the matching **Ryoku Hub > Desktop Scene** view.
 
 **Ryoku Hub > Sidebars > Layout & behavior** provides:
 
+- the **Modern** or **Classic** layout;
 - compact and roomy presets, plus exact width and height;
 - **Fit content** or **Fixed size** height;
 - a maximum screen-height percentage in either height mode;
@@ -97,10 +112,13 @@ and **Widgets** open the matching **Ryoku Hub > Desktop Scene** view.
 - **Keep open** pinning; and
 - quick, standard, or calm opening and closing motion.
 
-Both sides default to 1040 logical pixels wide, a height of 1000, and an 85%
-screen-height limit. Actual dimensions are clamped to the available display area
-after per-display UI scaling. A compact preset uses 720 by 720; roomy uses
-1280 by 1100.
+Modern defaults to 1040 logical pixels wide on either side. Classic defaults
+to 380 on the left and 428 on the right. Both use a height of 1000 and an 85%
+screen-height limit. Actual dimensions are clamped to the available display
+area after per-display UI scaling.
+
+Modern's compact preset is 720 by 720 and roomy is 1280 by 1100. Classic's
+compact preset uses its default width by 720 and roomy is 600 by 1100.
 
 Hub's `SidebarWriter.qml` does not treat a successful write call as a saved
 setting. It waits for both the daemon reply and the subscribed settings frame to
@@ -120,11 +138,13 @@ The normalized settings live under `sidebars` in `shell.json`:
 
 ```json
 "sidebars": {
+  "layout": "modern",
   "motion": "standard",
   "left": {
     "enabled": true,
     "cards": ["system", "notifications", "weather", "media", "capture", "stage"],
     "width": 1040,
+    "classicWidth": 380,
     "height": 1000,
     "heightMode": "fixed",
     "maxHeight": 85,
@@ -136,6 +156,7 @@ The normalized settings live under `sidebars` in `shell.json`:
     "enabled": true,
     "cards": ["usage", "tools", "chat"],
     "width": 1040,
+    "classicWidth": 428,
     "height": 1000,
     "heightMode": "fixed",
     "maxHeight": 85,
@@ -147,9 +168,12 @@ The normalized settings live under `sidebars` in `shell.json`:
 ```
 
 `presentations` maps a built-in or plugin id to `summary` or `expanded`; the
-editor labels the latter Full controls. Width is clamped to 300–1440 for the
-Control center and 380–1440 for Companion; height is 260–1200 and `maxHeight` is 40–95.
-The doctor removes retired native-window geometry and converts old corner
+editor labels the latter Full controls. `layout` accepts `modern` or `classic`;
+the daemon rejects other values before saving. Each side's `width` stores its
+Modern width and `classicWidth` stores its Classic width. Both are clamped to
+300–1440 for the Control center and 380–1440 for Companion; height is 260–1200
+and `maxHeight` is 40–95. The doctor preserves the selected layout and both
+widths while removing retired native-window geometry and converting old corner
 positions to top or bottom alignment.
 
 `ryoku/shell/framebars/Sidebars.js` owns these defaults and normalizes persisted
@@ -178,9 +202,11 @@ The host binds these values after loading the catalog source and forwards
 `requestClose()`. Sections should stop polling or other live work when `open` or
 `tabActive` is false.
 
-Visible built-in content uses `SidebarCardShell.qml` as a small layout scaffold.
+Modern built-in content uses `SidebarCardShell.qml` as a small layout scaffold.
 It provides an optional heading and summary-aware spacing; the surface frame
-and chrome own the visual boundary.
+and chrome own the visual boundary. Classic views live in `classic/`, selected
+through each catalog entry's `classicSource`. The host loads only the selected
+layout's built-in view. Plugins retain their shared host in either layout.
 
 Plugins have a narrower public contract. See
 [`docs/plugins.md`, section 4](plugins.md#4-sidebar-card---lives-in-a-global-sidebar)
@@ -192,9 +218,10 @@ for its entry points, optional compact contract, placement, and `pluginApi`.
    `ryoku/shell/quickshell/shell/modules/sidebar/cards/`.
 2. Declare the host members above, report content height through
    `implicitHeight`, and put visible content in `SidebarCardShell`.
-3. Add its id, default surface, label, glyph, and source to
-   `SidebarCatalog.js`.
-4. Add the id to the appropriate defaults in `ryoku/shell/framebars/Sidebars.js`
+3. Add its Classic view under `classic/`, using the same runtime contract.
+4. Add its id, default surface, label, glyph, Modern `source`, and
+   `classicSource` to `SidebarCatalog.js`.
+5. Add the id to the appropriate defaults in `ryoku/shell/framebars/Sidebars.js`
    only if it should ship selected. Keep Hub's customization choices in sync.
 
 ## File map
@@ -202,12 +229,13 @@ for its entry points, optional compact contract, placement, and `pluginApi`.
 | Path | Responsibility |
 |---|---|
 | `ryoku/shell/quickshell/shell/modules/sidebar/Sidebar.qml` | Left and right overlays, screen bounds, input region, and dismissal |
-| `ryoku/shell/quickshell/shell/modules/sidebar/SidebarFrame.qml` | Shared rounded paper/ink frame |
-| `ryoku/shell/quickshell/shell/modules/sidebar/SidebarChrome.qml` | Header, section navigation, scrolling content, and customization entry points |
+| `ryoku/shell/quickshell/shell/modules/sidebar/SidebarFrame.qml` | Shared boundary with Modern or Classic theme treatment |
+| `ryoku/shell/quickshell/shell/modules/sidebar/SidebarChrome.qml` | Layout-specific chrome, section navigation, and shared content viewport |
 | `ryoku/hub/quickshell/pages/SidebarsPage.qml` | Contents and layout/behavior editor |
 | `ryoku/hub/quickshell/pages/SidebarWriter.qml` | Confirmed daemon writes |
 | `ryoku/shell/quickshell/shell/modules/sidebar/SidebarCardHost.qml` | Built-in and plugin loading plus host-property binding |
 | `ryoku/shell/quickshell/shell/modules/sidebar/SidebarCardShell.qml` | Built-in heading and content layout scaffold |
+| `ryoku/shell/quickshell/shell/modules/sidebar/classic/` | Compact Classic built-in views and controls |
 | `ryoku/shell/quickshell/shell/modules/sidebar/SidebarCatalog.js` | Nine-section built-in registry |
 | `ryoku/shell/framebars/Sidebars.js` | Shared defaults and settings normalization |
 | `ryoku/shell/quickshell/shell/modules/sidebar/SidebarPlugins.qml` | Installed `sidebarCard` discovery and ordering |

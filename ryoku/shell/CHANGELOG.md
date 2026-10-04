@@ -3,6 +3,12 @@
 ## Unreleased
 
 ### New
+- **Classic sidebars are an optional layout.** Hub's Sidebars page switches
+  both sides between the original compact rails and the redesigned Modern
+  layout. Sections, ordering, Summary/Full controls, plugins, and behavior stay
+  shared; each layout remembers its widths. Classic keeps the per-source audio
+  mixer and respects reduced motion. Modern remains the default.
+  (`quickshell/shell/modules/sidebar/classic/`, `framebars/Sidebars.js`)
 - **Per-source audio and microphone controls.** The **Audio mixer** button below
   System's volume and microphone controls opens output devices, microphones,
   playing apps, and recording apps. Each has independent mute and level, an
