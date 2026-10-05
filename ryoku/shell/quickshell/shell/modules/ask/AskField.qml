@@ -31,6 +31,8 @@ Rectangle {
     signal rightRequested()
     signal newChatRequested()
     signal escapeRequested()
+    signal historyRequested()
+    signal modelRequested()
 
     implicitHeight: 72 * s
     radius: Tokens.radius * s
@@ -153,6 +155,16 @@ Rectangle {
                 event.accepted = true;
             } else if (event.key === Qt.Key_Escape) {
                 root.escapeRequested();
+                event.accepted = true;
+            } else if (event.key === Qt.Key_H
+                    && (event.modifiers & (Qt.ControlModifier | Qt.ShiftModifier))
+                        === (Qt.ControlModifier | Qt.ShiftModifier)) {
+                root.historyRequested();
+                event.accepted = true;
+            } else if (event.key === Qt.Key_M
+                    && (event.modifiers & (Qt.ControlModifier | Qt.ShiftModifier))
+                        === (Qt.ControlModifier | Qt.ShiftModifier)) {
+                root.modelRequested();
                 event.accepted = true;
             } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                 root.submitted(text);

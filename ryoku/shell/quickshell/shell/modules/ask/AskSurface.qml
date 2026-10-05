@@ -397,6 +397,8 @@ Rectangle {
             onRightRequested: answer.move(1)
             onNewChatRequested: root.newChat()
             onEscapeRequested: root.handleEscape()
+            onHistoryRequested: root.toggleHistory()
+            onModelRequested: root.toggleModel()
         }
 
         Flickable {

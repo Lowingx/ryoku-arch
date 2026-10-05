@@ -20,9 +20,10 @@
   its answer without a model call), and one opens the model drawer (the
   fast-lane provider the quick asks answer from, and the agent's chat models;
   a switch lands on the daemon and every chat surface follows). The bar grows
-  around an open drawer instead of clipping it, and Escape closes the drawer
+  around an open drawer instead of clipping it, Ctrl+Shift+H and Ctrl+Shift+M
+  toggle the two drawers without the mouse, and Escape closes the drawer
   before the bar (`quickshell/shell/modules/ask/AskSurface.qml`,
-  `AskDrawer.qml`, `quickshell/shell/services/Needle.qml`).
+  `AskDrawer.qml`, `AskField.qml`, `quickshell/shell/services/Needle.qml`).
 - **OPEN RASHIN joins CONTINUE IN CHAT.** The quick answer's chips now carry a
   button that leaves the bar and opens the full companion window
   (`rashin-app`), raising it when it is already open. Continue in chat stays

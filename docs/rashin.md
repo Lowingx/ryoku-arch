@@ -298,9 +298,9 @@ asks (the `\resume` history; picking one recalls its answer without a model
 call). The **model** drawer switches the two halves of inference: the fast
 lane's provider (`ryoku-rashin backend`, "Follow Hermes" clears the override)
 and the agent's chat models (a pick rides the live session and every chat
-surface follows). Both drawers are keyboard-driven: with one open, Up/Down
-move its selection and Enter picks, and Escape closes the drawer before it
-closes the bar.
+surface follows). `Ctrl+Shift+H` and `Ctrl+Shift+M` toggle the two drawers
+without the mouse; with one open, Up/Down move its selection and Enter picks,
+and Escape closes the drawer before it closes the bar.
 
 ### `\resume`
 
