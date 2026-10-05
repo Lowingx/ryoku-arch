@@ -459,22 +459,23 @@ fi
 # qt6-shadertools (build-time only); skip cleanly when the toolchain is absent so
 # a plain config deploy still succeeds (the module ships prebuilt on installs).
 #
-# Stamped with the Qt it was built against, like the Hyprland plugins below: a
-# module built against another Qt fails to load and takes the whole surface with
-# it, so a Qt update has to force a rebuild.
+# Always rebuilt, like Ryoku.Ryogami below: the module's types move with the
+# checkout, and a module older than a type the deployed QML names (a recovery
+# built from main, then an update onto unstable) fails the whole shell to load.
+# ninja keeps an unchanged tree a no-op. A Qt update still forces a clean build:
+# a module built against another Qt fails to load, and ninja alone may not see
+# the change.
 qmldir="$HOME/.local/lib/qt6/qml"
 qtver="$(pacman -Q qt6-base 2>/dev/null | awk '{print $2}')"
 qtstamp="$qmldir/Ryoku/Blobs/.qt-version"
 if command -v cmake >/dev/null 2>&1 && command -v ninja >/dev/null 2>&1; then
-  if [ -n "$qtver" ] && [ "$(cat "$qtstamp" 2>/dev/null)" = "$qtver" ] \
-     && [ -n "$(find "$qmldir/Ryoku/Blobs" -name '*.so' -print -quit 2>/dev/null)" ]; then
-    say "Ryoku.Blobs already built against Qt $qtver"
-  else
-    say "building Ryoku.Blobs plugin"
-    "$here/plugin/build.sh" "$qmldir"
-    [ -n "$qtver" ] && printf '%s\n' "$qtver" > "$qtstamp"
-    say "installed Ryoku.Blobs -> $qmldir/Ryoku/Blobs"
+  if [ -z "$qtver" ] || [ "$(cat "$qtstamp" 2>/dev/null)" != "$qtver" ]; then
+    rm -rf "${RYOKU_BLOBS_BUILD:-$here/plugin/build}"
   fi
+  say "building Ryoku.Blobs plugin"
+  "$here/plugin/build.sh" "$qmldir"
+  [ -n "$qtver" ] && printf '%s\n' "$qtver" > "$qtstamp"
+  say "installed Ryoku.Blobs -> $qmldir/Ryoku/Blobs"
 else
   say "skipping Ryoku.Blobs plugin (cmake/ninja not found)"
 fi
@@ -828,6 +829,13 @@ if [[ -d $cfg/$wm_dir ]]; then
   shopt -u nullglob
 fi
 mv "$staging" "$cfg/$wm_dir"
+# The swap carries the generated settings across, but a box that has none (a
+# recovery clears them with the Hub store) would boot without them, and a
+# missing include is fatal on niri. Author them from the store here, the way
+# the inactive providers below are; an absent store renders the defaults.
+if [[ -x $wm_bin ]] && ! "$wm_bin" apply "$cfg/ryoku/desktop.json" >/dev/null; then
+  say "the $wm_name provider could not write its generated config" >&2
+fi
 fi
 
 # A checkout box has every provider's binary on PATH, so lay every provider's
@@ -902,24 +910,28 @@ mkdir -p "$cfg/systemd/user"; cp -a "$here/systemd/user/." "$cfg/systemd/user/"
 # session environment: read at the next login, so niri and its spawns carry what
 # env.lua gives a Hyprland session
 mkdir -p "$cfg/environment.d"; cp -a "$here/environment.d/." "$cfg/environment.d/"
-# dev deploy runs the daemon from ~/.local/bin; the package ships /usr/bin.
-sed -i -e "s|^ExecStart=.*|ExecStart=$bindir/ryoku-shell daemon|" \
-  -e "s|^ExecStartPre=/usr/bin/ryoku-qylock-activate$|ExecStartPre=$bindir/ryoku-qylock-activate|" \
-  -e "s|^ExecStartPre=-/usr/bin/ryoku-shell quit$|ExecStartPre=-$bindir/ryoku-shell quit|" \
-  -e "s|^ExecStop=/usr/bin/ryoku-qylock-activate --prepare-stop$|ExecStop=$bindir/ryoku-qylock-activate --prepare-stop|" \
-  -e "s|^ExecStartPost=-/usr/bin/ryoku-power-cutover qylock-guards-stop$|ExecStartPost=-$bindir/ryoku-power-cutover qylock-guards-stop|" \
-  "$cfg/systemd/user/ryoku-shell.service"
-sed -i "s|^ExecStart=.*|ExecStart=$bindir/ryoku-idle start|" \
-  "$cfg/systemd/user/ryoku-idle.service"
-sed -i "s|^ExecStart=.*|ExecStart=$bindir/ryoku-clamshell daemon|" \
-  "$cfg/systemd/user/ryoku-clamshell.service"
-# ryogami.service ships ExecStart=/usr/bin/ryogami (the package path); point the
-# dev-deployed unit at ~/.local/bin, mirroring the ryoku-shell rewrite above,
-# and at the staged picker QML (the unit file is re-copied every deploy, so the
-# injected line never stacks).
-sed -i -e "s|^ExecStart=.*|ExecStart=$bindir/ryogami|" \
-  -e "/^\[Service\]/a Environment=RYOGAMI_SHELL_QML=$datadir/ryogami/shell.qml" \
-  "$cfg/systemd/user/ryogami.service"
+# The dev deploy runs these units' binaries from ~/.local/bin; the package ships
+# /usr/bin. The unit stays byte-for-byte as shipped and a drop-in repoints its
+# Exec lines: an edited copy reads as a hand edit to `ryoku materialize`, which
+# forks it into user_edits, and that fork outlives the ~/.local/bin build it
+# names once the box is back on packages, so the shell never starts again.
+dev_bin_dropin() {
+  local unit="$cfg/systemd/user/$1" dir="$cfg/systemd/user/$1.d"
+  shift
+  mkdir -p "$dir"
+  {
+    printf '[Service]\n'
+    grep -oE '^Exec[A-Za-z]+=' "$unit" | sort -u
+    grep -E '^Exec[A-Za-z]+=' "$unit" | sed "s|/usr/bin/|$bindir/|"
+    printf '%s\n' "$@"
+  } >"$dir/ryoku-dev-bin.conf"
+}
+dev_bin_dropin ryoku-shell.service
+dev_bin_dropin ryoku-idle.service
+dev_bin_dropin ryoku-clamshell.service
+dev_bin_dropin ryoku-ai-usage.service
+# ryogami also reads the staged picker QML.
+dev_bin_dropin ryogami.service "Environment=RYOGAMI_SHELL_QML=$datadir/ryogami/shell.qml"
 systemctl --user daemon-reload 2>/dev/null || true
 # daemon-reload only re-reads the unit; it never restarts a running service, so
 # without this the freshly built ryogami binary sits on disk while the old
@@ -928,11 +940,6 @@ systemctl --user daemon-reload 2>/dev/null || true
 # install deploy does not start it early; the restart relaunches the resident
 # picker too.
 systemctl --user try-restart ryogami.service 2>/dev/null || true
-# ryoku-ai-usage.service ships three ExecStart=-/usr/bin/<collector> lines (the
-# package path); rewrite them to ~/.local/bin so the dev-deployed collectors
-# resolve, mirroring the ryoku-shell.service rewrite above.
-sed -i "s|^ExecStart=-/usr/bin/|ExecStart=-$bindir/|" "$cfg/systemd/user/ryoku-ai-usage.service"
-systemctl --user daemon-reload 2>/dev/null || true
 systemctl --user enable --now ryoku-ai-usage.timer 2>/dev/null || true
 # the BlueZ pairing agent (#308): the unit rides the materialized config dir;
 # start it now so a converted dev box pairs BLE HID without a relogin.

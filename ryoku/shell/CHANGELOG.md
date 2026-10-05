@@ -388,6 +388,21 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **A recovery on niri lands on a working Ryoku desktop.** `ryoku recovery`
+  clears the generated `settings.kdl` and `rebinds.kdl` with the Hub store,
+  and the deploy only regenerated them for the compositor that was not
+  running, so the next niri login hit a missing include and fell back to
+  niri's own default config. The deploy now writes the running compositor's
+  generated config from the store too. It also rebuilds `Ryoku.Blobs` on
+  every deploy instead of only on a Qt update, so a module built from an older
+  checkout can no longer sit under newer QML that names its types and take
+  the whole shell down. (`deploy.sh`)
+- **A dev deploy no longer edits the shipped user units.** It points the
+  shell, idle, clamshell, AI-usage and ryogami units at `~/.local/bin` with a
+  `ryoku-dev-bin.conf` drop-in. An edited copy read as a hand edit to
+  `ryoku materialize`, which forked it into `user_edits`, and that fork kept
+  the shell running from a home build that was gone once the box was back on
+  packages. (`deploy.sh`, `systemd/user/`)
 - **Hold to Lock and Hold to Sleep in Controls do what they say.** The two
   holds were sent to the daemon as session calls it never registered, so
   completing either did nothing. Lock now runs `ryoku-shell lock`, the very
