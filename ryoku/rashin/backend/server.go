@@ -23,7 +23,11 @@ import (
 	"github.com/coder/websocket"
 )
 
-//go:embed web
+// The console is a Svelte app built from ryoku/rashin/web into web/dist; the
+// build output is committed so go build alone ships it (no node at build
+// time). `all:` keeps Vite's dot-prefixed files.
+//
+//go:embed all:web/dist
 var webFS embed.FS
 
 // Serve runs the dashboard and the agent bridge on 127.0.0.1.
@@ -87,11 +91,11 @@ func Serve(cfg Config) error {
 	go hub.warm()
 	mux := http.NewServeMux()
 
-	sub, err := fs.Sub(webFS, "web")
+	sub, err := fs.Sub(webFS, "web/dist")
 	if err != nil {
 		return err
 	}
-	mux.Handle("/", http.FileServerFS(sub))
+	mux.Handle("/", webHandler(sub))
 
 	mux.HandleFunc("GET /api/ping", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, "ok")

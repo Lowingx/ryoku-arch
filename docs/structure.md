@@ -130,8 +130,10 @@ truth for the live desktop.
 - `rashin/` Ryoku Rashin, the optional agent OS (off by default): `backend/`
   (`ryoku-rashin`, one Go program that maintains the markdown knowledge vault at
   `~/.local/share/ryoku/rashin/`, serves the embedded dashboard on
-  `127.0.0.1:3600`, and bridges the Hermes agent over ACP) with its hand-authored
-  web dashboard embedded under `backend/web/` (no build step), and the `rashin`
+  `127.0.0.1:3600`, and bridges the Hermes agent over ACP), `web/` (the Rashin
+  console: one Svelte 5 + bits-ui app that is the companion window's UI and the
+  dashboard, built with Vite into `backend/web/dist`, which is committed and
+  embedded so no node runs on an installed box), and the `rashin`
   terminal command (the same binary under a second name: natural language to a
   ready-to-run command plan on the fish prompt, with a `conf.d/rashin.fish`
   weave). The Hub's `RashinPage.qml` is the control surface (enable, one-click

@@ -313,28 +313,37 @@ Rashin app's Ask page read the same file through the same CLI.
 ## The Rashin app
 
 The quick bar is one surface; the companion window is another. `rashin-app`
-(`ryoku/apps/rashin-app/`) is a compiled Qt Quick app, the desktop's first: it
-opens like a normal window (Super+Alt+Space, the launcher, `rashin-app`, or
-the Ask bar's OPEN RASHIN chip), single-instance through `ryoku-summon` + a
-flock, and it is a client of the daemon, never a second brain.
+(`ryoku/apps/rashin-app/`) is a small GTK3 + WebKitGTK window that hosts the
+Rashin console the daemon serves: it opens like a normal window
+(Super+Alt+Space, the launcher, `rashin-app`, or the Ask bar's OPEN RASHIN
+chip), is single-instance (a `GtkApplication` id plus the `ryoku-summon`
+flock), shows a paper boot page until `/api/ping` answers, and then loads
+`http://127.0.0.1:3600/#/chat`. It is a client of the daemon, never a second
+brain, and it carries no UI of its own: the console is one Svelte app
+(`ryoku/rashin/web/`, see its README) that is also the dashboard a browser
+sees on the same port. Links to other origins open in the default browser,
+notifications are granted, and the window remembers its size.
 
-| Page | What it holds |
+| Sheet | What it holds |
 |---|---|
-| Chat | The shared agent session: streaming replies, thinking folds, tool rows with output peeks and file diffs, inline approvals, the session drawer, and the model / agent / approvals switchers |
-| Ask | The fast lane with room: one question, one streamed answer, the action chips, the recent-asks drawer, Continue in chat |
-| Vault | The knowledge base: grouped tree, rendered markdown, reindex |
-| Agents | Detected coding agents, wire and unwire, the harness ledger |
-| Models | The fast-lane provider switch, the chat model list, the provider directory |
-| System | Live vitals and the doctor's findings, each with Fix with AI |
+| Chat | The shared agent session as a workspace: the sessions pane, the transcript (user plates, the Needle's replies with thinking folds, tool rows with input/output peeks and file diffs, inline approvals), the composer with slash commands, image attachments and a beam while the agent works, and the inspector (session, model, usage, tools, commands) |
+| Ask | The fast lane with room: one question, the streamed answer with the working detail, Continue in chat, and the recent asks recalled without a call |
+| Overview | The wallpaper hero with the desktop clock, the live vitals strip, the code card led by measured token savings with a prowl search, the health band with Fix with AI, and the vault index card |
+| System | The machine as a home server: services, timers, cron, containers, sockets, processes, filesystems, the Doctor tab, deterministic tips; copy, never run |
+| Vault | The grouped tree, the rendered document at a reading measure, deep links, reindex |
+| Memory | The provider tiles, the force graph of the vault's notes, the activity heatmap, the Hermes session history |
+| Skills | One tab per harness, grouped and counted |
+| Agents | The harness ledger, wire and unwire, the chat agent switch |
+| Models | The provider directory with filters, the fast-lane switch, the chat models |
+| About | What Rashin is, the pieces with live facts, the shortcuts |
 
-Everything the app shows is the daemon's answer: the chat rides the same
-`chat --follow` bridge as the Ask chat (so a turn started anywhere is live
-everywhere), and every other page rides the HTTP API above. The app's own
-state is UI-only (last page, window size, rail collapse, drafts). It wears
-the desktop's live palette from `GET /api/theme`, retinting while open, and
-posts a freedesktop notification when a turn finishes or an approval waits
-while the window is unfocused. See `ryoku/apps/rashin-app/README.md` for the
-layout and the export path.
+Everything the console shows is the daemon's answer: the chat is a projection
+of the same `/ws/chat` stream and the same reducer the Ask bar uses
+(`ryoku/shell/.../lib/chatstate.js`, aliased into the web build), so a turn
+started anywhere is live everywhere, and every other sheet rides the HTTP API
+above. The console's own state is UI-only (pane collapse, drafts, the last
+vault file). It wears the desktop's live palette from `GET /api/theme`,
+retinting while open.
 
 ## In the terminal
 
@@ -352,17 +361,22 @@ recipes (`rr-<name>` fish abbreviations). Full design and UX in
 
 ## The dashboard
 
-Hand-authored HTML, CSS, and JS embedded in the binary. No node, no build
-step, no CDN; the fonts ship in the repo as subset woff2. The dashboard is a
-Ryoku surface, not a product with its own costume: it speaks the Hub's paper
-and ink (`docs/ui-ux.md`) and wears the desktop's live palette. `GET
-/api/theme` resolves the Material roles the way `Tokens.qml` does (a named
-scheme, then the wallpaper, then the signature default), and the page retints
-within 15 seconds of a wallpaper or scheme change. Emphasis is inversion (a
-bone plate for the active tab, file, or segment), colour is data, and the 力
-seal stays vermillion. Fraunces sets titles, Space Grotesk the language and
-numerals, Space Mono the tracked labels and paths, Noto Sans CJK JP the kanji
-gloss beside every sheet name.
+The same console, in a browser: `http://127.0.0.1:3600` serves the Svelte app
+built from `ryoku/rashin/web/` (Svelte 5, bits-ui for every headless control,
+the Libraries.dev effects for the Needle's face, the thinking orbs and the
+composer's beam). The build output is committed under
+`ryoku/rashin/backend/web/dist` and `go:embed`-ed, so `go build` alone ships
+it and no node runs on an installed box; the fonts ship as subset woff2 inside
+the bundle; nothing is fetched from a CDN. The dashboard is a Ryoku surface,
+not a product with its own costume: it speaks the Hub's paper and ink
+(`docs/ui-ux.md`) and wears the desktop's live palette. `GET /api/theme`
+resolves the Material roles the way `Tokens.qml` does (a named scheme, then
+the wallpaper, then the signature default), and the page retints within 15
+seconds of a wallpaper or scheme change. Emphasis is inversion (a bone plate
+for the active sheet, file, or segment), colour is data, and the 力 seal stays
+vermillion. Fraunces sets titles, Space Grotesk the language and numerals,
+Space Mono the tracked labels and paths, Noto Sans CJK JP the kanji gloss
+beside every sheet name.
 
 Navigation is three floating islands, like the default QS Bar: the seal, the
 sheets, and the daemon/hermes/prowl lamps with a clock. The Overview opens on

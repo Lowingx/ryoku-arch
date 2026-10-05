@@ -8,14 +8,19 @@
   `session-start` restarts the shell services, so a fresh niri desktop is
   covered from the greeter handoff until the loaded shell releases it,
   matching Hyprland (`niri/autostart.kdl`).
-- **Rashin, the AI companion app, joins the desktop.** A compiled Qt window
-  (`ryoku/apps/rashin-app/`) that rides the rashin daemon: the shared agent
-  chat with streaming replies, tool rows and inline approvals, the fast-lane
-  Ask, the vault reader, the agent ledger, the model and fast-lane
-  switchers, and vitals plus the doctor. Super+Alt+Space summons it on both
-  compositors, the Ask bar's new OPEN RASHIN chip raises it from a quick
-  answer, and the Ask bar's header grew its history and model drawers
-  (`apps/rashin-app/`, `wm/binds.go`, `wm/niri/config_binds.go`,
+- **Rashin, the AI companion app, joins the desktop.** A window
+  (`ryoku/apps/rashin-app/`, GTK3 + WebKitGTK) that hosts the Rashin console
+  the daemon serves, one Svelte app (`ryoku/rashin/web/`) that is also the
+  dashboard: the shared agent chat as a three-pane workspace (sessions, the
+  transcript with thinking folds, tool rows, diffs and inline approvals, the
+  composer with slash commands and images, the inspector), the fast-lane
+  Ask, and every dashboard sheet (overview, system, vault, memory, skills,
+  agents, models, about) rebuilt on bits-ui with the Libraries.dev effects
+  (the Needle's face, thinking orbs, a beam on the composer while it works).
+  Super+Alt+Space summons it on both compositors, the Ask bar's new OPEN
+  RASHIN chip raises it from a quick answer, and the Ask bar's header grew
+  its history and model drawers (`apps/rashin-app/`, `rashin/web/`,
+  `wm/binds.go`, `wm/niri/config_binds.go`,
   `shell/quickshell/shell/modules/ask/`).
 - **The night light can run on the clock.** Hub > Displays > Night light
   gained an AT THE CLOCK switch with START AT and OFF AT rows: a 12-hour

@@ -1,0 +1,70 @@
+<!-- The console: one island bar, one sheet on the stage. Stores start here
+     and live for the page; a sheet is a projection of them. -->
+<script lang="ts">
+  import { Tooltip } from "bits-ui";
+  import TopBar from "$lib/app/TopBar.svelte";
+  import { router } from "$lib/app/router.svelte";
+  import { chat } from "$lib/chat/store.svelte";
+  import { machine } from "$lib/state/machine.svelte";
+  import { theme } from "$lib/state/theme.svelte";
+  import Offline from "$lib/app/Offline.svelte";
+  import ChatSheet from "./pages/ChatSheet.svelte";
+  import AskSheet from "./pages/AskSheet.svelte";
+  import OverviewSheet from "./pages/OverviewSheet.svelte";
+  import SystemSheet from "./pages/SystemSheet.svelte";
+  import VaultSheet from "./pages/VaultSheet.svelte";
+  import MemorySheet from "./pages/MemorySheet.svelte";
+  import SkillsSheet from "./pages/SkillsSheet.svelte";
+  import AgentsSheet from "./pages/AgentsSheet.svelte";
+  import ModelsSheet from "./pages/ModelsSheet.svelte";
+  import AboutSheet from "./pages/AboutSheet.svelte";
+
+  const SHEET_VIEWS = {
+    chat: ChatSheet,
+    ask: AskSheet,
+    overview: OverviewSheet,
+    system: SystemSheet,
+    vault: VaultSheet,
+    memory: MemorySheet,
+    skills: SkillsSheet,
+    agents: AgentsSheet,
+    models: ModelsSheet,
+    about: AboutSheet,
+  } as const;
+
+  const View = $derived(SHEET_VIEWS[router.sheet as keyof typeof SHEET_VIEWS] ?? ChatSheet);
+
+  $effect(() => {
+    router.start();
+    theme.start();
+    machine.start();
+    chat.open();
+    return () => {
+      chat.close();
+      machine.stop();
+      theme.stop();
+    };
+  });
+</script>
+
+<Tooltip.Provider>
+  <div class="console">
+    <TopBar />
+    <main class="stage">
+      {#key router.sheet}
+        <View />
+      {/key}
+    </main>
+    <Offline />
+  </div>
+</Tooltip.Provider>
+
+<style>
+  .console {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    height: 100%;
+    container-type: inline-size;
+  }
+  .stage { min-height: 0; position: relative; }
+</style>

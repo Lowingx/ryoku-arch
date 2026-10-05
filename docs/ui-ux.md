@@ -156,11 +156,12 @@ import fails in dev and works on an installed box, that is why.
 
 ### The web dashboard is a Ryoku surface too
 
-Rashin's dashboard (`ryoku/rashin/backend/web`, served on `127.0.0.1:3600`) is
-HTML, so it cannot import `Tokens`, but it follows them. `GET /api/theme`
-resolves the same Material roles through the same chain (a named scheme, then
-the wallpaper while Match wallpaper is on, then the signature default), and
-`web/css/base.css` maps them onto its variables under the `Tokens` names:
+Rashin's console (`ryoku/rashin/web`, a Svelte app served on `127.0.0.1:3600`
+and hosted by the `rashin-app` window) is HTML, so it cannot import `Tokens`,
+but it follows them. `GET /api/theme` resolves the same Material roles through
+the same chain (a named scheme, then the wallpaper while Match wallpaper is on,
+then the signature default), and `src/app.css` maps them onto its variables
+under the `Tokens` names:
 `--paper`, `--ink`, `--bone`, `--sun`, `--alert`, the hairlines and tints. The
 type is the same four families, bundled as subset woff2. The Hub's Rashin page
 reads `Tokens` like any other page. There is no brand takeover left: if the
