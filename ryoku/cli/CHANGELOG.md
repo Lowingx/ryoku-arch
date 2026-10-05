@@ -88,6 +88,13 @@
   `internal/sys/release.go`, `internal/updater/release.go`).
 
 ### Fixed
+- **The update console no longer stacks copies of the running step.** While
+  a step runs something under sudo, sudo switches the terminal to raw mode,
+  so a plain newline stopped returning to the left edge; every redraw then
+  wrapped and stranded a copy of "Deploying the desktop". The console now
+  writes explicit carriage returns and turns autowrap off while it redraws.
+  A doctor finding about `.pacnew` files also shows once, not as a doubled
+  "! !" plus its detail line (`internal/updater/console.go`).
 - **The Hub no longer sticks on a phantom "Applying updates".** Code that
   narrated outside an update (`ryoku track`'s channel move, the updater's own
   tests) wrote a "running" run-state with no owner, and the Updates page could

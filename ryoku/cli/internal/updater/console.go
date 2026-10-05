@@ -2,8 +2,10 @@ package updater
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 	"sync"
@@ -68,7 +70,8 @@ const noteCap = 6
 type console struct {
 	mu      sync.Mutex
 	mode    conMode
-	w       *os.File
+	w       io.Writer // every byte the console prints goes through here
+	tty     *os.File  // the terminal itself, for size and mode queries
 	color   bool
 	cap     *capture
 	started time.Time
@@ -101,7 +104,7 @@ var con *console
 // view; footer, called at the end, names what the box now runs.
 func openConsole(verbose bool, channel, release string, footer func() string) *console {
 	c := &console{
-		mode: conVerbose, w: os.Stdout, color: sys.StdoutIsTTY() && os.Getenv("NO_COLOR") == "",
+		mode: conVerbose, w: os.Stdout, tty: os.Stdout, color: sys.StdoutIsTTY() && os.Getenv("NO_COLOR") == "",
 		channel: channel, release: release, footer: footer, cur: -1, seen: map[string]bool{},
 		started: time.Now(),
 	}
@@ -112,12 +115,19 @@ func openConsole(verbose bool, channel, release string, footer func() string) *c
 	if c.cap == nil {
 		return c
 	}
-	c.w = c.cap.term
-	tty := isTerminal(c.w)
+	c.tty = c.cap.term
+	c.w = c.tty
+	tty := isTerminal(c.tty)
 	c.color = tty && os.Getenv("NO_COLOR") == ""
 	switch {
 	case tty && updateUI() != "hub" && os.Getenv("TERM") != "dumb":
 		c.mode = conLive
+		// sudo runs its command on a pty of its own and switches this
+		// terminal to raw mode until it returns, output processing included:
+		// a bare "\n" then moves down without going back to column 0, every
+		// redraw lands mid-row, wraps, and strands a copy of the step line.
+		// The console says what it means instead of trusting the tty.
+		c.w = crlfWriter{c.tty}
 		c.stop, c.done = make(chan struct{}), make(chan struct{})
 		fmt.Fprint(c.w, "\033[?25l")
 		go c.animate()
@@ -125,6 +135,17 @@ func openConsole(verbose bool, channel, release string, footer func() string) *c
 		c.mode = conPlain
 	}
 	return c
+}
+
+// crlfWriter writes every line ending as "\r\n", so the view lays out the same
+// whether or not the terminal is translating newlines at that moment.
+type crlfWriter struct{ f *os.File }
+
+func (w crlfWriter) Write(p []byte) (int, error) {
+	if _, err := w.f.Write(bytes.ReplaceAll(p, []byte("\n"), []byte("\r\n"))); err != nil {
+		return 0, err
+	}
+	return len(p), nil
 }
 
 func isTerminal(f *os.File) bool {
@@ -135,7 +156,7 @@ func isTerminal(f *os.File) bool {
 
 func (c *console) width() int {
 	var ws struct{ row, col, x, y uint16 }
-	if _, _, e := syscall.Syscall(syscall.SYS_IOCTL, c.w.Fd(), syscall.TIOCGWINSZ, uintptr(unsafe.Pointer(&ws))); e == 0 && ws.col > 0 {
+	if _, _, e := syscall.Syscall(syscall.SYS_IOCTL, c.tty.Fd(), syscall.TIOCGWINSZ, uintptr(unsafe.Pointer(&ws))); e == 0 && ws.col > 0 {
 		return int(ws.col)
 	}
 	return 80
@@ -334,7 +355,10 @@ func (c *console) drawLive(frac float64) {
 	lines = append(lines, "", "  "+c.bar(frac, in-18)+"  "+c.bold(fmt.Sprintf("%3d%%", int(frac*100+0.5)))+c.dim("  ·  "+human(time.Since(c.started))))
 
 	c.clearLive()
-	fmt.Fprint(c.w, strings.Join(lines, "\n"))
+	// autowrap off for the redraw: a line that ever outgrows the terminal is
+	// cut at its edge instead of pushing the region a row taller than the
+	// count the next clear walks back over
+	fmt.Fprint(c.w, "\033[?7l"+strings.Join(lines, "\n")+"\033[?7h")
 	c.live = len(lines)
 }
 
@@ -666,8 +690,24 @@ func (c *console) captured(line string) {
 
 // classifyCaptured picks out the captured lines worth a note: a tool's own
 // "error:", "warning:" and "note:" lines, a .pacnew left behind, and, while
-// the doctor runs, its findings. Everything else stays in the log. pure.
+// the doctor runs, its findings. Everything else stays in the log. The doctor
+// speaks its own format (a glyph, the check's name, then indented detail), so
+// its output is read only that way: a finding's detail mentioning a .pacnew is
+// part of the finding already on screen, not a second one. pure.
 func classifyCaptured(step, line string) (noteKind, string, bool) {
+	if step == "doctor" {
+		switch {
+		case strings.HasPrefix(line, "! "):
+			return noteWarn, line[2:], true
+		case strings.HasPrefix(line, "✗ "):
+			return noteErr, strings.TrimPrefix(line, "✗ "), true
+		case line == "✓ all checks passed":
+			return noteOK, strings.TrimPrefix(line, "✓ "), true
+		case strings.HasPrefix(line, "✓ ") && strings.HasSuffix(line, "(fixed)"):
+			return noteOK, strings.TrimPrefix(line, "✓ "), true
+		}
+		return 0, "", false
+	}
 	low := strings.ToLower(line)
 	switch {
 	case strings.HasPrefix(low, "error:"):
@@ -681,18 +721,6 @@ func classifyCaptured(step, line string) (noteKind, string, bool) {
 		return noteInfo, strings.TrimSpace(line[len("note:"):]), true
 	case strings.Contains(low, ".pacnew"), strings.Contains(low, ".pacsave"):
 		return noteWarn, line, true
-	}
-	if step == "doctor" {
-		switch {
-		case strings.HasPrefix(line, "! "):
-			return noteWarn, line[2:], true
-		case strings.HasPrefix(line, "✗ "):
-			return noteErr, strings.TrimPrefix(line, "✗ "), true
-		case line == "✓ all checks passed":
-			return noteOK, strings.TrimPrefix(line, "✓ "), true
-		case strings.HasPrefix(line, "✓ ") && strings.HasSuffix(line, "(fixed)"):
-			return noteOK, strings.TrimPrefix(line, "✓ "), true
-		}
 	}
 	return 0, "", false
 }

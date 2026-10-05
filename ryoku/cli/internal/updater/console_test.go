@@ -34,6 +34,9 @@ func TestClassifyCapturedKeepsSignalOnly(t *testing.T) {
 		{"doctor", "✓ all checks passed", want{noteOK, "all checks passed", true}},
 		{"doctor", "✓ swap is out of snapshots", want{}},
 		{"deploy", "! not a doctor finding", want{}},
+		// a doctor finding about .pacnew files is one warning, not two
+		{"doctor", "! pending config (.pacnew)", want{noteWarn, "pending config (.pacnew)", true}},
+		{"doctor", "2 pending config update(s) (.pacnew) need review", want{}},
 	}
 	for _, c := range cases {
 		kind, text, ok := classifyCaptured(c.step, c.line)
