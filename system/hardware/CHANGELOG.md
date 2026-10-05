@@ -9,6 +9,12 @@
   modeline (`cvt`, from the already-present libxcvt) and use that, which Hyprland
   accepts as a forced timing; advertised modes pass through unchanged. Covered by
   `tests/monitor-custom-mode.sh`.
+- `power/ryoku-power-cutover`: **a shell-owner restart covers the desktop.**
+  `restart_shell_owner` raises the reload cover before restarting
+  `ryoku-shell.service`, so a session-start recovery, a compositor switch, or
+  a power-policy cutover never leaves the screen bare while the fresh shell
+  cold-loads. A live cover from the login chain makes the call a no-op, and a
+  headless one exits at once.
 
 ### Fixed
 - `power/ryoku-clamshell`: **a refused lid suspend now says why in the

@@ -1509,6 +1509,12 @@ start_fallback_shell() {
 
 restart_shell_owner() {
   local rc=0
+  # The restart below drops the shell to a bare desktop until the fresh one
+  # is supervised and loaded; raise the cover over the gap. On a normal boot
+  # the autostart chain already holds one, and the launcher's single-instance
+  # claim turns this into a fast no-op. Headless (a TTY recovery) it exits
+  # immediately.
+  ryoku-reload-cover begin >/dev/null 2>&1 || true
   systemctl --user restart ryoku-shell.service || rc=$?
   (( rc == 0 )) && return 0
   if systemctl --user cat ryoku-shell.service >/dev/null 2>&1; then
