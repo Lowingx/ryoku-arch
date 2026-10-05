@@ -388,6 +388,21 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **Hold to Lock and Hold to Sleep in Controls do what they say.** The two
+  holds were sent to the daemon as session calls it never registered, so
+  completing either did nothing. Lock now runs `ryoku-shell lock`, the very
+  command Super+L runs on every compositor, and Sleep runs `ryoku-shell
+  suspend`, the fail-closed lock-then-suspend the lid uses.
+  (`quickshell/shell/services/SessionActions.qml`)
+- **Closing the lid sleeps the laptop even while Keep awake is on.** Keep
+  awake held a logind `sleep` block as well as its idle block, and because
+  the request persists across logins a laptop that had it switched on once
+  answered every lid close and Sleep with "Operation denied due to active
+  block inhibitor", retrying every two seconds with the lid shut. Keep awake
+  now inhibits idle only, logind's own lid rule: the machine never sleeps on
+  its own while it is on, and a deliberate sleep still goes through. A box
+  carrying the old block swaps it on the next shell start.
+  (`scripts/ryoku-cmd-caffeine`)
 - **The record island shows up the moment a capture starts, with the right
   clock.** A capture started from ryoshot (or the CLI) reached the island only
   through a five-second idle poll, and the clock then counted from when the

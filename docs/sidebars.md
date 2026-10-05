@@ -52,11 +52,18 @@ Changing a level does not silently change its mute state.
 Lock, Sleep, Log out, Restart, and Power off are hold-to-activate actions. Hold a
 button until its fill completes; releasing early cancels it. Keyboard users can
 hold Space or Enter. The completed hold is the confirmation, so there is no
-second dialog.
+second dialog. Lock runs `ryoku-shell lock`, the same command as Super+L on
+every compositor; Sleep runs `ryoku-shell suspend`, the fail-closed lock then
+suspend the lid uses. Log out, Restart, and Power off go through the daemon's
+`session.*` calls.
 
 The same bar carries Night light when supported, Keep awake, Do not disturb,
-Mic mute, and Gaming mode when supported. The gear opens a small popup for the
-remaining Controls settings. Unsupported controls are not shown as dead options.
+Mic mute, and Gaming mode when supported. Keep awake is an idle inhibitor: the
+machine will not dim, lock, or sleep on its own while it is on, and the request
+persists across logins until it is switched off. It never refuses a deliberate
+sleep: the lid, the power key, and Sleep here still suspend. The gear opens a
+small popup for the remaining Controls settings. Unsupported controls are not
+shown as dead options.
 
 ## ryoshot
 
