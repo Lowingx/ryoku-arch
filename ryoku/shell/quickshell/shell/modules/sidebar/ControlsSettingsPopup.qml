@@ -47,7 +47,7 @@ QQC.Popup {
 
         Text {
             width: parent.width
-            text: I18n.tr("PANEL")
+            text: I18n.tr("Motion")
             color: Tokens.inkMuted
             font.family: Tokens.mono
             font.pixelSize: Tokens.fMicro * root.s
@@ -62,6 +62,15 @@ QQC.Popup {
             labels: ({ "quick": "Quick", "standard": "Standard", "calm": "Calm" })
             current: SidebarState.speed
             onChose: key => SidebarState.setSpeed(key)
+        }
+
+        Text {
+            width: parent.width
+            text: I18n.tr("Open, close, and section reveal speed")
+            color: Tokens.inkFaint
+            font.family: Tokens.ui
+            font.pixelSize: Tokens.fSmall * root.s
+            wrapMode: Text.WordWrap
         }
 
         Item { width: parent.width; height: Tokens.s1 * root.s }
@@ -223,14 +232,14 @@ QQC.Popup {
                 property: "opacity"
                 from: 0
                 to: 1
-                duration: root.motionAllowed ? Tokens.swap : 0
+                duration: SidebarState.motionDuration(Tokens.swap)
                 easing.type: Tokens.ease
             }
             NumberAnimation {
                 property: "scale"
                 from: 0.94
                 to: 1
-                duration: root.motionAllowed ? Tokens.swap : 0
+                duration: SidebarState.motionDuration(Tokens.swap)
                 easing.type: Tokens.ease
             }
         }
@@ -241,14 +250,14 @@ QQC.Popup {
                 property: "opacity"
                 from: 1
                 to: 0
-                duration: root.motionAllowed ? Tokens.snap : 0
+                duration: SidebarState.motionDuration(Tokens.snap)
                 easing.type: Tokens.easeSnap
             }
             NumberAnimation {
                 property: "scale"
                 from: 1
                 to: 0.96
-                duration: root.motionAllowed ? Tokens.snap : 0
+                duration: SidebarState.motionDuration(Tokens.snap)
                 easing.type: Tokens.easeSnap
             }
         }

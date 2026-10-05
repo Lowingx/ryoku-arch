@@ -3,6 +3,14 @@
 ## Unreleased
 
 ### Added
+- **Controls sets the power profile.** The Super+Escape panel gains a Power
+  Saver / Balanced / Performance switch for the system power profile. It
+  offers only what power-profiles-daemon reports, follows a change made
+  anywhere else, and says so when the daemon is missing. The panel's
+  Quick / Standard / Calm choice, which never visibly did anything, now sets
+  the panel's open, close and reveal speed and is labelled Motion.
+  (`quickshell/shell/modules/sidebar/PowerProfileControl.qml`,
+  `quickshell/shell/services/SidebarState.qml`)
 - **Controls is a live system and session panel.** Super+Escape opens the
   top-left panel with a native mini system monitor, richer connections, fine
   volume and brightness controls, inline per-application audio and per-display

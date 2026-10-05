@@ -37,7 +37,7 @@ Item {
     height: implicitHeight
     Behavior on height {
         enabled: root.motionAllowed
-        NumberAnimation { duration: Tokens.swap; easing.type: Tokens.ease }
+        NumberAnimation { duration: SidebarState.motionDuration(Tokens.swap); easing.type: Tokens.ease }
     }
 
     function syncActive(): void {
@@ -150,11 +150,11 @@ Item {
             clip: true
             Behavior on height {
                 enabled: root.motionAllowed
-                NumberAnimation { duration: Tokens.swap; easing.type: Tokens.ease }
+                NumberAnimation { duration: SidebarState.motionDuration(Tokens.swap); easing.type: Tokens.ease }
             }
             Behavior on opacity {
                 enabled: root.motionAllowed
-                NumberAnimation { duration: Tokens.move; easing.type: Tokens.ease }
+                NumberAnimation { duration: SidebarState.motionDuration(Tokens.move); easing.type: Tokens.ease }
             }
             MixerDrawer {
                 id: mixer
@@ -190,11 +190,11 @@ Item {
             clip: true
             Behavior on height {
                 enabled: root.motionAllowed
-                NumberAnimation { duration: Tokens.swap; easing.type: Tokens.ease }
+                NumberAnimation { duration: SidebarState.motionDuration(Tokens.swap); easing.type: Tokens.ease }
             }
             Behavior on opacity {
                 enabled: root.motionAllowed
-                NumberAnimation { duration: Tokens.move; easing.type: Tokens.ease }
+                NumberAnimation { duration: SidebarState.motionDuration(Tokens.move); easing.type: Tokens.ease }
             }
             BrightnessDrawer {
                 id: brightnessDrawer

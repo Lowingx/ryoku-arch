@@ -34,10 +34,12 @@ Item {
     function settleSections(value): void {
         heroSection.opacity = value;
         connectionsSection.opacity = value;
+        profileSection.opacity = value;
         levelsSection.opacity = value;
         barSection.opacity = value;
         heroShift.y = value ? 0 : Tokens.s2 * root.s;
         connectionsShift.y = value ? 0 : Tokens.s2 * root.s;
+        profileShift.y = value ? 0 : Tokens.s2 * root.s;
         levelsShift.y = value ? 0 : Tokens.s2 * root.s;
         barShift.y = value ? 0 : Tokens.s2 * root.s;
     }
@@ -45,6 +47,7 @@ Item {
     function updateReveal(): void {
         heroReveal.stop();
         connectionsReveal.stop();
+        profileReveal.stop();
         levelsReveal.stop();
         barReveal.stop();
         if (!root.overviewActive) {
@@ -55,6 +58,7 @@ Item {
             root.settleSections(0);
             heroReveal.start();
             connectionsReveal.start();
+            profileReveal.start();
             levelsReveal.start();
             barReveal.start();
         }
@@ -63,6 +67,11 @@ Item {
     onOverviewActiveChanged: root.updateReveal()
     onMotionAllowedChanged: root.updateReveal()
     Component.onCompleted: root.updateReveal()
+
+    Connections {
+        target: SidebarState
+        function onSpeedScaleChanged() { root.updateReveal(); }
+    }
 
     SystemMonitor {
         id: monitor
@@ -77,7 +86,7 @@ Item {
                 property: "opacity"
                 from: 0
                 to: 1
-                duration: Tokens.swap
+                duration: SidebarState.motionDuration(Tokens.swap)
                 easing.type: Tokens.ease
             }
             NumberAnimation {
@@ -85,21 +94,21 @@ Item {
                 property: "y"
                 from: Tokens.s2 * root.s
                 to: 0
-                duration: Tokens.swap
+                duration: SidebarState.motionDuration(Tokens.swap)
                 easing.type: Tokens.ease
             }
         }
     }
     SequentialAnimation {
         id: connectionsReveal
-        PauseAnimation { duration: Tokens.snap / 3 }
+        PauseAnimation { duration: SidebarState.motionDuration(Tokens.snap / 3) }
         ParallelAnimation {
             NumberAnimation {
                 target: connectionsSection
                 property: "opacity"
                 from: 0
                 to: 1
-                duration: Tokens.swap
+                duration: SidebarState.motionDuration(Tokens.swap)
                 easing.type: Tokens.ease
             }
             NumberAnimation {
@@ -107,21 +116,43 @@ Item {
                 property: "y"
                 from: Tokens.s2 * root.s
                 to: 0
-                duration: Tokens.swap
+                duration: SidebarState.motionDuration(Tokens.swap)
+                easing.type: Tokens.ease
+            }
+        }
+    }
+    SequentialAnimation {
+        id: profileReveal
+        PauseAnimation { duration: SidebarState.motionDuration(Tokens.snap * 2 / 3) }
+        ParallelAnimation {
+            NumberAnimation {
+                target: profileSection
+                property: "opacity"
+                from: 0
+                to: 1
+                duration: SidebarState.motionDuration(Tokens.swap)
+                easing.type: Tokens.ease
+            }
+            NumberAnimation {
+                target: profileShift
+                property: "y"
+                from: Tokens.s2 * root.s
+                to: 0
+                duration: SidebarState.motionDuration(Tokens.swap)
                 easing.type: Tokens.ease
             }
         }
     }
     SequentialAnimation {
         id: levelsReveal
-        PauseAnimation { duration: Tokens.snap * 2 / 3 }
+        PauseAnimation { duration: SidebarState.motionDuration(Tokens.snap) }
         ParallelAnimation {
             NumberAnimation {
                 target: levelsSection
                 property: "opacity"
                 from: 0
                 to: 1
-                duration: Tokens.swap
+                duration: SidebarState.motionDuration(Tokens.swap)
                 easing.type: Tokens.ease
             }
             NumberAnimation {
@@ -129,21 +160,21 @@ Item {
                 property: "y"
                 from: Tokens.s2 * root.s
                 to: 0
-                duration: Tokens.swap
+                duration: SidebarState.motionDuration(Tokens.swap)
                 easing.type: Tokens.ease
             }
         }
     }
     SequentialAnimation {
         id: barReveal
-        PauseAnimation { duration: Tokens.snap }
+        PauseAnimation { duration: SidebarState.motionDuration(Tokens.snap * 4 / 3) }
         ParallelAnimation {
             NumberAnimation {
                 target: barSection
                 property: "opacity"
                 from: 0
                 to: 1
-                duration: Tokens.swap
+                duration: SidebarState.motionDuration(Tokens.swap)
                 easing.type: Tokens.ease
             }
             NumberAnimation {
@@ -151,7 +182,7 @@ Item {
                 property: "y"
                 from: Tokens.s2 * root.s
                 to: 0
-                duration: Tokens.swap
+                duration: SidebarState.motionDuration(Tokens.swap)
                 easing.type: Tokens.ease
             }
         }
@@ -198,6 +229,23 @@ Item {
                 screen: root.screen
                 active: root.overviewActive
                 onOpenPage: page => root.showPage(page)
+            }
+        }
+
+        Item {
+            id: profileSection
+            width: parent.width
+            implicitHeight: powerProfile.implicitHeight
+            height: implicitHeight
+            opacity: 0
+            transform: Translate { id: profileShift; y: Tokens.s2 * root.s }
+
+            PowerProfileControl {
+                id: powerProfile
+                width: parent.width
+                height: implicitHeight
+                s: root.s
+                active: root.overviewActive
             }
         }
 

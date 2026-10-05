@@ -9,12 +9,10 @@ import "lib/screens.js" as Screens
 Singleton {
     id: root
 
-    readonly property real speedScale: root.speed === "quick" ? 0.72
-        : root.speed === "calm" ? 1.35 : 1
-    readonly property int enterDuration: (Motion.reduce || Tokens.reduceMotion)
-        ? 0 : Math.round(Tokens.swap * root.speedScale)
-    readonly property int exitDuration: (Motion.reduce || Tokens.reduceMotion)
-        ? 0 : Math.round(Tokens.move * root.speedScale)
+    readonly property real speedScale: root.speed === "quick" ? 0.6
+        : root.speed === "calm" ? 1.5 : 1
+    readonly property int enterDuration: root.motionDuration(Tokens.swap)
+    readonly property int exitDuration: root.motionDuration(Tokens.move)
     readonly property var enterCurve: [0.16, 1, 0.3, 1, 1, 1]
     readonly property var exitCurve: [0, 0, 0.58, 1, 1, 1]
     readonly property string speed: preferences.speed
@@ -110,6 +108,11 @@ Singleton {
         slice.railLeft = Math.max(0, Number(clearances.left) || 0);
         slice.railBottom = Math.max(0, Number(clearances.bottom) || 0);
         slice.railRight = Math.max(0, Number(clearances.right) || 0);
+    }
+
+    function motionDuration(base) {
+        return (Motion.reduce || Tokens.reduceMotion)
+            ? 0 : Math.round(base * root.speedScale);
     }
 
     function setSpeed(value) {
