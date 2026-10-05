@@ -3,6 +3,11 @@
 ## Unreleased
 
 ### Added
+- **Updates and repairs cover the desktop they blank.** `ryoku update`'s
+  packaged teardown and `ryoku doctor`'s daemon restart both raise the reload
+  cover before stopping the shell, so the swap and cold reload run behind the
+  animation instead of a grey flicker; headless calls fail fast and proceed
+  uncovered (`internal/updater/update.go`, `internal/doctor/doctor.go`).
 - **`ryoku doctor` retires Shima's stored frame music choice.** The
   `inir.iris.surround.music` key chose between a wave Ryoku never hosts and the
   frame; the switch now drives the frame on its own, so the key is removed from

@@ -1949,6 +1949,17 @@ func pkgBin(name string) string {
 	return name
 }
 
+// BeginReloadCover raises the reload cover over the still-live desktop so a
+// teardown and the config or binary swap that follows never show grey or
+// flicker. Best-effort: without a session (TTY updates, headless probes) or
+// with a cover already up, the launcher fast-fails and the caller proceeds
+// uncovered, exactly as before.
+func BeginReloadCover() {
+	ctx, cancel := context.WithTimeout(context.Background(), 6*time.Second)
+	defer cancel()
+	_ = exec.CommandContext(ctx, pkgBin("ryoku-reload-cover"), "begin").Run()
+}
+
 // stopShell quiesces the desktop for a config swap: ask the daemon to quit,
 // wait for it to go, then drop orphaned surfaces still holding a config's
 // single-instance lock (one survivor kills the fresh daemon's components).
@@ -1959,6 +1970,7 @@ func stopShell() error {
 	if !sys.Has("ryoku-shell") {
 		return nil
 	}
+	BeginReloadCover()
 	// Under systemd the unit would respawn the daemon two seconds after the
 	// quit below and the update would race its own quiesce. Stopping the unit
 	// is a no-op where it does not exist yet.

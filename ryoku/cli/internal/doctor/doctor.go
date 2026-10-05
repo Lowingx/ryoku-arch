@@ -3046,6 +3046,11 @@ func shellDaemonReachable() bool {
 // would resurrect a stale daemon; a checkout box's home deploy IS the
 // desktop, so PATH is right there.
 func startShellDaemon() error {
+	// A dead daemon means a bare desktop already; raise the cover before the
+	// fresh shell cold-loads so recovery ends on an animation, not a flicker.
+	// When reached via restartShellDaemon the first cover is still up and the
+	// launcher's single-instance claim makes this a no-op.
+	updater.BeginReloadCover()
 	// Prefer the unit so a recovered daemon stays supervised; the reload lets a
 	// freshly delivered unit be found. Falls through to a bare start where the
 	// unit does not exist, so recovery never depends on it. The env push first:
@@ -3177,6 +3182,10 @@ func daemonBinaryReplaced(cmdline, exeLink string) bool {
 // socket), then start a fresh daemon, which inherits doctor's live session
 // environment and passes it to every component it supervises.
 func restartShellDaemon() error {
+	// The quit below drops the shell to a bare desktop until the fresh
+	// daemon's shell comes back; the cover rides the gap and the new shell
+	// finishes it on readiness, same contract as an update reload.
+	updater.BeginReloadCover()
 	quitShellDaemon()
 	return startShellDaemon()
 }
