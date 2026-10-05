@@ -3,8 +3,14 @@
 #include <QAbstractListModel>
 #include <QJsonObject>
 #include <QProcess>
+#include <QSet>
+#include <QTimer>
 #include <QVariantList>
 #include <QVariantMap>
+#include <QVector>
+#include <qqmlintegration.h>
+class QQmlEngine;
+class QJSEngine;
 
 // ChatBridge is the app's window onto the one shared agent session the rashin
 // daemon owns. It speaks the daemon's protocol through the resident
@@ -16,6 +22,8 @@
 // offline honestly.
 class ChatBridge : public QObject {
     Q_OBJECT
+    QML_ELEMENT
+    QML_SINGLETON
     Q_PROPERTY(ChatModel *model READ model CONSTANT)
     Q_PROPERTY(bool busy READ busy NOTIFY touched)
     Q_PROPERTY(QString activity READ activity NOTIFY touched)
@@ -37,6 +45,8 @@ class ChatBridge : public QObject {
 
 public:
     explicit ChatBridge(QObject *parent = nullptr);
+    static ChatBridge *create(QQmlEngine * /*engine*/, QJSEngine * /*js*/) { return instance(); }
+    static ChatBridge *instance();
 
     // One transcript row. The model is a flat stream: agent/user messages and
     // tool calls interleave in arrival order, exactly as the daemon frames
@@ -64,6 +74,7 @@ public:
     };
 
     class ChatModel : public QAbstractListModel {
+        friend class ChatBridge; // the bridge owns the rows; the model projects them
     public:
         enum Roles {
             KindRole = Qt::UserRole + 1,

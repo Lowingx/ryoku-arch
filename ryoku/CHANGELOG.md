@@ -8,6 +8,15 @@
   `session-start` restarts the shell services, so a fresh niri desktop is
   covered from the greeter handoff until the loaded shell releases it,
   matching Hyprland (`niri/autostart.kdl`).
+- **Rashin, the AI companion app, joins the desktop.** A compiled Qt window
+  (`ryoku/apps/rashin-app/`) that rides the rashin daemon: the shared agent
+  chat with streaming replies, tool rows and inline approvals, the fast-lane
+  Ask, the vault reader, the agent ledger, the model and fast-lane
+  switchers, and vitals plus the doctor. Super+Alt+Space summons it on both
+  compositors, the Ask bar's new OPEN RASHIN chip raises it from a quick
+  answer, and the Ask bar's header grew its history and model drawers
+  (`apps/rashin-app/`, `wm/binds.go`, `wm/niri/config_binds.go`,
+  `shell/quickshell/shell/modules/ask/`).
 - **The night light can run on the clock.** Hub > Displays > Night light
   gained an AT THE CLOCK switch with START AT and OFF AT rows: a 12-hour
   time you step by the hour, flip AM/PM, or type, wrapping midnight, so a

@@ -275,25 +275,66 @@ dead end:
 | `cmd` | a backtick span whose first word is on `PATH` | copies the command |
 | `color` | a hex color, shown with a live swatch | copies the hex |
 
-Plus a COPY chip for the whole answer and CONTINUE IN CHAT. The answer
-text itself is selectable for mouse-copying a fragment. Nonexistent paths and
-non-runnable backtick spans are dropped, so a chip never lies.
+Plus a COPY chip for the whole answer, CONTINUE IN CHAT, and OPEN RASHIN. The
+answer text itself is selectable for mouse-copying a fragment. Nonexistent
+paths and non-runnable backtick spans are dropped, so a chip never lies.
 
 ### Continue while it works, and cancel
 
-While the agent is still working, two options sit under the pulsing strip:
+While the agent is still working, three options sit under the pulsing strip:
 **CONTINUE IN CHAT** opens the Alt+Space Ask chat, where the same turn is
 streaming live (the daemon runs each turn on a background context, so it keeps
-going even after the launcher closes), and **CANCEL** stops it. Escape cancels
-a working ask; the daemon interrupts both the fast lane and any session-lane
+going even after the launcher closes), **OPEN RASHIN** raises the companion
+window (see "The Rashin app"), and **CANCEL** stops it. Escape cancels a
+working ask; the daemon interrupts both the fast lane and any session-lane
 turn.
+
+### The header drawers
+
+Two icon buttons sit on the Ask bar's header, beside the `RASHIN // ASK` mark.
+The **history** drawer lists the recent chats (the shared session's stored
+sessions, newest first; picking one switches the chat to it) and the recent
+asks (the `\resume` history; picking one recalls its answer without a model
+call). The **model** drawer switches the two halves of inference: the fast
+lane's provider (`ryoku-rashin backend`, "Follow Hermes" clears the override)
+and the agent's chat models (a pick rides the live session and every chat
+surface follows). Both drawers are keyboard-driven: with one open, Up/Down
+move its selection and Enter picks, and Escape closes the drawer before it
+closes the bar.
 
 ### `\resume`
 
 Typing `\resume` lists recent quick asks (persisted at
 `$XDG_STATE_HOME/ryoku/rashin-asks.jsonl`, newest first). Picking one recalls
 its stored answer instantly, chips and all, with no model call. Every completed
-ask, from either lane, is recorded there.
+ask, from either lane, is recorded there. The Ask bar's history drawer and the
+Rashin app's Ask page read the same file through the same CLI.
+
+## The Rashin app
+
+The quick bar is one surface; the companion window is another. `rashin-app`
+(`ryoku/apps/rashin-app/`) is a compiled Qt Quick app, the desktop's first: it
+opens like a normal window (Super+Alt+Space, the launcher, `rashin-app`, or
+the Ask bar's OPEN RASHIN chip), single-instance through `ryoku-summon` + a
+flock, and it is a client of the daemon, never a second brain.
+
+| Page | What it holds |
+|---|---|
+| Chat | The shared agent session: streaming replies, thinking folds, tool rows with output peeks and file diffs, inline approvals, the session drawer, and the model / agent / approvals switchers |
+| Ask | The fast lane with room: one question, one streamed answer, the action chips, the recent-asks drawer, Continue in chat |
+| Vault | The knowledge base: grouped tree, rendered markdown, reindex |
+| Agents | Detected coding agents, wire and unwire, the harness ledger |
+| Models | The fast-lane provider switch, the chat model list, the provider directory |
+| System | Live vitals and the doctor's findings, each with Fix with AI |
+
+Everything the app shows is the daemon's answer: the chat rides the same
+`chat --follow` bridge as the Ask chat (so a turn started anywhere is live
+everywhere), and every other page rides the HTTP API above. The app's own
+state is UI-only (last page, window size, rail collapse, drafts). It wears
+the desktop's live palette from `GET /api/theme`, retinting while open, and
+posts a freedesktop notification when a turn finishes or an approval waits
+while the window is unfocused. See `ryoku/apps/rashin-app/README.md` for the
+layout and the export path.
 
 ## In the terminal
 
@@ -345,8 +386,9 @@ bars sweep) and yields to the OS reduced-motion setting and to
 
 ### The Ask chat
 
-The one GUI chat is Chat mode of the Alt+Space Ask bar, a live view of the shared agent
-session over `/ws/chat`. Thinking streams in the open while the agent works and
+The GUI chats are Chat mode of the Alt+Space Ask bar and the Chat page of the
+Rashin app, both live views of the shared agent session over `/ws/chat`.
+Thinking streams in the open while the agent works and
 then folds to a line the reader can reopen; each tool call is one row with a
 peek at its output; approvals sit inline on the row that asked, governed by the
 read-only auto-approve switch (`approvals` in `rashin.json`, `read-only` by

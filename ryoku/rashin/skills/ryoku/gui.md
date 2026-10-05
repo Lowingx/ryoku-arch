@@ -72,6 +72,7 @@ the Hub. Reach them here:
 | System activity, connections, levels, and session actions | Controls | Super+Escape | `ryoku-shell quicksettings` |
 | Screenshots and recordings | ryoshot capture bar | Super+Shift+S | `ryoku-shell screenshot` |
 | Quick AI answers, chat, tools, and web search | Ask | Alt+Space | `ryoku-shell ask`, `ryoku-shell ask chat`, `ryoku-shell ask tools`, `ryoku-shell compress`, `ryoku-shell install` |
+| The full AI companion window (chat, ask, vault, agents, models, system) | Rashin app | Super+Alt+Space | `rashin-app` (single-instance: a second press focuses it) |
 
 QS Bar Settings routes are `bars`, `layout`, `widgets`, `dock`, and `community`,
 so `ryoku-shell bar settings layout` opens straight to the layout lanes. The bar

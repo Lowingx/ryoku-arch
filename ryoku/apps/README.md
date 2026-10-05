@@ -33,8 +33,8 @@ These are full applications, not `~/.config` seeds. Two shapes live here:
 
 - a **Quickshell app** ships its `quickshell/` tree as `qs -c <name>`
   (`ryovm`, `ryostore`);
-- a **compiled Qt app** builds from a `CMakeLists.txt` to `/usr/bin/<name>`.
-  The packaging supports it; nothing uses it today.
+- a **compiled Qt app** builds from a `CMakeLists.txt` to `/usr/bin/<name>`
+  (`rashin-app`, the Rashin companion window: chat, ask, vault, agents, models).
 
 The music app lives in [Ryotunes](https://github.com/ryoku-dev/ryotunes), with a
 native Quickshell client and libmpv daemon. `release/repo/import-ryotunes.sh`

@@ -275,8 +275,8 @@ EOF
   cp -a "$_repo/ryoku/hub/quickshell/." "$cfg/quickshell/hub/"
 
   # First-party GUI apps: a Quickshell app (ryovm, ryostore) ships its
-  # quickshell/ tree as qs -c <name>; a compiled app has a CMakeLists.txt and
-  # builds to a /usr/bin/<name> binary (supported, none ship today). Either way
+  # quickshell/ tree as qs -c <name>; a compiled app (rashin-app) has a
+  # CMakeLists.txt and builds to a /usr/bin/<name> binary. Either way
   # its bin/ helpers, .desktop and icon are installed. Dropping in an app dir
   # ships it; see ryoku/apps/README.md for the contract a new one has to meet.
   local appdir appname icon gomod helperdir helper b d has_qs has_cmake
