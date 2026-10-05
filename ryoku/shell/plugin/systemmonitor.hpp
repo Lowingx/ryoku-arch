@@ -69,10 +69,13 @@ public:
     explicit SystemMonitor(QObject* parent = nullptr);
     ~SystemMonitor() override;
     // Four samples a second; loads and rates are measured over the last
-    // RateWindowSamples (one second), and the history keeps one minute.
+    // RateWindowSamples (one second). The graph shows WindowSeconds, and the
+    // history keeps one second more so the oldest sample always sits beyond
+    // the window's edge: a trace runs off the graph instead of ending on it.
     static constexpr int SamplePeriodMs = 250;
     static constexpr int RateWindowSamples = 1000 / SamplePeriodMs;
-    static constexpr int HistoryCapacity = 60 * 1000 / SamplePeriodMs;
+    static constexpr int WindowSeconds = 60;
+    static constexpr int HistoryCapacity = WindowSeconds * 1000 / SamplePeriodMs + RateWindowSamples;
 
     static constexpr int samplePeriodMs() { return SamplePeriodMs; }
 

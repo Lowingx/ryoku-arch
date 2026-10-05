@@ -27,9 +27,11 @@ sensors are omitted rather than shown as zero.
 is active; loads and transfer rates are measured over a sliding one-second
 window, and slow sensors (temperatures, battery, disk usage) refresh once a
 second. `SystemGraph` draws bounded native histories for CPU, memory, GPU,
-network, disk, and temperatures, a minute deep, and eases each new sample in
-over one sample period so the trace never steps. Sampling and graph animation
-stop when the panel is inactive.
+network, disk, and temperatures over a one-minute window, keeps a second more
+than it shows so the oldest sample is always beyond the left edge (the trace
+runs off the graph rather than ending on a point), and eases each new sample
+in over one sample period so the trace never steps. Sampling and graph
+animation stop when the panel is inactive.
 
 ### Connections
 

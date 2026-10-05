@@ -13,10 +13,12 @@
   `plugin/systemgraph.cpp`)
 - **The system monitor reads continuously.** Vitals sample four times a second
   with loads and transfer rates measured over a sliding one-second window, the
-  graph keeps a full minute at that density and eases every new point, rate
-  axis change, and meter over one sample period, so readings glide instead of
-  stepping once a second. Expensive sensors (temperatures, battery, disk
-  usage) still refresh once a second.
+  graph keeps a minute and a second at that density and eases every new point,
+  rate axis change, and meter over one sample period, so readings glide instead
+  of stepping once a second. The oldest sample always lies beyond the graph's
+  left edge and the crossing step is clipped there, so a full minute runs off
+  the edge instead of ending on a point that snaps each sample. Expensive
+  sensors (temperatures, battery, disk usage) still refresh once a second.
   (`plugin/systemmonitor.cpp`, `plugin/systemgraph.cpp`,
   `quickshell/shell/modules/sidebar/ControlsHero.qml`)
 - **ryoshot is the one capture UI.** Super+Shift+S opens its floating Shot,
@@ -386,6 +388,16 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **The record island shows up the moment a capture starts, with the right
+  clock.** A capture started from ryoshot (or the CLI) reached the island only
+  through a five-second idle poll, and the clock then counted from when the
+  shell noticed. The backend's status file now carries the launch time, and
+  the shell and Shima watch that file instead of waiting on the poll: the
+  island appears within a frame of the launch, counts from the real start, and
+  leaves the moment the backend removes the file. GSR's IPC stays as the
+  backstop for a stale file. (`scripts/ryoku-cmd-record`,
+  `quickshell/shell/services/Recorder.qml`,
+  `quickshell/inir/services/RecorderStatus.qml`)
 - **Shima's Music on the edges moves the frame as soon as it is switched on.**
   The switch used to default to driving the Organic Edge wave, a desktop widget
   Ryoku never hosts, so flipping it did nothing until a second choice buried

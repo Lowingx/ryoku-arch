@@ -382,7 +382,7 @@ void SystemGraph::setLineWidth(qreal width) {
 }
 
 int SystemGraph::windowSeconds() const {
-    return SystemMonitor::HistoryCapacity * SystemMonitor::SamplePeriodMs / 1000;
+    return SystemMonitor::WindowSeconds;
 }
 
 QColor SystemGraph::colorForTrace(int trace) const {
@@ -599,20 +599,30 @@ QSGNode* SystemGraph::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*) {
             const float p3Value = std::isfinite(followingValue) ? followingValue : p2Value;
             const Point p1 = pointFor(index, p1Value);
             const Point p2 = pointFor(index + 1, p2Value);
-            if (p2.x < 0.0f || p1.x > graphWidth)
+            if (p2.x < 0.0f)
                 continue;
 
-            Point previous{std::clamp(p1.x, 0.0f, graphWidth), p1.y};
+            // The oldest samples lie beyond the left edge; the step that crosses
+            // it starts where the curve meets x = 0, so the trace runs off the
+            // graph smoothly instead of ending on a point that snaps each sample.
+            Point previous = p1;
             for (int subdivision = 1; subdivision <= subdivisions; ++subdivision) {
                 const float t = static_cast<float>(subdivision) / static_cast<float>(subdivisions);
                 Point current;
-                current.x = std::clamp(p1.x + (p2.x - p1.x) * t, 0.0f, graphWidth);
+                current.x = p1.x + (p2.x - p1.x) * t;
                 const float value = std::clamp(catmullRom(p0Value, p1Value, p2Value, p3Value, t), 0.0f, 100.0f);
                 current.y = margin + plotHeight * (1.0f - value / 100.0f);
-                if (m_fill)
-                    appendFill(fillVertices, fillOffset, previous, current, graphHeight - margin, fillTop, fillBottom);
-                appendAntialiasedLine(lineVertices, lineOffset, previous, current, static_cast<float>(m_lineWidth),
-                                      lineTransparent, lineSolid);
+                if (current.x > 0.0f) {
+                    Point from = previous;
+                    if (from.x < 0.0f) {
+                        const float crossing = -previous.x / (current.x - previous.x);
+                        from = Point{0.0f, previous.y + (current.y - previous.y) * crossing};
+                    }
+                    if (m_fill)
+                        appendFill(fillVertices, fillOffset, from, current, graphHeight - margin, fillTop, fillBottom);
+                    appendAntialiasedLine(lineVertices, lineOffset, from, current, static_cast<float>(m_lineWidth),
+                                          lineTransparent, lineSolid);
+                }
                 previous = current;
             }
         }
