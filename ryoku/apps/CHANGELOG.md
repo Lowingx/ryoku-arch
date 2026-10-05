@@ -3,15 +3,15 @@
 ## Unreleased
 
 ### Added
-- `rashin-app/`: **Rashin, the AI companion window.** The daemon's whole
-  surface as a normal Qt app: a live chat with the shared agent session
-  (streaming replies, thinking folds, tool rows, inline approvals, session
-  history), the fast-lane Ask with action chips and recent history, the
-  vault reader, the agent wire/unwire ledger, the model and fast-lane
-  switchers, and vitals plus the doctor with Fix with AI. It opens from
-  Super+Alt+Space or the launcher, single-instance, and wears the desktop's
-  live palette. Every fact is the daemon's; the app only asks and paints
-  (`apps/rashin-app/`).
+- `rashin-app/`: **Rashin, the AI companion window.** A GTK3 + WebKitGTK
+  host for the console `ryoku-rashin` serves: it waits on a paper boot page
+  until the daemon answers, loads the chat, opens outside links in the
+  browser, grants notifications, remembers its size, and stays single
+  instance. The console itself is `ryoku/rashin/web` (Svelte 5 + bits-ui +
+  the Libraries.dev effects): the shared agent chat as a workspace, the
+  fast-lane Ask, and every dashboard sheet. It opens from Super+Alt+Space or
+  the launcher and wears the desktop's live palette. Every fact is the
+  daemon's; the app only asks and paints (`apps/rashin-app/`).
 - **A Ryostore fastfetch preset can bring its own renderer.** A preset that
   needs to draw something fastfetch cannot (icat PNGs, for one) names an
   executable in its own product folder with a `// ryoku:renderer` comment and

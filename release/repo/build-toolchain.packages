@@ -40,6 +40,11 @@ qt6-shadertools
 qt6-multimedia
 vulkan-headers
 
+# rashin-app: pkg-config discovers the GTK3 and WebKit2GTK 4.1 host libraries.
+gtk3
+webkit2gtk-4.1
+pkgconf
+
 # Compositor plugin packages (hypr-dynamic-cursors, ryoku-hypr-plugins,
 # hyprglass, hyprgrass, imgborders, ryoku-keysounds) plus their makedepends:
 # keysounds links libcanberra. hyprland-preview-share-picker needs gtk4 +
@@ -56,7 +61,6 @@ libxkbcommon
 wayland
 wayland-protocols
 ffmpeg
-pkgconf
 gtk4
 gtk4-layer-shell
 glm
@@ -81,7 +85,6 @@ nodejs
 # gnupg signs every built package and the repo db.
 gnupg
 
-# ryotunes (Tauri + libmpv): WebKitGTK and libmpv headers, the tray dlopen target.
-webkit2gtk-4.1
+# ryotunes (Tauri + libmpv): libmpv headers and the tray dlopen target.
 mpv
 libappindicator-gtk3

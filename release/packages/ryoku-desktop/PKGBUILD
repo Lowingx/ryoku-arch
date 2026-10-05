@@ -18,7 +18,7 @@ url="https://ryoku.dev"
 # rest of the package is GPL-3.0-or-later. AGPL-3.0 s13 permits the combination.
 license=('GPL-3.0-or-later' 'AGPL-3.0-or-later')
 # go builds the app helpers (ryovm-fetch); cmake+Qt6 build any compiled ryoku/apps app.
-makedepends=('go' 'cmake' 'ninja' 'qt6-base' 'qt6-declarative')
+makedepends=('go' 'cmake' 'ninja')
 depends=(
   # Ryoku. the monorepo components are pinned to this build's own version:
   # every publish rebuilds them all with one shared RYOKU_PKGVER, and the shell
@@ -43,6 +43,8 @@ depends=(
   'qt5-wayland'
   'qt6-5compat'
   'qt6-svg'
+  'gtk3'
+  'webkit2gtk-4.1'
   # WebP/AVIF/etc image decoders (libqwebp.so and friends). qt6-base ships only
   # PNG/JPEG/GIF, but RyoStore and the ryostore catalogue deliver product
   # previews and screenshots as WebP; without this every rice, bundle, bar-style

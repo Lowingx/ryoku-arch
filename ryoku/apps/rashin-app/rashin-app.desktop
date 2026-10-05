@@ -1,10 +1,11 @@
 [Desktop Entry]
 Type=Application
 Name=Rashin
-GenericName=AI companion
-Comment=Chat with the Needle, browse the vault, and steer the agents from one window
+GenericName=Machine console
+Comment=Chat, inspect the machine, and steer agents from one console
 Exec=rashin-app
 Terminal=false
 Icon=rashin-app
-Categories=Utility;Chat;
-Keywords=rashin;ai;chat;needle;vault;agents;models;
+Categories=Network;Chat;
+Keywords=rashin;ai;chat;machine;vault;agents;models;
+StartupNotify=true

@@ -110,7 +110,7 @@ hl.window_rule({
     name   = "float-rashin-app",
     match  = { title = "^(Rashin)$" },
     float  = true,
-    size   = fit(1180, 780),
+    size   = fit(1280, 820),
     center = true,
 })
 
