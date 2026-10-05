@@ -434,6 +434,14 @@
   reload, the deploy, and a doctor repair all raise the cover before they
   stop the shell now (`ipc/daemon.go`, `scripts/ryoku-reload-cover`,
   `quickshell/shell/shell.qml`, `quickshell/reload-cover/`).
+- **Shima loads on every box, not only on ones with KDE apps.** Its app icons
+  were drawn with KDE's Kirigami, which no Ryoku package depends on, so a box
+  without some unrelated KDE app installed could not load the style at all:
+  picking Shima left no island, dock or frame. The icons now use Quickshell's
+  own icon provider, and the delivery gate fails any shipped QML import that
+  no Ryoku package provides.
+  (`quickshell/inir/modules/common/widgets/SmartAppIcon.qml`,
+  `../../bin/ryoku-dev-verify-delivery`)
 - **The bar's update button no longer opens a terminal.** Clicking it starts
   the update in the background and opens Ryoku Settings on its Updates page,
   where the run shows, asks for the password, and can be stopped
