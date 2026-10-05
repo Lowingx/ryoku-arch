@@ -488,8 +488,7 @@ Rectangle {
         id: historyDrawer
         anchors.left: content.left
         anchors.right: content.right
-        anchors.top: header.bottom
-        anchors.topMargin: Tokens.s1 * root.s
+        y: content.y + header.y + header.height + Tokens.s1 * root.s
         s: root.s
         open: root.historyOpen
         rows: root.historyRows
@@ -502,8 +501,7 @@ Rectangle {
         id: modelDrawer
         anchors.left: content.left
         anchors.right: content.right
-        anchors.top: header.bottom
-        anchors.topMargin: Tokens.s1 * root.s
+        y: content.y + header.y + header.height + Tokens.s1 * root.s
         s: root.s
         open: root.modelOpen
         rows: root.modelRows

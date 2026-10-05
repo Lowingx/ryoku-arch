@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Controls
 import Ryoku.Ui
 import Ryoku.Ui.Singletons
+import shell.services
 
 // A sectioned dropdown for the Ask bar's header buttons (history, model).
 // The drawer never takes focus: the field keeps the keyboard, and the surface
@@ -20,7 +21,7 @@ Rectangle {
     property bool open: false
     property string emptyText: I18n.tr("Nothing here yet")
     property real maxHeight: 260 * s
-    // Selection index over the selectable rows only.
+    readonly property bool motionAllowed: !Tokens.reduceMotion && !Motion.reduce
     property int current: 0
     readonly property var selectable: rows.filter(r => !r.section)
     // The natural (unclipped) height, so the owner can reserve room for it.
@@ -79,12 +80,13 @@ Rectangle {
     }
 
     Flickable {
+        id: scroll
         anchors.fill: parent
         anchors.margins: Tokens.s3 * drawer.s
         contentHeight: contentColumn.implicitHeight
         boundsBehavior: Flickable.StopAtBounds
         interactive: contentHeight > height
-        ScrollBar.vertical: ScrollRail { policy: ScrollBar.AsNeeded; visible: interactive; motionEnabled: drawer.motionAllowed }
+        ScrollBar.vertical: ScrollRail { policy: ScrollBar.AsNeeded; visible: scroll.interactive; motionEnabled: drawer.motionAllowed }
 
         Column {
             id: contentColumn
