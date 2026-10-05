@@ -3,7 +3,7 @@
 // mirror what applyEvent builds; the reducer itself stays plain JS so
 // Quickshell and the node tests keep loading it unchanged.
 
-import type { BannerState, CommandInfo, ModelInfo, PermOption, PromptImage, SessionMeta, ToolDiff, WsOut } from "./protocol";
+import type { ApprovalsMode, BannerState, CommandInfo, ModelInfo, PermOption, PromptImage, SessionMeta, ToolDiff, WsOut } from "./protocol";
 
 export interface MsgItem {
   kind: "msg";
@@ -47,7 +47,7 @@ export interface ChatState {
   items: Item[];
   permissions: Permission[];
   banner: { state: BannerState; error: string };
-  approvals: "ask" | "read-only";
+  approvals: ApprovalsMode;
   busy: boolean;
   seq: number;
   models: ModelInfo[];

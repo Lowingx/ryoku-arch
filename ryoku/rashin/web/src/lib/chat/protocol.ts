@@ -40,6 +40,9 @@ export interface PromptImage {
 
 export type BannerState = "starting" | "ready" | "busy" | "dead" | "";
 
+/** what runs without asking: nothing, reads, or everything */
+export type ApprovalsMode = "ask" | "read-only" | "auto";
+
 export interface WsOut {
   type: string;
   state?: BannerState;
@@ -79,6 +82,6 @@ export type WsIn =
   | { type: "load"; sessionId: string }
   | { type: "set_model"; modelId: string }
   | { type: "permission"; requestId: string; optionId: string }
-  | { type: "approvals"; mode: "ask" | "read-only" };
+  | { type: "approvals"; mode: ApprovalsMode };
 
 export type ToolStatus = "pending" | "in_progress" | "completed" | "failed" | "cancelled" | string;

@@ -787,14 +787,18 @@ func (c *acpConn) handleAgentRequest(msg rpcMsg) {
 	}
 }
 
-// autoApproval returns the allow-once option to answer with when the user
-// lets read-only calls run unasked and this call only reads the machine.
+// autoApproval returns the allow-once option to answer with when the mode
+// lets this call run unasked: every call in auto mode, read-only calls in
+// read-only mode, none in ask mode.
 func autoApproval(call acpToolCall, opts []PermOption) string {
-	if !LoadConfig().AutoApproveReads() {
-		return ""
-	}
-	if ok, _ := readOnlyToolCall(call.Kind, call.Title, call.RawInput); !ok {
-		return ""
+	cfg := LoadConfig()
+	if !cfg.AutoApproveAll() {
+		if !cfg.AutoApproveReads() {
+			return ""
+		}
+		if ok, _ := readOnlyToolCall(call.Kind, call.Title, call.RawInput); !ok {
+			return ""
+		}
 	}
 	for _, o := range opts {
 		if o.Kind == "allow_once" {

@@ -517,7 +517,7 @@ func approvalsFrame() wsOut {
 // setApprovals stores the approval mode and tells every surface; an unknown
 // mode is ignored rather than guessed at.
 func (h *chatHub) setApprovals(mode string) {
-	if mode != approvalsReadOnly && mode != approvalsAsk {
+	if mode != approvalsReadOnly && mode != approvalsAsk && mode != approvalsAuto {
 		return
 	}
 	cfg := LoadConfig()

@@ -5,7 +5,7 @@
 
 import { JsonSocket } from "$lib/api/socket";
 import { applyEvent, initialState, type ChatState } from "$chatstate";
-import type { PromptImage, WsIn, WsOut } from "./protocol";
+import type { ApprovalsMode, PromptImage, WsIn, WsOut } from "./protocol";
 
 const DRAFT_KEY = "rashin.chat.draft";
 
@@ -83,7 +83,7 @@ export class ChatStore {
     if (id && id !== this.state.currentModel) this.post({ type: "set_model", modelId: id });
   }
 
-  setApprovals(mode: "ask" | "read-only"): void {
+  setApprovals(mode: ApprovalsMode): void {
     this.post({ type: "approvals", mode });
   }
 

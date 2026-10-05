@@ -49,24 +49,33 @@ func (c Config) HabitsHistoryEnabled() bool {
 	return c.Habits.History == nil || *c.Habits.History
 }
 
-// Approval modes for the chat agent's tool calls.
+// Approval modes for the chat agent's tool calls, named by what runs without
+// asking: nothing (ask), reads (read-only, the default), or everything (auto).
 const (
 	approvalsReadOnly = "read-only"
 	approvalsAsk      = "ask"
+	approvalsAuto     = "auto"
 )
 
 // ApprovalsMode is the effective mode; anything unrecognised reads as the
 // default so a hand-edited typo never turns every prompt off.
 func (c Config) ApprovalsMode() string {
-	if c.Approvals == approvalsAsk {
-		return approvalsAsk
+	switch c.Approvals {
+	case approvalsAsk, approvalsAuto:
+		return c.Approvals
 	}
 	return approvalsReadOnly
 }
 
 // AutoApproveReads: read-only tool calls run without a prompt.
 func (c Config) AutoApproveReads() bool {
-	return c.ApprovalsMode() == approvalsReadOnly
+	return c.ApprovalsMode() != approvalsAsk
+}
+
+// AutoApproveAll: every tool call runs without a prompt, writes and commands
+// included. The user opted into it explicitly; it is never the default.
+func (c Config) AutoApproveAll() bool {
+	return c.ApprovalsMode() == approvalsAuto
 }
 
 // IntroPreamble is the effective first-turn note: the Needle identity by

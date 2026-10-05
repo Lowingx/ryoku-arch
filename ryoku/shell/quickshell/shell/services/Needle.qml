@@ -99,7 +99,7 @@ Singleton {
     }
 
     function setApprovals(mode) {
-        if (mode !== "read-only" && mode !== "ask")
+        if (mode !== "read-only" && mode !== "ask" && mode !== "auto")
             return;
         root.approvalsMode = mode;
         root._send({ type: "approvals", mode: mode });
