@@ -74,5 +74,6 @@ a restart: the dist is `go:embed`-ed. The preview lane in
 ## Gates
 
 `pnpm check`, `pnpm test` and a clean `pnpm build` whose output matches the
-committed dist (`git diff --exit-code -- ryoku/rashin/backend/web/dist`), run
+committed dist (pnpm's own settings, such as the one build script esbuild is
+allowed to run, live in `pnpm-workspace.yaml`) (`git diff --exit-code -- ryoku/rashin/backend/web/dist`), run
 by `.github/workflows/rashin-web.yml`. The Go side runs its own tests.
