@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Added
+- **Super+Alt+Space opens the Rashin app.** The companion window summons the
+  single-instance way: a second press focuses the open window instead of
+  spawning a twin, and a window rule floats and centres it like the other
+  app windows (`modules/binds.lua`, `modules/window_rules.lua`).
+
 ### Changed
 - **Login raises the reload cover.** The session autostart chain calls
   `ryoku-reload-cover begin boot` after the environment push and before
