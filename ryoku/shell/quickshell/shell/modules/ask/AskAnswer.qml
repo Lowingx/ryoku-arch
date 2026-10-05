@@ -21,21 +21,27 @@ Item {
         if (session.busy)
             return [
                 { kind: "chat", value: "", label: I18n.tr("Continue in chat") },
+                { kind: "app", value: "", label: I18n.tr("Open Rashin") },
                 { kind: "cancel", value: "", label: I18n.tr("Cancel") }
             ];
         if (session.permPending)
-            return [{ kind: "chat", value: "", label: I18n.tr("Continue in chat") }];
+            return [
+                { kind: "chat", value: "", label: I18n.tr("Continue in chat") },
+                { kind: "app", value: "", label: I18n.tr("Open Rashin") }
+            ];
         if (session.phase !== "done")
             return [];
         const values = [{ kind: "copy", value: session.answerText, label: I18n.tr("Copy") }];
         for (let i = 0; i < session.answerActions.length; i++)
             values.push(session.answerActions[i]);
         values.push({ kind: "chat", value: "", label: I18n.tr("Continue in chat") });
+        values.push({ kind: "app", value: "", label: I18n.tr("Open Rashin") });
         values.push({ kind: "pin", value: "", label: I18n.tr("Pin bubble") });
         return values;
     }
 
     signal switchToChat()
+    signal openApp()
     signal recentLoaded(string question)
     signal pinBubbleRequested()
 
@@ -76,6 +82,8 @@ Item {
             Spawn.run(["xdg-open", String(chip.value || "")]);
         else if (kind === "chat")
             root.switchToChat();
+        else if (kind === "app")
+            root.openApp();
         else if (kind === "pin")
             root.pinBubbleRequested();
         else if (kind === "cancel")

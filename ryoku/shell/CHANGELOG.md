@@ -13,6 +13,21 @@
 - **The wordmark sweeps while the cover waits.** The bundled brand mark
   regained its loading light sweep, so a held cover reads as working rather
   than frozen (`quickshell/reload-cover/ReloadMedia.qml`).
+- **The Ask bar wears its history and model pickers on the header.** Two icon
+  buttons sit beside the RASHIN // ASK mark: one opens the history drawer
+  (recent chats from the shared session and recent asks from the fast lane,
+  keyboard-navigable, picking a chat switches to it and picking an ask recalls
+  its answer without a model call), and one opens the model drawer (the
+  fast-lane provider the quick asks answer from, and the agent's chat models;
+  a switch lands on the daemon and every chat surface follows). The bar grows
+  around an open drawer instead of clipping it, and Escape closes the drawer
+  before the bar (`quickshell/shell/modules/ask/AskSurface.qml`,
+  `AskDrawer.qml`, `quickshell/shell/services/Needle.qml`).
+- **OPEN RASHIN joins CONTINUE IN CHAT.** The quick answer's chips now carry a
+  button that leaves the bar and opens the full companion window
+  (`rashin-app`), raising it when it is already open. Continue in chat stays
+  exactly as it was for anyone who wants the thread inside the bar
+  (`quickshell/shell/modules/ask/AskAnswer.qml`, `AskSurface.qml`).
 - **Controls sets the power profile.** The Super+Escape panel gains a Power
   Saver / Balanced / Performance switch for the system power profile. It
   offers only what power-profiles-daemon reports, follows a change made
@@ -418,6 +433,10 @@
   reload, the deploy, and a doctor repair all raise the cover before they
   stop the shell now (`ipc/daemon.go`, `scripts/ryoku-reload-cover`,
   `quickshell/shell/shell.qml`, `quickshell/reload-cover/`).
+- **The bar's update button no longer opens a terminal.** Clicking it starts
+  the update in the background and opens Ryoku Settings on its Updates page,
+  where the run shows, asks for the password, and can be stopped
+  (`quickshell/shell/modules/bar/barstyles/qsbar/modules/UpdateWidget.qml`).
 - **A recovery on niri lands on a working Ryoku desktop.** `ryoku recovery`
   clears the generated `settings.kdl` and `rebinds.kdl` with the Hub store,
   and the deploy only regenerated them for the compositor that was not
