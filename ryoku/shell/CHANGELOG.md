@@ -3,6 +3,10 @@
 ## Unreleased
 
 ### Added
+- **The Ask bar is sealed.** Its header carries the Rashin mark from the icon
+  theme (`rashin-app`), so the bar, the window and the console share one
+  identity (`quickshell/shell/modules/ask/AskSurface.qml`). `deploy.sh` now
+  also takes an app's `logo.svg` beside its `.desktop`, as the package does.
 - **Login plays the cover animation into the desktop.** The reload cover now
   also runs at boot: each compositor's autostart raises it the moment the
   greeter hands over, and the freshly loaded shell releases it once wallpaper

@@ -139,7 +139,9 @@ truth for the live desktop.
   weave). The Hub's `RashinPage.qml` is the control surface (enable, one-click
   Hermes setup, open dashboard); built by the shell's `deploy.sh`. See
   `docs/rashin.md` and `docs/rashin-terminal.md`.
-- `assets/` `brand/` the 力 logo and icons, `wallpapers/` the shipped wallpaper
+- `assets/` `brand/` the 力 logo and icons and Rashin's seal (`rashin-mark*.svg`,
+  `rashin-lockup.svg`; the app icon and the console favicon link to them),
+  `wallpapers/` the shipped wallpaper
   set (installs to `~/Pictures/Wallpapers`), and `ryodecors/` the decor art the
   `Decor`/`Placard` components render (installs to `~/Pictures/ryodecors`, kept
   current by `ryoku doctor`; bake more with `bin/art/ryodither`).

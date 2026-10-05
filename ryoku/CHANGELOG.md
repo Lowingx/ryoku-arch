@@ -3,6 +3,12 @@
 ## Unreleased
 
 ### Added
+- **Rashin has its own seal.** A sibling of the 力 tile: the cross 十 that
+  ends 針 (needle), drawn as a compass needle with a vermillion north and the
+  pivot left as tile (`assets/brand/rashin-mark.svg`, with one-colour and
+  small cuts and a `Rashin 羅針` lockup). It is the app icon, the console's
+  favicon and brand seal, and the Ask bar's header mark, replacing the
+  borrowed Ryoku logo.
 - **niri raises the reload cover at login.** The session autostart chain
   calls `ryoku-reload-cover begin boot` after the environment push and before
   `session-start` restarts the shell services, so a fresh niri desktop is

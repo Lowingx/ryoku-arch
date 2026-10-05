@@ -5,11 +5,17 @@
   import { router, SHEETS } from "./router.svelte";
   import { chat } from "$lib/chat/store.svelte";
   import { machine } from "$lib/state/machine.svelte";
-  import BotAvatar from "$lib/fx/BotAvatar.svelte";
+  import NeedleFace, { type NeedleMood } from "$lib/fx/NeedleFace.svelte";
   import Lamp from "$lib/ui/Lamp.svelte";
   import Tooltip from "$lib/ui/Tooltip.svelte";
+  import seal from "$brand/rashin-mark-small.svg?raw";
 
-  const avatarState = $derived(!machine.online || chat.state.banner.state === "dead" ? "sleeping" : chat.state.busy ? "working" : "default");
+  const mood = $derived.by((): NeedleMood => {
+    if (!machine.online || chat.state.banner.state === "dead") return "sleeping";
+    if (chat.state.permissions.length > 0) return "waiting";
+    if (chat.state.busy) return chat.state.activity === "thinking" ? "thinking" : "working";
+    return "idle";
+  });
   const presence = $derived.by(() => {
     if (!machine.online) return "daemon offline";
     const b = chat.state.banner;
@@ -33,7 +39,7 @@
 
 <header class="islands">
   <a class="island brand" href="#/overview" aria-label="Rashin overview">
-    <span class="seal" aria-hidden="true">力</span>
+    <span class="seal" aria-hidden="true">{@html seal}</span>
     <span class="wordmark">Rashin</span>
     <span class="brand-gloss t-jp">羅針</span>
   </a>
@@ -49,7 +55,7 @@
 
   <div class="island presence">
     <a href="#/chat" class="needle" aria-label="The Needle: {presence}">
-      <BotAvatar mood={avatarState} size={28} interactive={false} seed={0.42} label="The Needle" />
+      <NeedleFace seed={chat.state.session.id || "the needle"} {mood} size={28} label="The Needle" />
       <span class="needle-word">{presence}</span>
     </a>
     <span class="lamps" aria-label="Services">
@@ -81,20 +87,8 @@
   }
 
   .brand { gap: var(--s2); padding-right: var(--s4); }
-  .seal {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 26px;
-    height: 26px;
-    border-radius: 6px;
-    background: var(--sun);
-    color: #fff;
-    font-family: var(--jp);
-    font-weight: 700;
-    font-size: 15px;
-    line-height: 1;
-  }
+  .seal { display: inline-flex; width: 26px; height: 26px; }
+  .seal :global(svg) { width: 100%; height: 100%; }
   .wordmark { font-family: var(--display); font-size: 19px; color: var(--ink); letter-spacing: -0.01em; }
   .brand-gloss { font-size: var(--f-small); }
 

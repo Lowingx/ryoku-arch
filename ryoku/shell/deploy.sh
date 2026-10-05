@@ -629,7 +629,9 @@ for appdir in "$here"/../apps/*/; do
     (cd "$helperdir" && go build -o "$helper" .) && install -m755 "$helperdir/$helper" "$bindir/$helper"
   done
   for d in "${appdir}"*.desktop; do [[ -f "$d" ]] && install -Dm644 "$d" "$appshare/applications/$(basename "$d")"; done
-  icon="${appdir}quickshell/logo.svg"; [[ -f "$icon" ]] || icon="$here/../assets/brand/logo-mark.svg"
+  icon="${appdir}quickshell/logo.svg"
+  [[ -f "$icon" ]] || icon="${appdir}logo.svg"
+  [[ -f "$icon" ]] || icon="$here/../assets/brand/logo-mark.svg"
   install -Dm644 "$icon" "$appshare/icons/hicolor/scalable/apps/$appname.svg"
   say "installed app $appname"
 done

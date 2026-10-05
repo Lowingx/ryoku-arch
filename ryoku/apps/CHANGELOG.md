@@ -3,6 +3,10 @@
 ## Unreleased
 
 ### Added
+- `rashin-app/`: **The window carries Rashin's own icon.** `logo.svg` links to
+  the brand seal (`assets/brand/rashin-mark.svg`), which the package and the
+  dev deploy both install as `rashin-app` in the hicolor theme; it was
+  falling back to the Ryoku 力 mark.
 - `rashin-app/`: **Rashin, the AI companion window.** A GTK3 + WebKitGTK
   host for the console `ryoku-rashin` serves: it waits on a paper boot page
   until the daemon answers, loads the chat, opens outside links in the

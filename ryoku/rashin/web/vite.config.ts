@@ -1,5 +1,6 @@
 import { defineConfig, type Plugin } from "vite";
 import { svelte } from "@sveltejs/vite-plugin-svelte";
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 // The chat reducer is the shell's (ryoku/shell/.../lib/chatstate.js), written
@@ -23,6 +24,7 @@ function sharedReducer(): Plugin {
 // RASHIN_DEV_TARGET points the dev server at a daemon; the default is the
 // user's live one on 3600, so pass an isolated preview (3611) when a change
 // sends chat turns.
+const brandDir = fileURLToPath(new URL("../../assets/brand", import.meta.url));
 const target = process.env.RASHIN_DEV_TARGET ?? "http://127.0.0.1:3600";
 
 export default defineConfig({
@@ -32,10 +34,14 @@ export default defineConfig({
     alias: {
       $lib: fileURLToPath(new URL("./src/lib", import.meta.url)),
       $chatstate: chatStateFile,
+      // The brand marks live with the rest of Ryoku's brand (ryoku/assets/brand);
+      // the console inlines them at build time rather than keeping a copy.
+      $brand: brandDir,
     },
   },
   server: {
     port: 5173,
+    fs: { allow: [".", brandDir, path.dirname(chatStateFile)] },
     proxy: {
       "/api": target,
       "/ws": { target: target.replace(/^http/, "ws"), ws: true },
@@ -52,7 +58,7 @@ export default defineConfig({
         // The effect runtimes and the component library change on their own
         // schedule; hashing them apart keeps a console update small.
         manualChunks: {
-          fx: ["react", "react-dom", "border-beam", "bot-avatars", "thinking-orbs/engine"],
+          fx: ["react", "react-dom", "border-beam", "thinking-orbs/engine", "blobatar", "@blobatar/svelte"],
           bits: ["bits-ui"],
         },
       },

@@ -285,8 +285,22 @@ Rectangle {
             width: parent.width
             height: 30 * root.s
 
-            Text {
+            // The seal is the installed app icon (rashin-app in the hicolor
+            // theme), so the bar, the window and the console share one mark.
+            Image {
+                id: seal
                 anchors.left: parent.left
+                anchors.verticalCenter: parent.verticalCenter
+                width: 16 * root.s
+                height: width
+                source: "image://icon/rashin-app"
+                sourceSize: Qt.size(width, height)
+                smooth: true
+            }
+
+            Text {
+                anchors.left: seal.right
+                anchors.leftMargin: Tokens.s2 * root.s
                 anchors.verticalCenter: parent.verticalCenter
                 text: I18n.tr("RASHIN // ASK")
                 color: Tokens.inkMuted

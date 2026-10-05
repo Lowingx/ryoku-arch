@@ -322,7 +322,11 @@ flock), shows a paper boot page until `/api/ping` answers, and then loads
 brain, and it carries no UI of its own: the console is one Svelte app
 (`ryoku/rashin/web/`, see its README) that is also the dashboard a browser
 sees on the same port. Links to other origins open in the default browser,
-notifications are granted, and the window remembers its size.
+notifications are granted, and the window remembers its size. Its icon is
+Rashin's own seal (`ryoku/assets/brand/rashin-mark.svg`, linked as
+`ryoku/apps/rashin-app/logo.svg` so the package and the dev deploy install the
+same file as `rashin-app` in the hicolor theme); the console's favicon and the
+Ask bar's header use the small cut of the same mark, see `docs/ui-ux.md`.
 
 | Sheet | What it holds |
 |---|---|

@@ -194,6 +194,16 @@ doing that arithmetic itself.
   soot.
 - **The 力 seal is never derived.** `Theme.brand` is a fixed vermillion, and
   `Tokens.alert` is the same red. A sun is a sun on any wallpaper.
+- **Rashin wears a sibling seal, not the 力.** Its mark (`assets/brand/rashin-mark.svg`)
+  is the same tile carrying 十, the cross that ends 針 (needle) and is also the
+  compass card at its four cardinals; the north-south stroke is the needle,
+  with north painted in the brand vermillion and the pivot left as tile. One
+  geometry, three cuts: the colour master (app icon, lockup), a one-colour
+  evenodd master, and a small cut without the pivot for 16 to 32 px (the
+  console favicon and the Ask bar's header). On black paper the tile
+  disappears and only the needle shows; that is the intended reversed form.
+  The lockup (`rashin-lockup.svg`) sets Rashin in Space Grotesk Medium with
+  the 羅針 gloss at a shared baseline; below 48 px tall use the mark alone.
 - **App content carries no accent at all.** The Hub, ryowalls, ryovm and ryostore
   are paper and ink. Emphasis is inversion: a surface flips to bone and its ink
   flips to dark. The frame carries the accent; the content does not compete with
