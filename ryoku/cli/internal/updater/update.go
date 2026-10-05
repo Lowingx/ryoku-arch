@@ -176,7 +176,7 @@ func Update(args []string) (err error) {
 		upgradeRyotunes()
 		progress.at("doctor")
 		offerSnapperHelpers()
-		runFreshDoctor()
+		runFreshDoctor(true)
 		progress.at("finalize")
 		snapperPost(pre, "ryoku-update")
 		return finishRun()
@@ -889,7 +889,7 @@ func updateStage2(pre string, withSystem bool) (err error) {
 
 	progress.at("doctor")
 	offerSnapperHelpers()
-	runFreshDoctor()
+	runFreshDoctor(false)
 
 	progress.at("finalize")
 	snapperPost(pre, "ryoku-update")
@@ -1337,12 +1337,26 @@ func askInstall(title, detail string, pkgs []string) bool {
 // reconcilers shipped in this release run inside the same update. same
 // command users run by hand; calling it here keeps doctor one thing instead
 // of a copy baked into update. best-effort: a finding never fails update.
-func runFreshDoctor() {
+func runFreshDoctor(checkout bool) {
 	progress.detailf(i18n.T("Running ryoku doctor"))
-	// pkgBin, not PATH: on a box with ~/.local/bin residue the bare name is the
-	// STALE CLI, whose doctor predates the reconcilers this release ships --
-	// including the residue scan that would clear that very shadow.
-	_ = sys.Run(pkgBin("ryoku"), "doctor")
+	_ = sys.Run(doctorBin(checkout), "doctor")
+}
+
+// doctorBin is the CLI that was just updated. A packaged box's is /usr/bin:
+// ~/.local/bin residue there is a STALE CLI whose doctor predates the
+// reconcilers this release ships, including the residue scan that would clear
+// that very shadow. A checkout box is the reverse: deploy.sh just built the
+// CLI into ~/.local/bin, and /usr/bin holds whatever release the box was
+// installed from, which a channel update never moves.
+func doctorBin(checkout bool) string {
+	if checkout {
+		if home, err := os.UserHomeDir(); err == nil {
+			if p := filepath.Join(home, ".local", "bin", "ryoku"); sys.Exists(p) {
+				return p
+			}
+		}
+	}
+	return pkgBin("ryoku")
 }
 
 // Rollback is the way back, on two levels. `--to <tag>` moves the Ryoku set

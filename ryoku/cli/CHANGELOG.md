@@ -103,6 +103,11 @@
   pacman's output on the terminal, so every run printed a wall of
   "<path> is owned by ryoku-desktop" lines. It reads only the answer now
   (`internal/doctor/doctor.go`).
+- **A checkout's update runs the doctor it just built.** `ryoku update` on a
+  source checkout ran `/usr/bin/ryoku doctor`, the packaged CLI the box was
+  installed from, which a channel update never moves, so every doctor fix
+  pushed to the channel stayed out of the update. It now runs the CLI deploy
+  just built into `~/.local/bin` (`internal/updater/update.go`).
 - **The shell comes back after a reboot on a box that left the dev loop.**
   `ryoku doctor` cleared the home builds a dev deploy or `ryoku recovery`
   left in `~/.local/bin`, but not the user units still running them: a
