@@ -3,6 +3,15 @@
 ## Unreleased
 
 ### Added
+- **A wiki for people new to Ryoku.** Plain-language guides (Linux basics, the
+  desktop, Hyprland in Lua, niri in KDL, Quickshell QML, the Go tools, Rashin)
+  ship with Rashin, are mirrored into the vault so the Needle cites them, and
+  render on the console's Wiki sheet (`rashin/wiki/`).
+- **The `ryoku` skill learns the window-manager seam and how to build.** `wm.md`
+  (`ryoku wm`, where each compositor's config is authored, where a user's
+  change goes) and `build.md` (a Quickshell plugin end to end, QML and Go the
+  Ryoku way) join the skill; its intro no longer assumes Hyprland, and the
+  package now ships every guide (`troubleshoot.md` had been left out).
 - **Rashin has its own seal.** A sibling of the 力 tile: the cross 十 that
   ends 針 (needle), drawn as a compass needle with a vermillion north and the
   pivot left as tile (`assets/brand/rashin-mark.svg`, with one-colour and

@@ -136,9 +136,13 @@ truth for the live desktop.
   embedded so no node runs on an installed box), and the `rashin`
   terminal command (the same binary under a second name: natural language to a
   ready-to-run command plan on the fish prompt, with a `conf.d/rashin.fish`
-  weave). The Hub's `RashinPage.qml` is the control surface (enable, one-click
-  Hermes setup, open dashboard); built by the shell's `deploy.sh`. See
-  `docs/rashin.md` and `docs/rashin-terminal.md`.
+  weave), `skills/ryoku/` (the agent skill `ryoku-rashin wire` links into every
+  harness: the GUI map, the bar, plugins, the window-manager seam, building the
+  Ryoku way, the feature ladder, break/fix), and `wiki/` (the plain-language
+  guides for someone new, mirrored into the vault as `wiki/` and rendered by
+  the console). The Hub's `RashinPage.qml` is the control surface (enable,
+  one-click Hermes setup, open dashboard); built by the shell's `deploy.sh`.
+  See `docs/rashin.md` and `docs/rashin-terminal.md`.
 - `assets/` `brand/` the 力 logo and icons and Rashin's seal (`rashin-mark*.svg`,
   `rashin-lockup.svg`; the app icon and the console favicon link to them),
   `wallpapers/` the shipped wallpaper
