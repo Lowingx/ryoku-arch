@@ -63,6 +63,16 @@
   `internal/sys/release.go`, `internal/updater/release.go`).
 
 ### Fixed
+- **The shell comes back after a reboot on a box that left the dev loop.**
+  `ryoku doctor` cleared the home builds a dev deploy or `ryoku recovery`
+  left in `~/.local/bin`, but not the user units still running them: a
+  `user_edits` fork of the rewritten shell unit, the live copy it re-laid, and
+  Rashin's home unit. After the next login the shell unit failed on a missing
+  binary and the desktop had no shell. The same pass now puts those units back
+  on the packaged ones (keeping Rashin enabled), drops the deploy's drop-ins,
+  treats ryogami's home build as residue, and removes the retired dev-switch
+  `ryoku` fish wrapper that otherwise turns every `ryoku` command into
+  "Unknown command". (`internal/doctor/reconcile_dev_residue.go`)
 - **`ryoku update` says what pacman actually failed on.** A failed Ryoku
   transaction reported only "exit status 1": pacman's real reason (a signature
   rejection, a package conflict, a broken dependency) lived in the rendered
