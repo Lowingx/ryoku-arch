@@ -52,6 +52,8 @@ func TestWantedSnapperHelpers(t *testing.T) {
 // stale answers, run-state carries the prompt, awaitAnswer reads + consumes.
 func TestPromptAnswerRoundTrip(t *testing.T) {
 	t.Setenv("XDG_RUNTIME_DIR", t.TempDir())
+	progress.begin(pkgSteps) // a prompt is only ever raised inside a run
+	t.Cleanup(progress.idle)
 
 	// stale answer from a previous prompt must not satisfy this one.
 	if err := os.WriteFile(answerPath(), []byte("Install"), 0o644); err != nil {

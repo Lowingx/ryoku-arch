@@ -173,15 +173,15 @@ var lastDroppedMetas []string
 // runRyokuMove executes the one channel-move transaction, sleep-inhibited so a
 // lid-close or idle suspend mid-transaction cannot corrupt it, and root-aware so
 // it holds from the boot guard (which is already root) as well as an interactive
-// `ryoku track` (which escalates). runInhibited renders the curated view on a
-// terminal and streams raw with no TTY, so the boot service needs no UI. A var
+// `ryoku track` (which escalates). Inside an update the console curates its
+// output; from `ryoku track` and the boot service it streams as it is. A var
 // so a test records the set without a live pacman.
 var runRyokuMove = func(set []string) error {
 	argv := ryokuMoveArgs(set)
 	if os.Geteuid() != 0 {
 		argv = append([]string{"sudo"}, argv...)
 	}
-	return runInhibited("Ryoku", i18n.T("Ryoku channel move"), argv)
+	return runInhibited(i18n.T("Ryoku channel move"), argv)
 }
 
 // retargetChannel makes a channel move transactional: record the current

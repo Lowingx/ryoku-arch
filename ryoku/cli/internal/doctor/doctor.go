@@ -855,16 +855,15 @@ func reconcilePacmanLock(checkOnly bool) recResult {
 // ---- reconciler: stale update run-state --------------------------------------
 
 // reconcileStaleUpdateRun clears the run-state file a crashed `ryoku update`
-// left in "running" (or an unanswered "prompt"): the shell's update island and
-// the Hub keep rendering that phantom run for the rest of the session. A live
-// `ryoku update` (stage 1 or --stage2) owns the file and is left alone; so is
-// the update this doctor may itself be running inside (the process match).
-// updateProcessLive: is a `ryoku update` (stage 1 or --stage2) running right
-// now? A package var so tests can stub it: a real pgrep scan is neither
-// hermetic (a dev's live update flips the result) nor guaranteed cheap.
-var updateProcessLive = func() bool {
-	return exec.Command("pgrep", "-f", "ryoku update").Run() == nil
-}
+// left in "running" (or an unanswered "prompt" or password request): the Hub
+// keeps rendering that phantom run for the rest of the session. The file names
+// the pid that owns it; a live `ryoku update` under that pid (stage 1 or
+// --stage2, or the update this doctor may itself be running inside) is left
+// alone. A document with no pid has no owner at all.
+//
+// runOwnerLive is a package var so tests can stub it: a real process check is
+// not hermetic (a dev's live update flips the result).
+var runOwnerLive = updater.RunOwnerLive
 
 func reconcileStaleUpdateRun(checkOnly bool) recResult {
 	dir := os.Getenv("XDG_RUNTIME_DIR")
@@ -878,11 +877,12 @@ func reconcileStaleUpdateRun(checkOnly bool) recResult {
 	}
 	var st struct {
 		Phase string `json:"phase"`
+		PID   int    `json:"pid"`
 	}
-	if json.Unmarshal(b, &st) != nil || (st.Phase != "running" && st.Phase != "prompt") {
+	if json.Unmarshal(b, &st) != nil || (st.Phase != "running" && st.Phase != "prompt" && st.Phase != "auth") {
 		return okRes(i18n.T("update run-state is settled"))
 	}
-	if updateProcessLive() {
+	if runOwnerLive(st.PID) {
 		return okRes(i18n.T("an update is running; run-state is live"))
 	}
 	if checkOnly {
@@ -3849,10 +3849,12 @@ func tailLines(s string, n int) string {
 // the overwrite glob itself, split: one source of truth, no drift.
 var ryokuSystemGlobs = strings.Split(updater.RyokuOverwriteGlob, ",")
 
-// pkgOwnsFile reports whether an installed package owns path. A var so tests stub
-// the probe without a real pacman database.
+// pkgOwnsFile reports whether an installed package owns path. Only the exit
+// status is the answer: wired to stdio, pacman printed "<path> is owned by
+// <pkg>" for every one of the hundred-odd shipped paths on each doctor run. A
+// var so tests stub the probe without a real pacman database.
 var pkgOwnsFile = func(path string) bool {
-	return sys.Run("pacman", "-Qo", path) == nil
+	return exec.Command("pacman", "-Qo", path).Run() == nil
 }
 
 // strayRyokuFiles returns the files matching globs that pacman does not own: the

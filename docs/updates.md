@@ -93,10 +93,14 @@ new shell, waits for `sleep-ready`, verifies idle and clamshell, and restores a
 previously running Ryogami before releasing protection. Any earlier failure
 leaves the durable block active until retry or reboot. Longer `ryoku doctor` and
 index work follows. A snapper post-snapshot closes the run. Each stage
-publishes to `$XDG_RUNTIME_DIR/ryoku-update.json` (the ordered steps, the current
-label, a live log tail, and, on failure, the error and the pre-update snapshot),
-so the update island and the Hub's Updates page render a determinate run and a
-one-click rollback.
+publishes to `$XDG_RUNTIME_DIR/ryoku-update.json` (the ordered steps and their
+timings, the current label, the line the running work last printed, a
+heartbeat with the run's own watchdog verdict, and, on failure, the error and
+the pre-update snapshot), so the Hub's Updates page renders a determinate run,
+notices a stalled or vanished one, and offers a one-click rollback. The Hub
+drives its own runs (`ryoku update --gui`) without a terminal; the terminal
+shows a curated console and keeps the raw output in
+`~/.local/state/ryoku/update-log.txt` (`ryoku update -v` streams it instead).
 
 The database refresh happens before the set is read, so a rollback onto a frozen
 release only ever asks for packages that release actually served; targets are

@@ -3,6 +3,26 @@
 ## Unreleased
 
 ### Added
+- **`ryoku update` is a clean console now, not a wall of logs.** A terminal
+  run shows a header, one line per step with its time and what it found, a
+  live line for the step in flight, a progress bar, and a closing card; the
+  raw output of pacman, git, the builds and the doctor lands in
+  `~/.local/state/ryoku/update-log.txt` instead. Only `error:`, `warning:` and
+  `note:` lines, a `.pacnew` and the doctor's findings reach the screen. A
+  failure shows the error, the last lines the work printed and the rollback
+  snapshot. `ryoku update -v` streams the raw output instead
+  (`internal/updater/console.go`, `internal/updater/capture.go`).
+- **`ryoku update --gui` runs an update from Ryoku Settings, no terminal.** It
+  starts the run in the background under a pseudo terminal; sudo's password
+  and any question come back through the Hub (`--auth` takes the password on
+  stdin, over a FIFO), and `--cancel` stops a run (`internal/updater/gui.go`).
+- **An update watches itself.** Every two seconds the run rewrites its
+  run-state with a heartbeat, the line its work last printed, and a read of
+  its own process tree: output or CPU time is progress, three minutes of
+  neither is a stall, and the newest command in the tree is named. A stopped
+  run (Ctrl-C, `--cancel`) hands back what it quiesced (the shell, the sleep
+  guard) and lets a committing package transaction finish on its own
+  (`internal/updater/watch.go`, `internal/updater/abort.go`).
 - **Updates and repairs cover the desktop they blank.** `ryoku update`'s
   packaged teardown and `ryoku doctor`'s daemon restart both raise the reload
   cover before stopping the shell, so the swap and cold reload run behind the
@@ -68,6 +88,21 @@
   `internal/sys/release.go`, `internal/updater/release.go`).
 
 ### Fixed
+- **The Hub no longer sticks on a phantom "Applying updates".** Code that
+  narrated outside an update (`ryoku track`'s channel move, the updater's own
+  tests) wrote a "running" run-state with no owner, and the Updates page could
+  never leave it. Only a run that has begun writes the file now, it names its
+  pid, the doctor's stale-run check reads that pid, and the updater's tests
+  run against a throwaway runtime dir (`internal/updater/runstate.go`,
+  `internal/doctor/doctor.go`).
+- **A packaged update's log keeps the package transaction.** The stage2
+  hand-off reopened `update-log.txt` truncated, so the log held only the
+  deploy and the doctor (`internal/updater/upgradelog.go`).
+- **`ryoku doctor` stops listing every shipped file.** Its stray-file scan
+  asked pacman who owns each of the hundred-odd shipped system paths with
+  pacman's output on the terminal, so every run printed a wall of
+  "<path> is owned by ryoku-desktop" lines. It reads only the answer now
+  (`internal/doctor/doctor.go`).
 - **The shell comes back after a reboot on a box that left the dev loop.**
   `ryoku doctor` cleared the home builds a dev deploy or `ryoku recovery`
   left in `~/.local/bin`, but not the user units still running them: a

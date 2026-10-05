@@ -1,6 +1,14 @@
 # Changelog: ryoku/hub/
 
 ### Fixed
+- **The Updates page can always get out of a stuck run.** It believed any
+  "running" run-state, so one left with no live update behind it pinned the
+  page on "Applying updates" for good. The page now checks the pid the run
+  names: a document with no owner is cleared on sight, a run whose process is
+  gone is recorded as stopped, a live run that stops reporting or makes no
+  progress for three minutes gets a notice naming what it waits on with Keep
+  waiting and Stop update, and STOP is always in the action bar
+  (`quickshell/pages/UpdatesPage.qml`).
 - **App title bars can be turned off on niri from the Look tab.** The niri
   switch that asks apps to drop their own title bars sat under Layout as
   "Server-side window frames", where nobody looked for it. It is now "Hide app
@@ -19,6 +27,14 @@
   (`quickshell/Hub.qml`)
 
 ### Added
+- **UPDATE NOW runs the update right in Ryoku Settings.** No terminal window:
+  the page asks for your password itself, answers the run's questions, and
+  draws the run as a timeline of its steps with how long each took, the line
+  the running step last printed, and the run's own read of whether it is
+  progressing. DETAILS opens the full raw log beneath it, and the settled run
+  stays up until you dismiss it (`quickshell/pages/UpdatesPage.qml`,
+  `quickshell/pages/UpdateRun.qml`, `quickshell/pages/UpdateAuth.qml`,
+  `quickshell/pages/UpdateLog.qml`).
 - **Desktop Scene brings the editors together.** Scene, Visualizer, and Widgets
   have dedicated views. The scene view includes layers, cut quality, shadow
   direction, motion presets, idle speed, music intensity, and pointer tuning.

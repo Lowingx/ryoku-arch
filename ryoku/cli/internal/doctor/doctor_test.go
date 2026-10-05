@@ -2026,9 +2026,9 @@ func TestReconcileStaleUpdateRun(t *testing.T) {
 
 	// hermetic: a dev box's real `ryoku update` (or a sandbox where process
 	// scans stall) must not steer the result.
-	prev := updateProcessLive
-	updateProcessLive = func() bool { return false }
-	t.Cleanup(func() { updateProcessLive = prev })
+	prev := runOwnerLive
+	runOwnerLive = func(int) bool { return false }
+	t.Cleanup(func() { runOwnerLive = prev })
 
 	// no run-state at all: nothing to do.
 	if res := reconcileStaleUpdateRun(true); res.status != recOK {
