@@ -31,16 +31,16 @@
 </div>
 
 <style>
+  /* A block scroller, not a flex column: a flex child's visible overflow
+     never joins its scroll container's range, which is how a sheet taller
+     than the window lost its bottom. A bare sheet owns its own scroll. */
   .page {
-    display: flex;
-    flex-direction: column;
     height: 100%;
-    min-height: 0;
     overflow: auto;
     padding: var(--s6) var(--s7) var(--s7);
     animation: page-in var(--t-mid) var(--ease-out);
   }
-  .page.bare { padding: 0; overflow: hidden; }
+  .page.bare { display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }
   @keyframes page-in { from { opacity: 0; transform: translateY(6px); } }
   .page-head {
     display: grid;
@@ -55,5 +55,6 @@
   .page-gloss { font-size: var(--f-row); }
   .page-lead { grid-area: lead; color: var(--ink-mute); max-width: 70ch; }
   .page-tools { grid-area: tools; display: flex; align-items: center; gap: var(--s2); }
-  .page-body { flex: 1; min-height: 0; }
+  .page-body { min-width: 0; }
+  .page.bare > .page-body { flex: 1; min-height: 0; }
 </style>

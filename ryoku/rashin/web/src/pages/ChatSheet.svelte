@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import Page from "$lib/app/Page.svelte";
   import { chat } from "$lib/chat/store.svelte";
+  import ApprovalDock from "$lib/pages/chat/ApprovalDock.svelte";
   import Composer from "$lib/pages/chat/Composer.svelte";
   import Inspector from "$lib/pages/chat/Inspector.svelte";
   import SessionsPane from "$lib/pages/chat/SessionsPane.svelte";
@@ -99,6 +100,7 @@
       <div class="transcript-wrap">
         <Transcript
           items={chat.state.items}
+          seed={chat.state.session.id || "the needle"}
           permissions={chat.state.permissions}
           banner={chat.state.banner}
           replaying={chat.state.replaying}
@@ -112,6 +114,15 @@
         />
       </div>
 
+      {#if chat.state.permissions.length > 0}
+        <div class="dock-wrap">
+          <ApprovalDock
+            permissions={chat.state.permissions}
+            onanswer={(requestId, optionId) => chat.answerPermission(requestId, optionId)}
+          />
+        </div>
+      {/if}
+
       <Composer
         bind:focusTarget={composerField}
         draft={chat.draft}
@@ -123,6 +134,7 @@
         currentModel={chat.state.currentModel}
         agent={chat.state.agent}
         approvals={chat.state.approvals}
+        waiting={chat.state.permissions.length > 0}
         usage={chat.state.usage}
         ondraft={(value) => chat.setDraft(value)}
         onsend={(text, images) => chat.send(text, images)}
@@ -141,6 +153,7 @@
         models={chat.state.models}
         usage={chat.state.usage}
         items={chat.state.items}
+        busy={chat.state.busy}
         permissions={chat.state.permissions}
         commands={chat.state.commands}
         oncollapse={() => setInspectorOpen(false)}
@@ -153,6 +166,7 @@
   .workspace { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; height: 100%; min-height: 0; overflow: hidden; }
   .conversation { display: flex; min-width: 0; min-height: 0; flex-direction: column; background: var(--paper); }
   .transcript-wrap { position: relative; display: flex; flex: 1; min-height: 0; }
+  .dock-wrap { flex: none; padding: 0 var(--s5) var(--s3); }
   .pane-reveals { display: grid; grid-template-columns: auto 1fr auto; align-items: center; min-height: 44px; padding: var(--s2) var(--s3); border-bottom: 1px solid var(--line-soft); }
   .pane-reveals button { display: inline-flex; align-items: center; gap: var(--s2); min-height: 28px; padding: 0 var(--s2); border-radius: var(--radius); color: var(--ink-mute); font-size: var(--f-small); transition: color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease); }
   .pane-reveals button:hover { color: var(--ink); background: var(--tint5); }

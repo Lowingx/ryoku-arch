@@ -2,7 +2,7 @@
   import { onMount, tick } from "svelte";
   import type { Item, Permission } from "$chatstate";
   import type { BannerState } from "$lib/chat/protocol";
-  import BotAvatar from "$lib/fx/BotAvatar.svelte";
+  import NeedleFace from "$lib/fx/NeedleFace.svelte";
   import ThinkingOrb from "$lib/fx/ThinkingOrb.svelte";
   import Button from "$lib/ui/Button.svelte";
   import Icon from "$lib/ui/Icon.svelte";
@@ -12,6 +12,8 @@
 
   interface Props {
     items: Item[];
+    /** the conversation id the Needle's face is seeded from */
+    seed: string;
     permissions: Permission[];
     banner: { state: BannerState; error: string };
     replaying: boolean;
@@ -21,7 +23,7 @@
     onsuggest: (text: string) => void;
   }
 
-  let { items, permissions, banner, replaying, busy, onnew, onanswer, onsuggest }: Props = $props();
+  let { items, seed, permissions, banner, replaying, busy, onnew, onanswer, onsuggest }: Props = $props();
   let scroller: HTMLDivElement | undefined = $state();
   let pinned = $state(true);
 
@@ -76,7 +78,7 @@
 
     {#if items.length === 0 && banner.state !== "starting" && !replaying}
       <section class="empty-chat">
-        <BotAvatar size={64} mood={banner.state === "dead" ? "sleeping" : "default"} label="The Needle" />
+        <NeedleFace {seed} size={72} mood={banner.state === "dead" ? "sleeping" : "idle"} label="The Needle" />
         <p>What should we look at on this machine?</p>
         <div class="suggestions" aria-label="Suggested prompts">
           <button type="button" onclick={() => onsuggest("What is using the most memory?")}>What is using the most memory?</button>
@@ -88,7 +90,7 @@
       <div class="items" aria-live={busy ? "polite" : "off"}>
         {#each items as item (item.id)}
           {#if item.kind === "msg"}
-            <MessageItem {item} />
+            <MessageItem {item} {seed} />
           {:else}
             <ToolItem
               {item}

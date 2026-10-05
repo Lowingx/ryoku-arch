@@ -15,9 +15,13 @@ ships it and no node runs on an installed box.
   Wrapped once under `src/lib/ui/`; a sheet never imports `bits-ui` directly.
 - [Libraries.dev](https://github.com/Jakubantalik/Libraries.dev) for the
   effects that make the console feel alive, under `src/lib/fx/`:
-  `ThinkingOrb` (the `thinking-orbs/engine` painters on a plain canvas),
-  `BotAvatar` and `BorderBeam` (the packages' React components, mounted in a
-  Svelte-owned element through `island.ts`; that file is the whole React seam).
+  `ThinkingOrb` (the `thinking-orbs/engine` painters on a plain canvas) and
+  `BorderBeam` (the package's React component, mounted in a Svelte-owned
+  element through `island.ts`; that file is the whole React seam).
+- [blobatar](https://github.com/Alain00/blobatar) for the Needle's face
+  (`NeedleFace`): a creature seeded by the conversation id, hue-locked to the
+  palette's warm family, with an expression per agent state, blobatar's idle
+  motion, and eyes that follow the pointer through its `gaze` attachment.
 - The chat reducer is the shell's (`ryoku/shell/quickshell/shell/services/lib/
   chatstate.js`), aliased as `$chatstate`. One source of truth for the
   `/ws/chat` protocol; `src/lib/chat/chatstate.d.ts` types it.

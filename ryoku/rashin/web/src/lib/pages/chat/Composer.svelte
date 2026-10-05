@@ -1,11 +1,10 @@
 <script lang="ts">
   import { tick } from "svelte";
-  import type { CommandInfo, ModelInfo, PromptImage } from "$lib/chat/protocol";
+  import type { ApprovalsMode, CommandInfo, ModelInfo, PromptImage } from "$lib/chat/protocol";
   import BorderBeam from "$lib/fx/BorderBeam.svelte";
   import ThinkingOrb from "$lib/fx/ThinkingOrb.svelte";
   import Button from "$lib/ui/Button.svelte";
   import IconButton from "$lib/ui/IconButton.svelte";
-  import Popover from "$lib/ui/Popover.svelte";
   import Seg from "$lib/ui/Seg.svelte";
   import Select from "$lib/ui/Select.svelte";
   import Tooltip from "$lib/ui/Tooltip.svelte";
@@ -20,14 +19,16 @@
     models: ModelInfo[];
     currentModel: string;
     agent: string;
-    approvals: "ask" | "read-only";
+    approvals: ApprovalsMode;
+    /** an approval is waiting on the person */
+    waiting?: boolean;
     usage: { size: number; used: number } | null;
     focusTarget?: HTMLTextAreaElement;
     ondraft: (value: string) => void;
     onsend: (text: string, images: PromptImage[]) => void;
     oncancel: () => void;
     onmodel: (id: string) => void;
-    onapprovals: (mode: "ask" | "read-only") => void;
+    onapprovals: (mode: ApprovalsMode) => void;
   }
 
   let {
@@ -40,6 +41,7 @@
     currentModel,
     agent,
     approvals,
+    waiting = false,
     usage,
     focusTarget = $bindable(),
     ondraft,
@@ -48,6 +50,19 @@
     onmodel,
     onapprovals,
   }: Props = $props();
+
+  // The tiers are named by what runs without a prompt; "Read-only" used to
+  // read as "the agent may only read" and the first command caught people out.
+  const APPROVAL_OPTIONS = [
+    { value: "ask", label: "Ask", hint: "Every tool waits for you" },
+    { value: "read-only", label: "Reads run", hint: "Reads run; writes and commands wait for you" },
+    { value: "auto", label: "All run", hint: "Everything runs; nothing waits for you" },
+  ];
+  const APPROVAL_HINTS: Record<ApprovalsMode, string> = {
+    ask: "Ask: every tool waits for you",
+    "read-only": "Reads run: writes and commands still wait for you",
+    auto: "All run: writes and commands too; nothing waits for you",
+  };
 
   let filePicker: HTMLInputElement | undefined = $state();
   let images: PromptImage[] = $state([]);
@@ -163,7 +178,9 @@
 </script>
 
 <div class="composer-shell">
-  <BorderBeam size="line" active={busy} />
+  {#key waiting}
+    <BorderBeam size={waiting ? "pulse-inner" : "line"} active={busy || waiting} strength={waiting ? 0.7 : 0.9} />
+  {/key}
   <div class="composer-inner">
     {#if images.length}
       <div class="attachments" aria-label="Attached images">
@@ -176,39 +193,38 @@
       </div>
     {/if}
 
-    <Popover bind:open={commandOpen} side="top" align="start" width={440} focusContent={false}>
-      {#snippet trigger({ props })}
-        <div class="field" {...props}>
-          <IconButton icon="image" label="Attach an image" size={30} onclick={() => filePicker?.click()} />
-          <textarea
-            bind:this={focusTarget}
-            value={draft}
-            rows="1"
-            placeholder="Ask the Needle…"
-            aria-label="Message the Needle"
-            oninput={(event) => {
-              ondraft(event.currentTarget.value);
-              resizeField();
-            }}
-            onkeydown={handleKey}
-            onpaste={handlePaste}
-          ></textarea>
-          <div class="send-swap">
-            {#key busy}
-              <Tooltip text={busy ? "Stop response" : "Send message"} side="top">
-                <Button
-                  variant="plate"
-                  class="send-action"
-                  icon={busy ? "stop" : "arrowUp"}
-                  aria-label={busy ? "Stop response" : "Send message"}
-                  armed={busy || Boolean(draft.trim()) || images.length > 0}
-                  onclick={submit}
-                />
-              </Tooltip>
-            {/key}
-          </div>
+    <div class="field-anchor">
+      <div class="field">
+        <IconButton icon="image" label="Attach an image" size={30} onclick={() => filePicker?.click()} />
+        <textarea
+          bind:this={focusTarget}
+          value={draft}
+          rows="1"
+          placeholder="Ask the Needle…"
+          aria-label="Message the Needle"
+          oninput={(event) => {
+            ondraft(event.currentTarget.value);
+            resizeField();
+          }}
+          onkeydown={handleKey}
+          onpaste={handlePaste}
+        ></textarea>
+        <div class="send-swap">
+          {#key busy}
+            <Tooltip text={busy ? "Stop response" : "Send message"} side="top">
+              <Button
+                variant="plate"
+                class="send-action"
+                icon={busy ? "stop" : "arrowUp"}
+                aria-label={busy ? "Stop response" : "Send message"}
+                armed={busy || Boolean(draft.trim()) || images.length > 0}
+                onclick={submit}
+              />
+            </Tooltip>
+          {/key}
         </div>
-      {/snippet}
+      </div>
+      {#if commandOpen}
       <div class="command-menu" role="listbox" aria-label="Slash commands">
         {#each commandMatches as command, index (command.name)}
           <button
@@ -225,7 +241,8 @@
           </button>
         {/each}
       </div>
-    </Popover>
+      {/if}
+    </div>
 
     <input
       class="file-picker"
@@ -242,10 +259,10 @@
     <div class="status-line">
       <div class="activity" aria-live="polite">
         {#if busy}
-          <ThinkingOrb mode="working" size={20} label="Working" />
-          <span>{activity || "working"}</span>
+          <ThinkingOrb mode={waiting ? "listening" : "working"} size={20} label={waiting ? "Waiting for you" : "Working"} />
+          <span class="activity-text" title={activity}>{waiting ? "waiting for your approval" : (activity || "working")}</span>
         {:else if !connected}
-          <span>reconnecting</span>
+          <span class="activity-text">reconnecting</span>
         {/if}
       </div>
       <div class="composer-controls">
@@ -264,13 +281,15 @@
           placeholder="Model"
           onchange={onmodel}
         />
-        <Seg
-          size="sm"
-          label="Tool approvals"
-          options={[{ value: "ask", label: "Ask" }, { value: "read-only", label: "Read-only" }]}
-          value={approvals}
-          onchange={(value) => onapprovals(value as "ask" | "read-only")}
-        />
+        <Tooltip text={APPROVAL_HINTS[approvals]} side="top">
+          <Seg
+            size="sm"
+            label="What runs without asking"
+            options={APPROVAL_OPTIONS}
+            value={approvals}
+            onchange={(value) => onapprovals(value as ApprovalsMode)}
+          />
+        </Tooltip>
       </div>
     </div>
   </div>
@@ -292,13 +311,19 @@
   figure img { width: 100%; height: 100%; border: 1px solid var(--line); border-radius: var(--radius); object-fit: cover; }
   figure :global(.ib) { position: absolute; top: var(--s1); right: var(--s1); border-color: var(--line-strong); background: var(--paper-lift); }
   .status-line { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: 30px; padding-top: var(--s2); }
-  .activity { display: flex; align-items: center; gap: var(--s2); min-width: 120px; color: var(--ink-mute); font-size: var(--f-small); }
-  .composer-controls { display: flex; align-items: center; justify-content: flex-end; gap: var(--s2); min-width: 0; }
+  .activity { display: flex; align-items: center; gap: var(--s2); flex: 1 1 0; min-width: 0; color: var(--ink-mute); font-size: var(--f-small); }
+  .activity-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .composer-controls { display: flex; align-items: center; justify-content: flex-end; gap: var(--s2); flex: none; }
   .agent-hint { color: var(--ink-faint); font-size: var(--f-micro); }
   .usage { display: grid; grid-template-columns: auto 56px; align-items: center; gap: var(--s2); color: var(--ink-faint); font-family: var(--mono); font-size: var(--f-tiny); }
   .usage-bar { position: relative; width: 56px; height: 3px; overflow: hidden; border-radius: 2px; background: var(--tint10); }
   .usage-bar i { position: absolute; inset: 0 auto 0 0; border-radius: inherit; background: var(--bone); transition: width var(--t-slow) var(--ease-out); }
-  .command-menu { display: flex; flex-direction: column; width: 100%; }
+  .field-anchor { position: relative; }
+  /* The slash menu is a typeahead anchored over the field, not a popover: a
+     popover trigger owns Space and Enter as a button would, which is how a
+     space typed into the message went missing. */
+  .command-menu { position: absolute; left: 0; right: 0; bottom: calc(100% + var(--s2)); z-index: 20; display: flex; flex-direction: column; max-height: 320px; overflow: auto; padding: var(--s2); border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--paper-lift); animation: menu-rise var(--t-fast) var(--ease-out); }
+  @keyframes menu-rise { from { opacity: 0; transform: translateY(4px); } }
   .command-menu button { display: grid; grid-template-columns: 112px minmax(0, 1fr) auto; align-items: center; gap: var(--s3); min-height: 38px; padding: var(--s2) var(--s3); border-radius: 4px; text-align: left; }
   .command-menu button.active { background: var(--tint10); }
   .command-name { color: var(--ink); font-family: var(--mono); font-size: var(--f-small); }

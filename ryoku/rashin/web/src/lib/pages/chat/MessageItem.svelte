@@ -1,15 +1,17 @@
 <script lang="ts">
   import type { MsgItem } from "$chatstate";
   import Markdown from "$lib/content/Markdown.svelte";
-  import BotAvatar from "$lib/fx/BotAvatar.svelte";
+  import NeedleFace from "$lib/fx/NeedleFace.svelte";
   import ThinkingOrb from "$lib/fx/ThinkingOrb.svelte";
   import Fold from "$lib/ui/Fold.svelte";
 
   interface Props {
     item: MsgItem;
+    /** the conversation the face stands for */
+    seed: string;
   }
 
-  let { item }: Props = $props();
+  let { item, seed }: Props = $props();
   let thoughtOpen = $state(false);
   let answerStarted = $state(false);
 
@@ -37,7 +39,7 @@
   <article class="message agent-message" class:continued={item.cont}>
     {#if !item.cont}
       <header class="agent-head">
-        <BotAvatar size={28} mood={item.open ? "working" : "default"} label="The Needle" />
+        <NeedleFace {seed} size={28} mood={item.open ? (item.text ? "working" : "thinking") : "idle"} follow={false} label="The Needle" />
         <span>The Needle</span>
       </header>
     {/if}

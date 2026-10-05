@@ -24,12 +24,14 @@
     models: ModelInfo[];
     usage: { size: number; used: number } | null;
     items: Item[];
+    /** the agent is mid-turn, so a live tool is really running */
+    busy?: boolean;
     permissions: Permission[];
     commands: CommandInfo[];
     oncollapse: () => void;
   }
 
-  let { session, cwd, agent, currentModel, models, usage, items, permissions, commands, oncollapse }: Props = $props();
+  let { session, cwd, agent, currentModel, models, usage, items, permissions, commands, oncollapse, busy = false }: Props = $props();
 
   const modelName = $derived(models.find((model) => model.id === currentModel)?.name || currentModel || "Not selected");
   const usagePercent = $derived(usage && usage.size > 0 ? Math.min(100, (usage.used / usage.size) * 100) : 0);
@@ -93,7 +95,7 @@
               <span class="kind"><Icon name={toolIcon(group.kind)} size={14} />{group.kind}</span>
               <span class="tool-count">{group.total}</span>
               <span class="status-counts">
-                {#if group.live}<Chip>{group.live} live</Chip>{/if}
+                {#if group.live}<Chip tone={busy ? "line" : "quiet"}>{group.live} {busy ? "live" : "unfinished"}</Chip>{/if}
                 {#if group.completed}<Chip tone="quiet">{group.completed} done</Chip>{/if}
                 {#if group.failed}<Chip tone="alert">{group.failed} failed</Chip>{/if}
               </span>

@@ -39,12 +39,17 @@
     border-radius: var(--radius);
     background: var(--paper);
   }
-  .card.pad .card-head { padding: var(--s4) var(--s5) 0; }
+  /* The head keeps its inset even when the body is flush (a table, a
+     toolbar), and the body starts a full step below the lead: a lead
+     pressed against the first control read as one crowded block. */
+  .card-head { padding: var(--s4) var(--s5) 0; }
   .card.pad .card-body { padding: var(--s4) var(--s5) var(--s5); }
+  .card-head + .card-body { margin-top: var(--s4); }
+  .card.pad .card-head + .card-body { margin-top: 0; }
   .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s4); }
   .card-name { display: grid; grid-template-columns: auto auto; align-items: baseline; column-gap: var(--s2); }
   .card-title { font-size: var(--f-row); font-weight: 500; color: var(--ink); }
-  .card-lead { grid-column: 1 / -1; margin-top: var(--s1); color: var(--ink-mute); font-size: var(--f-small); max-width: 70ch; }
+  .card-lead { grid-column: 1 / -1; margin-top: var(--s2); color: var(--ink-mute); font-size: var(--f-small); line-height: 1.5; max-width: 70ch; }
   .card-tools { display: flex; align-items: center; gap: var(--s2); flex: none; }
   .card-body { min-width: 0; }
 </style>

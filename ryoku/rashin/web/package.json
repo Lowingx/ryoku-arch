@@ -26,9 +26,10 @@
     "vitest": "^3.2.0"
   },
   "dependencies": {
+    "@blobatar/svelte": "^2.7.0",
     "bits-ui": "^2.19.0",
+    "blobatar": "^2.7.0",
     "border-beam": "^1.4.1",
-    "bot-avatars": "^0.2.2",
     "thinking-orbs": "^0.3.2"
   }
 }

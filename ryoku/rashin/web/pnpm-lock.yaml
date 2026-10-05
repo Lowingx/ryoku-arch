@@ -8,15 +8,18 @@ importers:
 
   .:
     dependencies:
+      '@blobatar/svelte':
+        specifier: ^2.7.0
+        version: 2.7.0(blobatar@2.7.0(react@19.3.0))(svelte@5.57.1)
       bits-ui:
         specifier: ^2.19.0
         version: 2.19.5(@internationalized/date@3.12.4)(svelte@5.57.1)
+      blobatar:
+        specifier: ^2.7.0
+        version: 2.7.0(react@19.3.0)
       border-beam:
         specifier: ^1.4.1
         version: 1.4.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      bot-avatars:
-        specifier: ^0.2.2
-        version: 0.2.2(react@19.3.0)
       thinking-orbs:
         specifier: ^0.3.2
         version: 0.3.2(react@19.3.0)
@@ -65,6 +68,12 @@ packages:
 
   '@asamuzakjp/css-color@3.2.0':
     resolution: {integrity: sha512-K1A6z8tS3XsmCMM86xoWdn7Fkdn9m6RSVtocUrJYIwZnFVkng/PvkEoWtOWmP+Scc6saYWHWZYbndEEXxl24jw==}
+
+  '@blobatar/svelte@2.7.0':
+    resolution: {integrity: sha512-Pf/RE5ICEUatbWloaBa4vGLRx+HRsKNN/eNCCHp1Nksgs3+3VuutpZBB61Y169fa0uMgAqPl72fAr+GcmnmtHA==}
+    peerDependencies:
+      blobatar: 2.x
+      svelte: '>=5'
 
   '@csstools/color-helpers@5.1.0':
     resolution: {integrity: sha512-S11EXWJyy0Mz5SYvRmY8nJYTFFd1LCNV+7cXyAgQtOOuzb4EsgfqDufL+9esx72/eLhsRdGZwaldu/h+E4t4BA==}
@@ -530,16 +539,22 @@ packages:
       '@internationalized/date': ^3.8.1
       svelte: ^5.33.0
 
+  blobatar@2.7.0:
+    resolution: {integrity: sha512-tL1p2J3dXE/Z9U/ITwHqU7HBHmTH+Am+hif1J1hWAhvFT1VYC2HG+eXtN7081yuY+L2lrp9bs/VaF7dVH3S2jw==}
+    peerDependencies:
+      react: '>=18'
+      vue: '>=3'
+    peerDependenciesMeta:
+      react:
+        optional: true
+      vue:
+        optional: true
+
   border-beam@1.4.1:
     resolution: {integrity: sha512-YyugmKjrhkg1PBC1ZKX7JvFo/zYzha6NXOq24VWrnvBYmDRvGCgFS9oxZoKJ+oS9Kn436l1etYGlAdGiWK+3ag==}
     peerDependencies:
       react: '>=18.0.0'
       react-dom: '>=18.0.0'
-
-  bot-avatars@0.2.2:
-    resolution: {integrity: sha512-EszpDsXfbO7SD3Jv/g8/7mt3I4EpN4WuDy6Uk3reuzIgU+dl4iKtk+fuIzGgfXjOraF1jQqUjaDOdcql1khXHQ==}
-    peerDependencies:
-      react: '>=18.0.0'
 
   cac@6.7.14:
     resolution: {integrity: sha512-b6Ilus+c3RrdDk+JhLKUAQfzzgLEPy6wcXqS7f/xe1EETvsDP6GORG7SFuOs6cID5YkqchW/LXZbX5bc8j7ZcQ==}
@@ -1019,6 +1034,11 @@ snapshots:
       '@csstools/css-tokenizer': 3.0.4
       lru-cache: 10.4.3
 
+  '@blobatar/svelte@2.7.0(blobatar@2.7.0(react@19.3.0))(svelte@5.57.1)':
+    dependencies:
+      blobatar: 2.7.0(react@19.3.0)
+      svelte: 5.57.1
+
   '@csstools/color-helpers@5.1.0': {}
 
   '@csstools/css-calc@2.1.4(@csstools/css-parser-algorithms@3.0.5(@csstools/css-tokenizer@3.0.4))(@csstools/css-tokenizer@3.0.4)':
@@ -1344,14 +1364,14 @@ snapshots:
     transitivePeerDependencies:
       - '@sveltejs/kit'
 
+  blobatar@2.7.0(react@19.3.0):
+    optionalDependencies:
+      react: 19.3.0
+
   border-beam@1.4.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0):
     dependencies:
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
-
-  bot-avatars@0.2.2(react@19.3.0):
-    dependencies:
-      react: 19.3.0
 
   cac@6.7.14: {}
 
