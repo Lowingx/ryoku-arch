@@ -1,6 +1,13 @@
 # Changelog: ryoku/hub/
 
 ### Fixed
+- **The Profile dossier keeps its composure on short windows.** The live
+  telemetry column sat on hard-coded pixels while the dossier foot climbed from
+  the bottom, so under ~880px the callouts ran through the small print and the
+  sub-lines touched the label below. The pins now distribute over the real
+  space between the head and the foot, dropping sub-lines and shrinking the
+  figures as the page tightens, and the compositor row no longer prints two v's
+  before a version that already carries one. (`quickshell/pages/ProfilePage.qml`)
 - **The Updates page can always get out of a stuck run.** It believed any
   "running" run-state, so one left with no live update behind it pinned the
   page on "Applying updates" for good. The page now checks the pid the run
