@@ -29,6 +29,13 @@ hl.bind(K(mod .. " + C"),         hl.dsp.window.center())                       
 hl.bind(K("ALT + Tab"),           hl.dsp.focus({ last = true }))                    -- Last window
 hl.bind(K(mod .. " + P"),         hl.dsp.exec_cmd("ryoku-monitor toggle"))         -- mirror or extend displays (monitor layout)
 
+-- Directional focus keeps working while a window is maximized or fullscreen.
+-- With the default (off) the compositor refuses every direction focus from an
+-- FS window: the scrolling layout paints it over the whole workspace, so the
+-- neighbour on the tape is unreachable until the state clears. On, a direction
+-- move focuses the neighbour and leaves the maximized window maximized.
+hl.config({ binds = { movefocus_cycles_fullscreen = true } })
+
 -- Focus and move windows
 hl.bind(K(mod .. " + Left"),          hl.dsp.focus({ direction = "left" }))        -- focus left
 hl.bind(K(mod .. " + Right"),         hl.dsp.focus({ direction = "right" }))       -- focus right

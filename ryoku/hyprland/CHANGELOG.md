@@ -25,6 +25,12 @@
   (`modules/binds.lua`, `modules/ryoshot.lua`).
 
 ### Fixed
+- **Arrow keys still move focus when a window is maximized.** Super+D
+  maximizes, and with the compositor's default the direction focus binds then
+  refuse to leave a maximized or fullscreen window: on the scrolling layout
+  the maximized window covers the tape, so the neighbour beside it becomes
+  unreachable until the state clears. Direction focus now moves to the
+  neighbour and leaves the maximized window maximized (`modules/binds.lua`).
 - **Ryoku Settings opens inside the work area.** Its full-page float was sized
   from the whole monitor, so it slid under whatever the shell reserves (the
   iRiS frame's edges, a bar). It now fits the work area with the same gaps and
