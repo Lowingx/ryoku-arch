@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"ryoku-cli/internal/sys"
 	"ryoku-cli/internal/updater"
 
 	wm "ryoku-wm"
@@ -18,6 +19,38 @@ func swapMaterialize(t *testing.T, fn func() error) {
 	prev := materializeNow
 	materializeNow = fn
 	t.Cleanup(func() { materializeNow = prev })
+}
+
+// materializeComplete is the layout a healthy box performs: the real
+// materialize, then each laid tree's generated config authored from its
+// provider. The provider binaries are a packaged-box dependency, so a unit
+// test must not need them on PATH; writing the files here is the same bytes
+// a login's apply leaves behind.
+func materializeComplete() func() error {
+	return func() error {
+		if err := updater.Materialize(); err != nil {
+			return err
+		}
+		for _, name := range wm.Providers() {
+			dir := wm.ConfigDir(name)
+			if dir == "" || !sys.Exists(filepath.Join(sys.ConfigHome(), dir)) {
+				continue
+			}
+			for _, rel := range wm.GeneratedConfig(name) {
+				d, _, ok := strings.Cut(rel, "/")
+				if !ok || d != dir {
+					continue
+				}
+				if err := os.MkdirAll(filepath.Dir(filepath.Join(sys.ConfigHome(), rel)), 0o755); err != nil {
+					return err
+				}
+				if err := os.WriteFile(filepath.Join(sys.ConfigHome(), rel), []byte("// rendered\n"), 0o644); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
 }
 
 // swapSessionLive declares the session live without a live compositor.
@@ -99,7 +132,7 @@ func TestReconcileConfigTreeBareLiveSessionIsFixed(t *testing.T) {
 	home, _ := configTreeFixture(t, wm.ProviderNiri, wm.ProviderHyprland)
 	t.Setenv("RYOKU_WM", wm.ProviderNiri)
 	restarts := 0
-	swapMaterialize(t, updater.Materialize)
+	swapMaterialize(t, materializeComplete())
 	swapStartSession(t, func() error { restarts++; return nil })
 	swapSessionLive(t, true)
 
@@ -128,7 +161,7 @@ func TestReconcileConfigTreeBareLiveSessionIsFixed(t *testing.T) {
 func TestReconcileConfigTreeReportsGuardedSessionStartFailure(t *testing.T) {
 	_, _ = configTreeFixture(t, wm.ProviderNiri)
 	t.Setenv("RYOKU_WM", wm.ProviderNiri)
-	swapMaterialize(t, updater.Materialize)
+	swapMaterialize(t, materializeComplete())
 	swapStartSession(t, func() error { return errors.New("sleep guard unavailable") })
 	swapSessionLive(t, true)
 
@@ -164,7 +197,7 @@ func TestReconcileConfigTreeHealsTheSwitchedAwayTreeOnly(t *testing.T) {
 		t.Fatal(err)
 	}
 	restarts := 0
-	swapMaterialize(t, updater.Materialize)
+	swapMaterialize(t, materializeComplete())
 	swapStartSession(t, func() error { restarts++; return nil })
 	swapSessionLive(t, true)
 
@@ -188,7 +221,7 @@ func TestReconcileConfigTreeHealsTheSwitchedAwayTreeOnly(t *testing.T) {
 func TestReconcileConfigTreeIgnoresAnUninstalledDesktop(t *testing.T) {
 	configTreeFixture(t, wm.ProviderNiri) // hyprland's variant is not installed
 	t.Setenv("RYOKU_WM", wm.ProviderNiri)
-	swapMaterialize(t, updater.Materialize)
+	swapMaterialize(t, materializeComplete())
 	swapStartSession(t, func() error { return nil })
 
 	r := reconcileConfigTree(false)
@@ -209,7 +242,7 @@ func TestReconcileConfigTreeEntryPointMissingAfterMaterializeFails(t *testing.T)
 	if err := os.Remove(filepath.Join(base, "niri", "config.kdl")); err != nil {
 		t.Fatal(err)
 	}
-	swapMaterialize(t, updater.Materialize)
+	swapMaterialize(t, materializeComplete())
 	swapStartSession(t, func() error { t.Fatal("a session that is still bare must not be reported as started"); return nil })
 
 	r := reconcileConfigTree(false)
