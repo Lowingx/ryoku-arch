@@ -3,6 +3,16 @@
 ## Unreleased
 
 ### Added
+- **Login plays the cover animation into the desktop.** The reload cover now
+  also runs at boot: each compositor's autostart raises it the moment the
+  greeter hands over, and the freshly loaded shell releases it once wallpaper
+  and desktop report ready on every screen, so the desktop never appears grey
+  or flickers while the shell's surfaces cold-load. In boot mode the cover
+  reads LOADING DESKTOP and holds up to 45 s before giving up
+  (`scripts/ryoku-reload-cover`, `quickshell/reload-cover/`).
+- **The wordmark sweeps while the cover waits.** The bundled brand mark
+  regained its loading light sweep, so a held cover reads as working rather
+  than frozen (`quickshell/reload-cover/ReloadMedia.qml`).
 - **Controls sets the power profile.** The Super+Escape panel gains a Power
   Saver / Balanced / Performance switch for the system power profile. It
   offers only what power-profiles-daemon reports, follows a change made
@@ -396,6 +406,18 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **A reload always plays its cover.** Several teardowns restarted the shell
+  without ever raising the cover, and some raised one the new shell could not
+  release: the daemon's three-second deadline killed a cover one poll from
+  ready; a still-running old shell re-read the freshly written token and
+  finished the cover before the teardown, so the animation opened over the
+  live desktop instead of the grey gap; and `finish` raced the cover's own
+  IPC load and stranded it on the watchdog. The deadline now outlasts the
+  launcher's map poll, the shell reads the reload token exactly once at load,
+  and `finish` retries briefly. The packaged `ryoku update`, the daemon
+  reload, the deploy, and a doctor repair all raise the cover before they
+  stop the shell now (`ipc/daemon.go`, `scripts/ryoku-reload-cover`,
+  `quickshell/shell/shell.qml`, `quickshell/reload-cover/`).
 - **A recovery on niri lands on a working Ryoku desktop.** `ryoku recovery`
   clears the generated `settings.kdl` and `rebinds.kdl` with the Hub store,
   and the deploy only regenerated them for the compositor that was not
