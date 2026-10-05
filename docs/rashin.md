@@ -224,9 +224,37 @@ comes from this dashboard or a local process), and `WS /ws/chat`, the shared
 agent session behind the Alt+Space Ask chat. Vitals come from `/proc` and `statfs`,
 with GPU via `nvidia-smi` when present.
 
-## Quick asks: two lanes
+## The two lanes
 
-A launcher ask does not always need the full agent. `/api/ask` routes it:
+Rashin holds two conversations with the agent, and each has one purpose.
+
+- **The Ryoku lane** is the machine agent. The Needle works on THIS machine:
+  it has the vault, the `ryoku` skill (with `wm.md` for the window-manager
+  seam and `build.md` for building things the Ryoku way), the wiki, prowl over
+  the Ryoku source, and the approval modes Ask / Reads run / All run. The
+  Alt+Space bar, the `rashin` terminal command and the companion window's
+  first sheet all live here, and so does the quick path below.
+- **The Chat lane** is a plain conversation with the harness (Hermes). No
+  machine map, no Needle persona, no quick path: the harness answers as
+  itself, with its own SOUL and skills. The console's Chat sheet is its only
+  surface. Approvals still govern its tool calls; the mode is one daemon-wide
+  setting that every surface on both lanes shows and may change.
+
+Each lane is its own hub with its own agent process, spawned when a surface
+first joins it (`GET /ws/chat?lane=ryoku|chat`; an absent lane is the Ryoku
+lane, so the shell and the terminal built before lanes kept their meaning).
+The agent learns what a lane is for through the one system prompt ACP has: the
+context file at the session's cwd. The Ryoku lane runs in the vault, whose
+`AGENTS.md` the daemon generates (who the Needle is, the one rule, the skills,
+the wiki, the code index); the Chat lane runs in a bare directory
+(`$XDG_STATE_HOME/ryoku/rashin-chat`), so Hermes, which reads `AGENTS.md`
+from the cwd only, finds nothing to load. A lane's history drawer lists the
+sessions opened in its own cwd.
+
+### Quick asks: the fast path
+
+A launcher ask does not always need the full agent. `/api/ask` routes it
+inside the Ryoku lane:
 
 1. **Fast lane (fabric-style, with tools).** When hermes's configured provider
    speaks plain chat-completions (openrouter, openai, groq, ollama, or a local
@@ -249,8 +277,8 @@ The fast lane's tools are deliberately a small, safe, Go-native set, not the
 full hermes toolset: that is the trade that keeps it fast. Heavy or
 system-changing work is exactly what escalates to the session lane.
 
-Both lanes write the conversation into the shared transcript, so "continue in
-chat" always opens the full exchange. The fast lane's connection can be
+Both paths write the conversation into the Ryoku lane's transcript, so
+"continue with the agent" always opens the full exchange. The fast lane's connection can be
 overridden in `~/.config/ryoku/rashin.json` for a cheaper or local model:
 
 ```json
@@ -275,14 +303,14 @@ dead end:
 | `cmd` | a backtick span whose first word is on `PATH` | copies the command |
 | `color` | a hex color, shown with a live swatch | copies the hex |
 
-Plus a COPY chip for the whole answer, CONTINUE IN CHAT, and OPEN RASHIN. The
+Plus a COPY chip for the whole answer, CONTINUE WITH THE AGENT, and OPEN RASHIN. The
 answer text itself is selectable for mouse-copying a fragment. Nonexistent
 paths and non-runnable backtick spans are dropped, so a chip never lies.
 
 ### Continue while it works, and cancel
 
 While the agent is still working, three options sit under the pulsing strip:
-**CONTINUE IN CHAT** opens the Alt+Space Ask chat, where the same turn is
+**CONTINUE WITH THE AGENT** opens the bar's Agent mode, where the same turn is
 streaming live (the daemon runs each turn on a background context, so it keeps
 going even after the launcher closes), **OPEN RASHIN** raises the companion
 window (see "The Rashin app"), and **CANCEL** stops it. Escape cancels a
@@ -307,8 +335,8 @@ and Escape closes the drawer before it closes the bar.
 Typing `\resume` lists recent quick asks (persisted at
 `$XDG_STATE_HOME/ryoku/rashin-asks.jsonl`, newest first). Picking one recalls
 its stored answer instantly, chips and all, with no model call. Every completed
-ask, from either lane, is recorded there. The Ask bar's history drawer and the
-Rashin app's Ask page read the same file through the same CLI.
+ask, from either path, is recorded there. The Ask bar's history drawer and the
+Rashin app's Ryoku sheet read the same file through the same CLI.
 
 ## The Rashin app
 
@@ -318,7 +346,7 @@ Rashin console the daemon serves: it opens like a normal window
 (Super+Alt+Space, the launcher, `rashin-app`, or the Ask bar's OPEN RASHIN
 chip), is single-instance (a `GtkApplication` id plus the `ryoku-summon`
 flock), shows a paper boot page until `/api/ping` answers, and then loads
-`http://127.0.0.1:3600/#/chat`. It is a client of the daemon, never a second
+`http://127.0.0.1:3600/#/ryoku`. It is a client of the daemon, never a second
 brain, and it carries no UI of its own: the console is one Svelte app
 (`ryoku/rashin/web/`, see its README) that is also the dashboard a browser
 sees on the same port. Links to other origins open in the default browser,
@@ -330,8 +358,9 @@ Ask bar's header use the small cut of the same mark, see `docs/ui-ux.md`.
 
 | Sheet | What it holds |
 |---|---|
-| Chat | The shared agent session as a workspace: the sessions pane, the transcript (user plates, the Needle's replies with thinking folds, tool rows with input/output peeks and file diffs, inline approvals), the composer with slash commands, image attachments and a beam while the agent works, and the inspector (session, model, usage, tools, commands) |
-| Ask | The fast lane with room: one question, the streamed answer with the working detail, Continue in chat, and the recent asks recalled without a call |
+| Ryoku | The machine agent (the Ryoku lane) as a workspace: the sessions pane with the recent asks, the transcript (user plates, the Needle's replies with thinking folds, tool rows with input/output peeks and file diffs, inline approvals), the composer with slash commands, image attachments, a Quick / Agent switch and a beam while the agent works, and the inspector (session, model, usage, tools, commands) |
+| Chat | The same workspace on the Chat lane: a plain conversation with the harness, nothing about the machine in front of it |
+| Wiki | The shipped guides for someone new (Linux basics, the desktop, Hyprland in Lua, niri in KDL, Quickshell QML, the Go tools, Rashin), rendered at the reading measure with deep links |
 | Overview | The wallpaper hero with the desktop clock, the live vitals strip, the code card led by measured token savings with a prowl search, the health band with Fix with AI, and the vault index card |
 | System | The machine as a home server: services, timers, cron, containers, sockets, processes, filesystems, the Doctor tab, deterministic tips; copy, never run |
 | Vault | The grouped tree, the rendered document at a reading measure, deep links, reindex |
@@ -341,8 +370,8 @@ Ask bar's header use the small cut of the same mark, see `docs/ui-ux.md`.
 | Models | The provider directory with filters, the fast-lane switch, the chat models |
 | About | What Rashin is, the pieces with live facts, the shortcuts |
 
-Everything the console shows is the daemon's answer: the chat is a projection
-of the same `/ws/chat` stream and the same reducer the Ask bar uses
+Everything the console shows is the daemon's answer: each lane's sheet is a
+projection of that lane's `/ws/chat` stream and the same reducer the Ask bar uses
 (`ryoku/shell/.../lib/chatstate.js`, aliased into the web build), so a turn
 started anywhere is live everywhere, and every other sheet rides the HTTP API
 above. The console's own state is UI-only (pane collapse, drafts, the last

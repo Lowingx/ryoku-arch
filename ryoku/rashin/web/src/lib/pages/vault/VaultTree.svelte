@@ -11,7 +11,7 @@
   }
 
   let { groups, current, filter, onopen }: Props = $props();
-  let groupState = $state<Record<string, boolean>>({ maps: true, memory: true, journal: true, source: false, other: true });
+  let groupState = $state<Record<string, boolean>>({ wiki: true, maps: true, memory: true, journal: true, source: false, other: true });
   let folderState = $state<Record<string, boolean>>({});
   let journalExpanded = $state(false);
   const openFolders = $derived(new Set(Object.keys(folderState).filter((key) => folderState[key])));

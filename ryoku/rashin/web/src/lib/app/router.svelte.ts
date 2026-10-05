@@ -1,6 +1,6 @@
-// Hash routes, so the console works from the daemon's static server and the
-// companion window alike with no fallback handler: #/chat, #/vault/path...
-// A sheet is a route's first segment; the rest is the sheet's own business.
+// Hash routes keep the console compatible with the daemon's static server
+// and the companion window. A sheet is the first segment; the rest belongs
+// to that sheet.
 
 export interface Sheet {
   id: string;
@@ -10,8 +10,9 @@ export interface Sheet {
 }
 
 export const SHEETS: readonly Sheet[] = [
+  { id: "ryoku", label: "Ryoku", gloss: "力" },
   { id: "chat", label: "Chat", gloss: "対話" },
-  { id: "ask", label: "Ask", gloss: "即答" },
+  { id: "wiki", label: "Wiki", gloss: "手引" },
   { id: "overview", label: "Overview", gloss: "概要" },
   { id: "system", label: "System", gloss: "演算" },
   { id: "vault", label: "Vault", gloss: "書庫" },
@@ -22,7 +23,7 @@ export const SHEETS: readonly Sheet[] = [
   { id: "about", label: "About", gloss: "案内" },
 ];
 
-export const DEFAULT_SHEET = "chat";
+export const DEFAULT_SHEET = "ryoku";
 
 function parse(hash: string): { sheet: string; rest: string[] } {
   const parts = hash.replace(/^#\/?/, "").split("/").filter(Boolean).map(decodeURIComponent);
@@ -36,6 +37,13 @@ export class Router {
 
   start(): void {
     const sync = () => {
+      const requested = location.hash.replace(/^#\/?/, "").split("/")[0];
+      if (requested === "ask") {
+        history.replaceState(null, "", "#/ryoku");
+        this.sheet = "ryoku";
+        this.rest = [];
+        return;
+      }
       const { sheet, rest } = parse(location.hash);
       this.sheet = sheet;
       this.rest = rest;

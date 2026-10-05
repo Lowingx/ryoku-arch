@@ -3,27 +3,17 @@
      the Needle's face, what it is doing, and the three lamps. -->
 <script lang="ts">
   import { router, SHEETS } from "./router.svelte";
-  import { chat } from "$lib/chat/store.svelte";
+  import { chat, ryoku } from "$lib/chat/store.svelte";
   import { machine } from "$lib/state/machine.svelte";
-  import NeedleFace, { type NeedleMood } from "$lib/fx/NeedleFace.svelte";
+  import NeedleFace from "$lib/fx/NeedleFace.svelte";
   import Lamp from "$lib/ui/Lamp.svelte";
   import Tooltip from "$lib/ui/Tooltip.svelte";
   import seal from "$brand/rashin-mark-small.svg?raw";
+  import { combinedPresence } from "./presence";
 
-  const mood = $derived.by((): NeedleMood => {
-    if (!machine.online || chat.state.banner.state === "dead") return "sleeping";
-    if (chat.state.permissions.length > 0) return "waiting";
-    if (chat.state.busy) return chat.state.activity === "thinking" ? "thinking" : "working";
-    return "idle";
-  });
-  const presence = $derived.by(() => {
-    if (!machine.online) return "daemon offline";
-    const b = chat.state.banner;
-    if (b.state === "dead") return "agent down";
-    if (b.state === "starting") return "waking";
-    if (chat.state.busy) return chat.state.activity || "working";
-    return chat.connected ? "listening" : "connecting";
-  });
+  const lanePresence = $derived(combinedPresence(machine.online, ryoku.state, chat.state, ryoku.connected, chat.connected));
+  const mood = $derived(lanePresence.mood);
+  const presence = $derived(lanePresence.label);
   const hermesOk = $derived.by(() => {
     const h = machine.status?.hermes as { installed?: boolean; ready?: boolean } | undefined;
     return h?.installed ? (h.ready === false ? "idle" : "ok") : "bad";
@@ -54,8 +44,8 @@
   </nav>
 
   <div class="island presence">
-    <a href="#/chat" class="needle" aria-label="The Needle: {presence}">
-      <NeedleFace seed={chat.state.session.id || "the needle"} {mood} size={28} label="The Needle" />
+    <a href="#/ryoku" class="needle" aria-label="The Needle: {presence}">
+      <NeedleFace seed={ryoku.state.session.id || "the needle"} {mood} size={28} label="The Needle" />
       <span class="needle-word">{presence}</span>
     </a>
     <span class="lamps" aria-label="Services">

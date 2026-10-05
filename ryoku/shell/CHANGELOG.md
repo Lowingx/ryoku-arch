@@ -3,6 +3,10 @@
 ## Unreleased
 
 ### Added
+- **The Ask bar names its agent mode.** The mode strip reads Ask / Agent /
+  Tools / Web and the answer chip says Continue with the agent: the bar is
+  Rashin's Ryoku lane, and Chat is now the companion window's plain
+  conversation with the harness (`quickshell/shell/modules/ask/`).
 - **The Ask bar is sealed.** Its header carries the Rashin mark from the icon
   theme (`rashin-app`), so the bar, the window and the console share one
   identity (`quickshell/shell/modules/ask/AskSurface.qml`). `deploy.sh` now

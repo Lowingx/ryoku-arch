@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tick } from "svelte";
   import type { ApprovalsMode, CommandInfo, ModelInfo, PromptImage } from "$lib/chat/protocol";
+  import type { ChatLane } from "$lib/chat/store.svelte";
   import BorderBeam from "$lib/fx/BorderBeam.svelte";
   import ThinkingOrb from "$lib/fx/ThinkingOrb.svelte";
   import Button from "$lib/ui/Button.svelte";
@@ -11,6 +12,7 @@
   import { tokenLabel } from "./presentation";
 
   interface Props {
+    lane: ChatLane;
     draft: string;
     busy: boolean;
     connected: boolean;
@@ -23,15 +25,21 @@
     /** an approval is waiting on the person */
     waiting?: boolean;
     usage: { size: number; used: number } | null;
+    sendMode?: "agent" | "quick";
+    quickRunning?: boolean;
+    quickStatus?: string;
+    quickError?: string;
     focusTarget?: HTMLTextAreaElement;
     ondraft: (value: string) => void;
     onsend: (text: string, images: PromptImage[]) => void;
     oncancel: () => void;
     onmodel: (id: string) => void;
     onapprovals: (mode: ApprovalsMode) => void;
+    onmode?: (mode: "agent" | "quick") => void;
   }
 
   let {
+    lane,
     draft,
     busy,
     connected,
@@ -43,12 +51,17 @@
     approvals,
     waiting = false,
     usage,
+    sendMode = "agent",
+    quickRunning = false,
+    quickStatus = "",
+    quickError = "",
     focusTarget = $bindable(),
     ondraft,
     onsend,
     oncancel,
     onmodel,
     onapprovals,
+    onmode,
   }: Props = $props();
 
   // The tiers are named by what runs without a prompt; "Read-only" used to
@@ -182,6 +195,20 @@
     <BorderBeam size={waiting ? "pulse-inner" : "line"} active={busy || waiting} strength={waiting ? 0.7 : 0.9} />
   {/key}
   <div class="composer-inner">
+    {#if lane === "ryoku"}
+      <div class="send-mode">
+        <Seg
+          size="sm"
+          label="Send mode"
+          options={[
+            { value: "agent", label: "Agent", hint: "Work with the machine agent" },
+            { value: "quick", label: "Quick", hint: "Ask a quick read-only question" },
+          ]}
+          value={sendMode}
+          onchange={(value) => onmode?.(value as "agent" | "quick")}
+        />
+      </div>
+    {/if}
     {#if images.length}
       <div class="attachments" aria-label="Attached images">
         {#each images as image, index (`${image.data.slice(0, 20)}:${index}`)}
@@ -195,13 +222,15 @@
 
     <div class="field-anchor">
       <div class="field">
-        <IconButton icon="image" label="Attach an image" size={30} onclick={() => filePicker?.click()} />
+        {#if sendMode === "agent"}
+          <IconButton icon="image" label="Attach an image" size={30} onclick={() => filePicker?.click()} />
+        {/if}
         <textarea
           bind:this={focusTarget}
           value={draft}
           rows="1"
-          placeholder="Ask the Needle…"
-          aria-label="Message the Needle"
+          placeholder={lane === "ryoku" ? "Ask the Needle…" : `Message ${agent || "Hermes"}…`}
+          aria-label={lane === "ryoku" ? "Message the Needle" : `Message ${agent || "Hermes"}`}
           oninput={(event) => {
             ondraft(event.currentTarget.value);
             resizeField();
@@ -258,7 +287,12 @@
 
     <div class="status-line">
       <div class="activity" aria-live="polite">
-        {#if busy}
+        {#if quickError}
+          <span class="activity-text quick-error" role="alert">{quickError}</span>
+        {:else if quickRunning}
+          <ThinkingOrb mode="working" size={20} label="Quick answer is working" />
+          <span class="activity-text" title={quickStatus}>{quickStatus || "thinking"}</span>
+        {:else if busy}
           <ThinkingOrb mode={waiting ? "listening" : "working"} size={20} label={waiting ? "Waiting for you" : "Working"} />
           <span class="activity-text" title={activity}>{waiting ? "waiting for your approval" : (activity || "working")}</span>
         {:else if !connected}
@@ -298,6 +332,7 @@
 <style>
   .composer-shell { position: relative; z-index: 3; flex: none; border-top: 1px solid var(--line-soft); background: var(--paper); }
   .composer-inner { width: min(100%, var(--measure)); margin: 0 auto; padding: var(--s3) var(--s5) var(--s4); }
+  .send-mode { display: flex; justify-content: flex-start; padding-bottom: var(--s2); }
   .field { display: flex; align-items: flex-end; gap: var(--s2); padding: var(--s2); border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper-lift); transition: border-color var(--t-fast) var(--ease); }
   .field:focus-within { border-color: var(--line-strong); }
   textarea { flex: 1; min-width: 0; min-height: 32px; max-height: 176px; resize: none; overflow-y: auto; padding: 5px var(--s1); border: 0; outline: 0; background: transparent; color: var(--ink); line-height: 22px; }
@@ -313,6 +348,7 @@
   .status-line { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); min-height: 30px; padding-top: var(--s2); }
   .activity { display: flex; align-items: center; gap: var(--s2); flex: 1 1 0; min-width: 0; color: var(--ink-mute); font-size: var(--f-small); }
   .activity-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .quick-error { color: var(--alert); }
   .composer-controls { display: flex; align-items: center; justify-content: flex-end; gap: var(--s2); flex: none; }
   .agent-hint { color: var(--ink-faint); font-size: var(--f-micro); }
   .usage { display: grid; grid-template-columns: auto 56px; align-items: center; gap: var(--s2); color: var(--ink-faint); font-family: var(--mono); font-size: var(--f-tiny); }

@@ -1,26 +1,34 @@
-// The one chat connection the console holds. Frames from /ws/chat fold into
-// the shell's reducer; every chat surface is a projection of `state`. The
-// daemon decides what a run, a tool or an approval is; this store only
-// renders optimistically what the user just typed.
+// One connection per conversation lane. Frames from each /ws/chat hub fold
+// into the shared reducer independently, so the two transcripts never leak
+// into one another.
 
 import { JsonSocket } from "$lib/api/socket";
 import { applyEvent, initialState, type ChatState } from "$chatstate";
 import type { ApprovalsMode, PromptImage, WsIn, WsOut } from "./protocol";
 
-const DRAFT_KEY = "rashin.chat.draft";
+export type ChatLane = "ryoku" | "chat";
 
 export class ChatStore {
   state = $state.raw<ChatState>(initialState());
   connected = $state(false);
-  draft = $state(localStorage.getItem(DRAFT_KEY) ?? "");
-  /** turns typed while the socket was down, sent in order once it is up */
+  draft = $state("");
+  readonly lane: ChatLane;
   private outbox: WsIn[] = [];
   private socket: JsonSocket<WsOut> | null = null;
+
+  constructor(lane: ChatLane) {
+    this.lane = lane;
+    this.draft = localStorage.getItem(this.preferenceKey("draft")) ?? "";
+  }
+
+  private preferenceKey(name: string): string {
+    return `rashin.${this.lane}.${name}`;
+  }
 
   open(): void {
     if (this.socket) return;
     this.socket = new JsonSocket<WsOut>({
-      path: "/ws/chat",
+      path: `/ws/chat?lane=${this.lane}`,
       onFrame: (f) => this.apply(f),
       onOpen: () => {
         this.connected = true;
@@ -59,8 +67,8 @@ export class ChatStore {
 
   setDraft(text: string): void {
     this.draft = text;
-    if (text) localStorage.setItem(DRAFT_KEY, text);
-    else localStorage.removeItem(DRAFT_KEY);
+    if (text) localStorage.setItem(this.preferenceKey("draft"), text);
+    else localStorage.removeItem(this.preferenceKey("draft"));
   }
 
   cancel(): void {
@@ -92,4 +100,5 @@ export class ChatStore {
   }
 }
 
-export const chat = new ChatStore();
+export const ryoku = new ChatStore("ryoku");
+export const chat = new ChatStore("chat");

@@ -23,8 +23,8 @@ ships it and no node runs on an installed box.
   palette's warm family, with an expression per agent state, blobatar's idle
   motion, and eyes that follow the pointer through its `gaze` attachment.
 - The chat reducer is the shell's (`ryoku/shell/quickshell/shell/services/lib/
-  chatstate.js`), aliased as `$chatstate`. One source of truth for the
-  `/ws/chat` protocol; `src/lib/chat/chatstate.d.ts` types it.
+  chatstate.js`), aliased as `$chatstate`. The Ryoku and Chat stores each fold
+  their own `/ws/chat?lane=` stream through that reducer.
 
 ## Map
 
@@ -34,12 +34,26 @@ ships it and no node runs on an installed box.
 |`src/lib/ui/kit.css`|Shared markup idioms: `table.data`, `.prose`, `.plates`/`.plate`, `.grid`, `.kpi`, `.bar`.|
 |`src/lib/ui/`|The primitives kit on bits-ui: `Button`, `IconButton`, `Tooltip`, `Seg`, `Switch`, `Select`, `Dialog`, `Popover`, `Tabs`, `Fold`, `Chip`, `Card`, `Field`, `Empty`, `Lamp`, `Kbd`, `Icon` (+ `icons.ts`).|
 |`src/lib/fx/`|The Libraries.dev wrappers.|
-|`src/lib/app/`|The frame: `TopBar` (brand, sheets, presence), `Page` (head + body), `Offline`, `router.svelte.ts` (hash routes, the sheet list with its kanji glosses).|
+|`src/lib/app/`|The frame: `TopBar` (brand, sheets, combined lane presence), `Page`, `Offline`, and `router.svelte.ts` (hash routes and sheet order).|
 |`src/lib/api/`|`client.ts` (one function per daemon route), `socket.ts` (reconnecting JSON WebSocket).|
 |`src/lib/state/`|`theme.svelte.ts` (wears the wallpaper palette), `machine.svelte.ts` (status + vitals stream).|
-|`src/lib/chat/`|`protocol.ts` (wire shapes), `store.svelte.ts` (the one `/ws/chat` connection on the shared reducer).|
+|`src/lib/chat/`|`protocol.ts` (wire shapes), `store.svelte.ts` (the separate Ryoku and Chat lane connections).|
 |`src/lib/content/`|`markdown.ts` (escape-first renderer, tested) and `Markdown.svelte`.|
+|`src/lib/pages/chat/ChatWorkspace.svelte`|The shared sessions, transcript, approval, composer and inspector workspace used by both conversation sheets.|
+|`src/lib/pages/wiki/`|Wiki-specific helpers and reader parts; `WikiSheet.svelte` owns the route and lazy document loading.|
 |`src/pages/<Name>Sheet.svelte`|One sheet per route. Its parts live under `src/lib/pages/<name>/`.|
+
+## Conversation lanes
+
+- **Ryoku** (`#/ryoku`, `/ws/chat?lane=ryoku`) is the machine lane. Its agent
+  can use the vault, skills, code index and approval flow. The composer can
+  send a full agent turn or a Quick request through `POST /api/ask?q=`.
+- **Chat** (`#/chat`, `/ws/chat?lane=chat`) is the plain harness lane. It has
+  its own transcript, sessions, draft and pane preferences, and deliberately
+  receives no machine context. Both lanes show the daemon-wide approval mode.
+- **Wiki** (`#/wiki/<page>`) lists `wiki/*.md` from `GET /api/vault` and reads
+  a page through `GET /api/vault/file?p=wiki/<page>.md`. `#/wiki` opens
+  `wiki/README.md`.
 
 ## Rules a sheet follows
 

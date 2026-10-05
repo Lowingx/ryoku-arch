@@ -29,14 +29,16 @@ interface FolderNode {
 export function groupVaultFiles(files: VaultFile[]): VaultGroup[] {
   const visible = files.filter((file) => file.path !== "CLAUDE.md");
   const maps = visible.filter((file) => !file.path.includes("/") && file.path.endsWith(".md"));
+  const wiki = visible.filter((file) => file.path.startsWith("wiki/"));
   const memory = visible.filter((file) => file.path.startsWith("memory/"));
   const journal = visible
     .filter((file) => file.path.startsWith("journal/"))
     .sort((a, b) => Date.parse(b.mtime) - Date.parse(a.mtime));
   const source = visible.filter((file) => file.path.startsWith("source/"));
-  const claimed = new Set([...maps, ...memory, ...journal, ...source]);
+  const claimed = new Set([...maps, ...wiki, ...memory, ...journal, ...source]);
   const other = visible.filter((file) => !claimed.has(file));
   const groups: VaultGroup[] = [
+    { key: "wiki", label: "Wiki", files: wiki, prefix: "wiki/" },
     { key: "maps", label: "Maps", files: maps, prefix: "" },
     { key: "memory", label: "Memory", files: memory, prefix: "memory/" },
     { key: "journal", label: "Journal", files: journal, prefix: "journal/" },

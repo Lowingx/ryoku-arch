@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Added
+- `rashin-app/`: **The window opens on the Ryoku lane.** The first sheet is the
+  machine agent; Chat and the new Wiki sheet sit beside it.
 - `rashin-app/`: **The window carries Rashin's own icon.** `logo.svg` links to
   the brand seal (`assets/brand/rashin-mark.svg`), which the package and the
   dev deploy both install as `rashin-app` in the hicolor theme; it was

@@ -2,6 +2,7 @@
   import { onMount, tick } from "svelte";
   import type { Item, Permission } from "$chatstate";
   import type { BannerState } from "$lib/chat/protocol";
+  import type { ChatLane } from "$lib/chat/store.svelte";
   import NeedleFace from "$lib/fx/NeedleFace.svelte";
   import ThinkingOrb from "$lib/fx/ThinkingOrb.svelte";
   import Button from "$lib/ui/Button.svelte";
@@ -11,9 +12,11 @@
   import ToolItem from "./ToolItem.svelte";
 
   interface Props {
+    lane: ChatLane;
     items: Item[];
     /** the conversation id the Needle's face is seeded from */
     seed: string;
+    harnessName: string;
     permissions: Permission[];
     banner: { state: BannerState; error: string };
     replaying: boolean;
@@ -23,7 +26,7 @@
     onsuggest: (text: string) => void;
   }
 
-  let { items, seed, permissions, banner, replaying, busy, onnew, onanswer, onsuggest }: Props = $props();
+  let { lane, items, seed, harnessName, permissions, banner, replaying, busy, onnew, onanswer, onsuggest }: Props = $props();
   let scroller: HTMLDivElement | undefined = $state();
   let pinned = $state(true);
 
@@ -78,13 +81,20 @@
 
     {#if items.length === 0 && banner.state !== "starting" && !replaying}
       <section class="empty-chat">
-        <NeedleFace {seed} size={72} mood={banner.state === "dead" ? "sleeping" : "idle"} label="The Needle" />
-        <p>What should we look at on this machine?</p>
-        <div class="suggestions" aria-label="Suggested prompts">
-          <button type="button" onclick={() => onsuggest("What is using the most memory?")}>What is using the most memory?</button>
-          <button type="button" onclick={() => onsuggest("Explain my keybinds")}>Explain my keybinds</button>
-          <button type="button" onclick={() => onsuggest("Run the doctor")}>Run the doctor</button>
-        </div>
+        {#if lane === "ryoku"}
+          <NeedleFace {seed} size={72} mood={banner.state === "dead" ? "sleeping" : "idle"} label="The Needle" />
+          <p>What should we look at on this machine?</p>
+          <div class="suggestions" aria-label="Suggested prompts">
+            <button type="button" onclick={() => onsuggest("What is using the most memory?")}>What is using the most memory?</button>
+            <button type="button" onclick={() => onsuggest("Explain my keybinds")}>Explain my keybinds</button>
+            <button type="button" onclick={() => onsuggest("Run the doctor")}>Run the doctor</button>
+          </div>
+          <a class="lane-link" href="#/wiki">New here? Start with the wiki</a>
+        {:else}
+          <p>Chat with {harnessName || "Hermes"}</p>
+          <span class="empty-copy">This lane knows nothing about this machine by design.</span>
+          <a class="lane-link" href="#/ryoku">Open Ryoku for machine work</a>
+        {/if}
       </section>
     {:else}
       <div class="items" aria-live={busy ? "polite" : "off"}>
@@ -145,6 +155,9 @@
     transition: color var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), background-color var(--t-fast) var(--ease);
   }
   .suggestions button:hover { border-color: var(--line-strong); background: var(--tint5); color: var(--ink); }
+  .empty-copy { color: var(--ink-mute); font-size: var(--f-small); }
+  .lane-link { color: var(--ink-mute); font-size: var(--f-small); text-decoration: underline; text-decoration-color: var(--line-strong); text-underline-offset: 3px; }
+  .lane-link:hover { color: var(--ink); }
   .unmatched-permission { margin-left: 40px; }
   .jump {
     position: absolute;

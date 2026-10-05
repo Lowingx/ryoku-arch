@@ -12,7 +12,7 @@ Item {
     readonly property bool motionAllowed: !Tokens.reduceMotion && !Motion.reduce
     readonly property var modes: [
         { id: "ask", label: I18n.tr("Ask"), hint: "\\" },
-        { id: "chat", label: I18n.tr("Chat"), hint: "" },
+        { id: "chat", label: I18n.tr("Agent"), hint: "" },
         { id: "tools", label: I18n.tr("Tools"), hint: "/" },
         { id: "web", label: I18n.tr("Web"), hint: "?" }
     ]

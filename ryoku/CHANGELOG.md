@@ -3,6 +3,15 @@
 ## Unreleased
 
 ### Added
+- **Rashin splits into a Ryoku lane and a Chat lane.** The Ryoku lane is the
+  machine agent: the Needle with the vault, the `ryoku` skill, the wiki, prowl
+  over the Ryoku source and the approval modes, on the Alt+Space bar, in the
+  terminal and on the companion window's first sheet; its quick path answers
+  fast and hands tool jobs to the same lane's agent. The Chat lane is a plain
+  conversation with the harness, nothing about the machine in front of it. Each
+  lane is its own agent process in its own cwd, and the Ryoku lane's system
+  prompt is the vault's `AGENTS.md` the daemon writes (`rashin/backend/`,
+  `rashin/web/`).
 - **A wiki for people new to Ryoku.** Plain-language guides (Linux basics, the
   desktop, Hyprland in Lua, niri in KDL, Quickshell QML, the Go tools, Rashin)
   ship with Rashin, are mirrored into the vault so the Needle cites them, and

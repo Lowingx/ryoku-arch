@@ -83,7 +83,7 @@ Recording**.
 
 Ask is a compact Rashin surface with four modes:
 
-- **Ask** streams a quick answer and offers Copy, Continue in chat, and Pin bubble.
+- **Ask** streams a quick answer and offers Copy, Continue with the agent, and Pin bubble.
 - **Chat** opens the current Rashin conversation with model and permission controls.
 - **Tools** handles downloads, compression, package installation, recent work,
   and active jobs.

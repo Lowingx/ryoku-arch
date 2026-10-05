@@ -1,5 +1,7 @@
 <script lang="ts">
   import type { SessionMeta } from "$lib/chat/protocol";
+  import type { ChatLane } from "$lib/chat/store.svelte";
+  import RecentAsks, { type RecentAsk } from "$lib/pages/ask/RecentAsks.svelte";
   import Button from "$lib/ui/Button.svelte";
   import Empty from "$lib/ui/Empty.svelte";
   import IconButton from "$lib/ui/IconButton.svelte";
@@ -7,17 +9,21 @@
   import { relativeTime } from "./presentation";
 
   interface Props {
+    lane: ChatLane;
     sessions: SessionMeta[];
     currentId: string;
+    recentAsks?: RecentAsk[];
+    recentError?: string;
     onnew: () => void;
     onswitch: (id: string) => void;
     oncollapse: () => void;
+    onrecall?: (ask: RecentAsk) => void;
   }
 
-  let { sessions, currentId, onnew, onswitch, oncollapse }: Props = $props();
+  let { lane, sessions, currentId, recentAsks = [], recentError = "", onnew, onswitch, oncollapse, onrecall }: Props = $props();
 </script>
 
-<aside class="sessions" aria-label="Chat sessions">
+<aside class="sessions" aria-label={`${lane === "ryoku" ? "Ryoku" : "Chat"} sessions`}>
   <header class="pane-head">
     <div>
       <span class="t-mark">Conversations</span>
@@ -51,6 +57,9 @@
       </div>
     {/if}
   </div>
+  {#if lane === "ryoku" && onrecall}
+    <RecentAsks asks={recentAsks} error={recentError} onrecall={onrecall} />
+  {/if}
 </aside>
 
 <style>

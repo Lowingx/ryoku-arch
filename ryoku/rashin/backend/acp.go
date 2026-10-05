@@ -16,8 +16,9 @@ import (
 )
 
 // acp.go speaks the Agent Client Protocol: newline-delimited JSON-RPC 2.0
-// over the hermes acp child's stdio. One conn drives one hermes session whose
-// cwd is the vault, so terminal hermes and the dashboard share one memory.
+// over the hermes acp child's stdio. One conn drives one hermes session in
+// one lane's cwd: the vault for the Ryoku lane, so terminal hermes and the
+// dashboard share one memory, and a bare directory for the plain chat lane.
 
 type PermOption struct {
 	ID   string `json:"id"`
@@ -94,7 +95,7 @@ type acpConn struct {
 	mu        sync.Mutex
 	pending   map[int64]chan rpcMsg
 	sessionID string
-	vault     string
+	cwd       string
 	closed    bool
 	// eventsDone: the reader closed the event stream; emit becomes a no-op.
 	eventsDone bool
@@ -384,11 +385,11 @@ func (c *acpConn) reconcileModel(st modelState, method string) {
 // acpClientVersion is the latest ACP protocol version this client speaks.
 const acpClientVersion = 1
 
-// Initialize performs the ACP handshake and opens the vault session. It sends
+// Initialize performs the ACP handshake and opens the lane's session in cwd. It sends
 // our client info and the version we speak, then records what the agent
 // negotiated back so optional methods stay gated to what the agent supports.
-func (c *acpConn) Initialize(vault string) error {
-	c.vault = vault
+func (c *acpConn) Initialize(cwd string) error {
+	c.cwd = cwd
 	c.protoVersion = acpClientVersion
 	res, err := c.request("initialize", map[string]any{
 		"protocolVersion": acpClientVersion,
@@ -404,7 +405,7 @@ func (c *acpConn) Initialize(vault string) error {
 		return err
 	}
 	c.applyInitResult(res)
-	return c.openSession("session/new", map[string]any{"cwd": vault, "mcpServers": prowlMCPServers()})
+	return c.openSession("session/new", map[string]any{"cwd": cwd, "mcpServers": prowlMCPServers()})
 }
 
 // applyInitResult records the negotiated protocol version and the agent's
@@ -455,9 +456,9 @@ func (c *acpConn) openSession(method string, params map[string]any) error {
 	return nil
 }
 
-// NewSession abandons the current session for a fresh one in the vault.
+// NewSession abandons the current session for a fresh one in the same cwd.
 func (c *acpConn) NewSession() error {
-	return c.openSession("session/new", map[string]any{"cwd": c.vault, "mcpServers": prowlMCPServers()})
+	return c.openSession("session/new", map[string]any{"cwd": c.cwd, "mcpServers": prowlMCPServers()})
 }
 
 // LoadSession switches to a stored session; hermes replays its transcript as
@@ -468,7 +469,7 @@ func (c *acpConn) LoadSession(id string) error {
 	}
 	c.emit(AcpEvent{Type: "replay_start"})
 	err := c.openSession("session/load", map[string]any{
-		"sessionId": id, "cwd": c.vault, "mcpServers": prowlMCPServers(),
+		"sessionId": id, "cwd": c.cwd, "mcpServers": prowlMCPServers(),
 	})
 	c.emit(AcpEvent{Type: "replay_end"})
 	return err
@@ -884,17 +885,17 @@ func (c *acpConn) handleUpdate(params json.RawMessage) {
 	}
 }
 
-// startACP spawns the configured chat agent's ACP command with the vault as its
-// working directory. Hermes is the recommended default; resolveChatBackend
+// startACP spawns the configured chat agent's ACP command in a lane's cwd, its
+// working directory and the source of its context file. Hermes is the recommended default; resolveChatBackend
 // falls back to it when a chosen agent's adapter is absent.
-func startACP(vault string) (*acpConn, error) {
+func startACP(cwd string) (*acpConn, error) {
 	b, ok := resolveChatBackend(LoadConfig())
 	if !ok {
 		return nil, errors.New("no chat agent available; install Hermes (recommended) or a supported ACP agent")
 	}
 	stamp := hermesConfigStamp()
 	cmd := exec.Command(b.Argv[0], b.Argv[1:]...)
-	cmd.Dir = vault
+	cmd.Dir = cwd
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		return nil, err

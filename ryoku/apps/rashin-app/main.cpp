@@ -367,7 +367,9 @@ void activate(GtkApplication *application, gpointer data) {
     state->port = daemon_port();
     state->daemon_origin = "http://127.0.0.1:" + std::to_string(state->port);
     state->ping_uri = state->daemon_origin + "/api/ping";
-    state->chat_uri = state->daemon_origin + "/#/chat";
+    // The window opens on the Ryoku lane, the machine agent; the plain Chat
+    // lane and the other sheets are one click away in the console itself.
+    state->chat_uri = state->daemon_origin + "/#/ryoku";
     load_preferences(state);
 
     state->session = soup_session_new();

@@ -20,13 +20,13 @@ Item {
     readonly property var chips: {
         if (session.busy)
             return [
-                { kind: "chat", value: "", label: I18n.tr("Continue in chat") },
+                { kind: "chat", value: "", label: I18n.tr("Continue with the agent") },
                 { kind: "app", value: "", label: I18n.tr("Open Rashin") },
                 { kind: "cancel", value: "", label: I18n.tr("Cancel") }
             ];
         if (session.permPending)
             return [
-                { kind: "chat", value: "", label: I18n.tr("Continue in chat") },
+                { kind: "chat", value: "", label: I18n.tr("Continue with the agent") },
                 { kind: "app", value: "", label: I18n.tr("Open Rashin") }
             ];
         if (session.phase !== "done")
@@ -34,7 +34,7 @@ Item {
         const values = [{ kind: "copy", value: session.answerText, label: I18n.tr("Copy") }];
         for (let i = 0; i < session.answerActions.length; i++)
             values.push(session.answerActions[i]);
-        values.push({ kind: "chat", value: "", label: I18n.tr("Continue in chat") });
+        values.push({ kind: "chat", value: "", label: I18n.tr("Continue with the agent") });
         values.push({ kind: "app", value: "", label: I18n.tr("Open Rashin") });
         values.push({ kind: "pin", value: "", label: I18n.tr("Pin bubble") });
         return values;

@@ -4,12 +4,13 @@
   import { Tooltip } from "bits-ui";
   import TopBar from "$lib/app/TopBar.svelte";
   import { router } from "$lib/app/router.svelte";
-  import { chat } from "$lib/chat/store.svelte";
+  import { chat, ryoku } from "$lib/chat/store.svelte";
   import { machine } from "$lib/state/machine.svelte";
   import { theme } from "$lib/state/theme.svelte";
   import Offline from "$lib/app/Offline.svelte";
+  import RyokuSheet from "./pages/RyokuSheet.svelte";
   import ChatSheet from "./pages/ChatSheet.svelte";
-  import AskSheet from "./pages/AskSheet.svelte";
+  import WikiSheet from "./pages/WikiSheet.svelte";
   import OverviewSheet from "./pages/OverviewSheet.svelte";
   import SystemSheet from "./pages/SystemSheet.svelte";
   import VaultSheet from "./pages/VaultSheet.svelte";
@@ -20,8 +21,9 @@
   import AboutSheet from "./pages/AboutSheet.svelte";
 
   const SHEET_VIEWS = {
+    ryoku: RyokuSheet,
     chat: ChatSheet,
-    ask: AskSheet,
+    wiki: WikiSheet,
     overview: OverviewSheet,
     system: SystemSheet,
     vault: VaultSheet,
@@ -32,14 +34,16 @@
     about: AboutSheet,
   } as const;
 
-  const View = $derived(SHEET_VIEWS[router.sheet as keyof typeof SHEET_VIEWS] ?? ChatSheet);
+  const View = $derived(SHEET_VIEWS[router.sheet as keyof typeof SHEET_VIEWS] ?? RyokuSheet);
 
   $effect(() => {
     router.start();
     theme.start();
     machine.start();
+    ryoku.open();
     chat.open();
     return () => {
+      ryoku.close();
       chat.close();
       machine.stop();
       theme.stop();
