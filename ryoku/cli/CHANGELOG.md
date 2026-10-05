@@ -3,6 +3,11 @@
 ## Unreleased
 
 ### Added
+- **`ryoku doctor` retires Shima's stored frame music choice.** The
+  `inir.iris.surround.music` key chose between a wave Ryoku never hosts and the
+  frame; the switch now drives the frame on its own, so the key is removed from
+  `shell.json` while every sibling setting stays as it was.
+  (`internal/doctor/reconcile_shima_frame_music.go`)
 - **`ryoku doctor` cleans up the retired panel state and shortcut.** The
   sidebar migration removes obsolete layout records, and the Ask-keybind
   migration removes only the orphaned retired-surface rebind while preserving

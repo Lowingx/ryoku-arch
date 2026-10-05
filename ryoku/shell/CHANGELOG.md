@@ -386,6 +386,16 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **Shima's Music on the edges moves the frame as soon as it is switched on.**
+  The switch used to default to driving the Organic Edge wave, a desktop widget
+  Ryoku never hosts, so flipping it did nothing until a second choice buried
+  under it picked the frame. The port can only move the frame, so that is what
+  the switch does: the dead choice is gone, the response and finish rows follow
+  the switch, the preview shows the swell, and the palette's Frame Music action
+  turns the frame on with it. `ryoku doctor` strips the retired stored choice.
+  (`quickshell/inir/modules/iris/frame/IrisFrame.qml`,
+  `quickshell/inir/modules/iris/settings/IrisOptions.qml`,
+  `quickshell/inir/services/GlobalActions.qml`)
 - **The shell reloads again after the Bluetooth pairing agent shipped.** The
   agent's command lives in a QML template string, and a shell comment inside it
   wrapped the command name in backticks: the first one closed the template, so
