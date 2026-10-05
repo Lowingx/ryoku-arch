@@ -1,6 +1,12 @@
 # Changelog: ryoku/hub/
 
 ### Fixed
+- **App title bars can be turned off on niri from the Look tab.** The niri
+  switch that asks apps to drop their own title bars sat under Layout as
+  "Server-side window frames", where nobody looked for it. It is now "Hide app
+  title bars" on Window Manager > Look, says which apps may keep theirs, and a
+  Hub search for "titlebar" lands on it. (`../wm/niri/schema.json`,
+  `quickshell/Hub.qml`)
 - **General and Desktop settings no longer open blank.** The app picker now
   resolves to Hub's own component and imports its scrolling controls.
   (`quickshell/SchemaPage.qml`, `quickshell/AppPicker.qml`)
