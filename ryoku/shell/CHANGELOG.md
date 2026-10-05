@@ -430,6 +430,15 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **The lid can no longer deny its own suspend.** The sleep transaction
+  closed its hard block and asked login1 to suspend on the same connection
+  immediately; login1 watches the block fd on its own schedule, so a Suspend
+  that overtook the close was denied by the daemon's own inhibitor and the lid
+  retried every two seconds, sometimes for minutes. The transaction now waits
+  until login1's inhibitor list stops naming this process before it calls
+  Suspend, and restores the guard if that confirmation never lands
+  (`ipc/sleepwake.go`).
+
 - **Stage Depth says why it cannot cut.** Turning Depth on with the tier's
   model missing (or any other blocked pipeline) recorded the effect, ran
   nothing, and went silent: the tile read On forever with no subject. The
