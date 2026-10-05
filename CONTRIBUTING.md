@@ -149,6 +149,15 @@ Release** workflow run on `main` (`bump_type: none` tags the version `main`
 carries). Never squash-merge into a release
 branch: squashing collapses commits and drops their notes.
 
+Nothing is pushed to `main` except that fast-forward, and only when a release
+is ready: work and fixes go to `unstable-dev`, which publishes the testing
+channel on every push. The `pre-push` hook refuses any other push to `main`;
+the release push names itself with `RYOKU_RELEASE_PUSH=1 git push origin
+unstable-dev:main`, and must still be a fast-forward onto a commit
+`origin/unstable-dev` carries. A `VERSION` bump the workflow commits on `main`
+is merged back into `unstable-dev` before the next release. The sequence is in
+`docs/development.md`, "Branches and pushing".
+
 A release line carries a name (`CODENAME`, its story in `release/names.md`);
 the release is titled with it and a line's first release opens with the story.
 Starting a new line is one commit that changes `CODENAME`, adds the section

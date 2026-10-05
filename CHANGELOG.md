@@ -34,6 +34,16 @@ for finer detail.
   mutable channels current without changing frozen distro snapshots.
 
 ### Added
+- **`main` is pushed only as the release fast-forward.** The `pre-push` hook now
+  refuses every push that moves `main` unless it is named as the release
+  (`RYOKU_RELEASE_PUSH=1 git push origin unstable-dev:main`), and even then
+  insists on a fast-forward onto a commit `origin/unstable-dev` carries; a
+  rewrite or deletion of `main` is refused outright. Work and fixes land on
+  `unstable-dev`, which publishes the testing channel on every push. The hook's
+  ShellCheck pass uses CI's flags (`-x -s bash --severity=warning`), so a
+  rolling box's info-level rules no longer refuse what CI accepts; the release
+  push covers every script `main` is missing. `docs/development.md`,
+  "Branches and pushing", and `CONTRIBUTING.md` carry the procedure.
 - **The installer now asks which window manager, browser, and apps you want.**
   New ISO installs offer a choice of compositor (Hyprland, niri, MangoWM),
   exactly one of the three shipped browsers (Zen, Chromium, Firefox), and a

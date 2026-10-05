@@ -305,8 +305,10 @@ serves, and `manifest.json` beside it lists every package the release is made
 of, by lane (base, dev, hardware, AUR, first-party, compositor, provisioned),
 generated from the checkout by `build-repo.sh` and never hand-edited.
 
-A release is a tag: `main` advances only by fast-forward from `unstable-dev`,
-and publishing nothing on that push. The maintainer runs **Stable Release**
+A release is a tag: `main` advances only by fast-forward from `unstable-dev`
+(`RYOKU_RELEASE_PUSH=1 git push origin unstable-dev:main`; the `pre-push` hook
+refuses every other push to `main`, see `docs/development.md`, "Branches and
+pushing"), and publishing nothing on that push. The maintainer runs **Stable Release**
 (`bump_type: none` tags the `VERSION` main already carries; a bump rewrites it
 first), which tags `main`, publishes `releases/<tag>/`, moves the stable
 pointer onto it, records the ledger entry, and dispatches both release ISOs
