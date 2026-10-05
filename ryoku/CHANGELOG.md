@@ -3,6 +3,11 @@
 ## Unreleased
 
 ### Added
+- **niri raises the reload cover at login.** The session autostart chain
+  calls `ryoku-reload-cover begin boot` after the environment push and before
+  `session-start` restarts the shell services, so a fresh niri desktop is
+  covered from the greeter handoff until the loaded shell releases it,
+  matching Hyprland (`niri/autostart.kdl`).
 - **The night light can run on the clock.** Hub > Displays > Night light
   gained an AT THE CLOCK switch with START AT and OFF AT rows: a 12-hour
   time you step by the hour, flip AM/PM, or type, wrapping midnight, so a

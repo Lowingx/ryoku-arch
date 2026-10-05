@@ -3,6 +3,11 @@
 ## Unreleased
 
 ### Changed
+- **Login raises the reload cover.** The session autostart chain calls
+  `ryoku-reload-cover begin boot` after the environment push and before
+  `session-start` restarts the shell services, so the desktop is covered from
+  the greeter handoff until the loaded shell releases it
+  (`modules/autostart.lua`).
 - **Super+Q asks first when iRiS is set to.** The close bind reads
   `shell.json` in place and only goes through the shell when the iRiS bar
   style is active with its close confirmation on; every other close stays a
