@@ -430,6 +430,21 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **Stage Depth says why it cannot cut.** Turning Depth on with the tier's
+  model missing (or any other blocked pipeline) recorded the effect, ran
+  nothing, and went silent: the tile read On forever with no subject. The
+  engine's availability probe now asks about the model the configured quality
+  tier actually uses (a fine-tier box no longer reads as missing because the
+  draft weights are absent), a blocked or failed cut publishes the engine's
+  one-line reason on the `stage` frame, and the Hub Scene page and the
+  desktop menu's Depth row show it instead of a dead toggle. A wall left on
+  whose cut-outs vanished is re-cut by the next wake, and Clear now takes the
+  wall back to Plain so it stops asking for a cut it deleted
+  (`ipc/stage.go`, `scripts/ryostage`,
+  `quickshell/shell/modules/stage/Singletons/StageBackend.qml`,
+  `quickshell/shell/modules/desktop/DesktopContextMenu.qml`,
+  `../../hub/quickshell/pages/DesktopScenePage.qml`).
+
 - **A reload always plays its cover.** Several teardowns restarted the shell
   without ever raising the cover, and some raised one the new shell could not
   release: the daemon's three-second deadline killed a cover one poll from

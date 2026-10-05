@@ -189,7 +189,7 @@ rembg's range, `uv` provisioning a managed 3.13 otherwise).
 
 | Subcommand | Contract |
 |---|---|
-| `check` | exit 0 and print `available` when the runtime and at least one model are present, else `missing` and non-zero |
+| `check [model]` | exit 0 and print `available` when the runtime and (with a model named) that model, else (without) at least one curated model, are present; otherwise a one-line reason (`runtime missing`, `model <id> missing`, `missing`) and non-zero |
 | `models [--json]` | the curated catalogue: ids one per line, or the JSON above |
 | `install [model...]` | provision the runtime and fetch the named models (default `u2netp`); opt-in, streams progress |
 | `remove <model>` | drop a cached model |
@@ -219,23 +219,29 @@ One worker, one registry (below), one topic.
   Parallax is chosen for that wallpaper), `layer-NN.png` (added layers),
   `.index.json` (mtime + quality reuse).
 - **Topic** `stage`: `{ current, busy, stage: "cut"|"inpaint"|"", percent,
-  walls: { <path>: { effect, subject, background, rev, layers: [...] } } }`,
+  notice, walls: { <path>: { effect, subject, background, rev, layers: [...] } } }`,
   published on every change and on each generation phase. QML renders from it
   and nothing else. `subject`/`background` are absolute paths ("" until fresh);
   `rev` is the max mtime across the wall's `subject.png`/`background.png`/
   `layer-NN.png`, so the shell busts every url with the one revision. The frame
   layers carry `{out, label, enabled, front, depth}` and no per-layer rev, and
-  `layers[0]` is always the subject slot.
+  `layers[0]` is always the subject slot. `notice` names why the last reconcile
+  could not produce a cut (the engine's reason, e.g. `model u2netp missing`);
+  it is "" whenever the pipeline is fine, and the UI shows it instead of a
+  silently dead toggle.
 - **Verbs** (`ryoku-shell stage ...`): `set-effect <off|depth|parallax>`,
   `set-layer <index> <json>` (enabled/front/depth), `add-layer <png>`,
   `cut-layer <picture>` (runs the engine on another picture and adds the
-  result), `remove-layer <index>`, `refresh` (re-cut), `cancel`, `clear`,
+  result), `remove-layer <index>`, `refresh` (re-cut), `cancel`, `clear`
+  (delete the current wall's cut-outs and take the wall back to Plain),
   `status`, `models`.
 - **Rules**: a wallpaper switch reconciles and never generates; a stage is
   per wallpaper; videos are skipped; an effect switch never re-cuts (only
-  Parallax's first use on a wallpaper adds the inpaint); a failure leaves the
-  effect off with a logged reason. The subject is still handed to ryogami as
-  `depth` for the Depth effect only, unchanged on the wire.
+  Parallax's first use on a wallpaper adds the inpaint); a wall left on whose
+  artifacts vanished is re-cut by the next wake (the registry is the intent);
+  a blocked or failed cut keeps the effect recorded, logs the reason, and
+  publishes it as the frame's `notice`. The subject is still handed to ryogami
+  as `depth` for the Depth effect only, unchanged on the wire.
 
 ## Settings: `~/.config/ryoku/stage.json`
 

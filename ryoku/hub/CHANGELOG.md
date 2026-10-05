@@ -1,6 +1,11 @@
 # Changelog: ryoku/hub/
 
 ### Fixed
+- **The Stage scene page reports a blocked cut.** When the daemon cannot cut
+  (the quality tier's model is not installed, or a cut failed), the page now
+  says why and offers Retry instead of showing a wallpaper that never gains
+  layers (`quickshell/pages/DesktopScenePage.qml`).
+
 - **The Profile dossier keeps its composure on short windows.** The live
   telemetry column sat on hard-coded pixels while the dossier foot climbed from
   the bottom, so under ~880px the callouts ran through the small print and the
