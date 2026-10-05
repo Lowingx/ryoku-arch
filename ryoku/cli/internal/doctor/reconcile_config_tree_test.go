@@ -152,8 +152,10 @@ func TestReconcileConfigTreeHealsTheSwitchedAwayTreeOnly(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(home, ".config", "hypr", "hyprland.lua"), []byte("-- live tree\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.RemoveAll(filepath.Join(base, "niri")); err != nil { // niri's variant is still installed
-		t.Fatal(err)
+	for _, leaf := range []string{"settings.lua", "rebinds.lua"} {
+		if err := os.WriteFile(filepath.Join(home, ".config", "hypr", leaf), []byte("-- generated\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if err := os.MkdirAll(filepath.Join(base, "niri"), 0o755); err != nil {
 		t.Fatal(err)
@@ -216,5 +218,50 @@ func TestReconcileConfigTreeEntryPointMissingAfterMaterializeFails(t *testing.T)
 	}
 	if !strings.Contains(r.detail, "niri") {
 		t.Fatalf("failure should name the compositor, got %q", r.detail)
+	}
+}
+
+// A laid tree that never got its generated includes is the fresh-install #331:
+// config.kdl is there, its hard-included settings.kdl/rebinds.kdl are not, so
+// niri refuses its own config at first login. The check must name it as a gap
+// and the fix must render the includes.
+func TestReconcileConfigTreeHealsALaidTreeMissingGeneratedIncludes(t *testing.T) {
+	home, _ := configTreeFixture(t, wm.ProviderNiri)
+	t.Setenv("RYOKU_WM", wm.ProviderNiri)
+	if err := os.MkdirAll(filepath.Join(home, ".config", "niri"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(home, ".config", "niri", "config.kdl"), []byte("include \"settings.kdl\"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	materialized := 0
+	swapMaterialize(t, func() error {
+		materialized++
+		for _, leaf := range []string{"settings.kdl", "rebinds.kdl"} {
+			if err := os.WriteFile(filepath.Join(home, ".config", "niri", leaf), []byte("// rendered\n"), 0o644); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if r := reconcileConfigTree(true); r.status != recWouldFix {
+		t.Fatalf("check: status=%s detail=%q, want would-fix for the missing includes", r.status.label(), r.detail)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".config", "niri", "settings.kdl")); !os.IsNotExist(err) {
+		t.Fatal("check-only must not render the includes")
+	}
+
+	if r := reconcileConfigTree(false); r.status != recFixed {
+		t.Fatalf("fix: status=%s detail=%q, want fixed", r.status.label(), r.detail)
+	}
+	if materialized != 1 {
+		t.Fatalf("the fix must run materialize once, got %d", materialized)
+	}
+	if !laidDown(home, "niri/settings.kdl") || !laidDown(home, "niri/rebinds.kdl") {
+		t.Fatal("the generated includes must be laid by the fix")
+	}
+	if r := reconcileConfigTree(true); r.status != recOK {
+		t.Fatalf("after the heal, status=%s detail=%q, want ok", r.status.label(), r.detail)
 	}
 }

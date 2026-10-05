@@ -349,13 +349,19 @@ pacman -Ql ryoku-desktop-niri | grep -q "config/hypr" && die "the niri variant s
 # drop-in is what makes the *first* login after an install a Ryoku desktop.
 [[ -f /usr/lib/systemd/user/niri.service.d/ryoku-bootstrap.conf ]] || die "the niri variant did not ship the bootstrap ordering drop-in"
 
-# materialize for the test user, then let the packaged provider author the
-# generated includes (settings.kdl, rebinds.kdl) the way a login does, and let
-# niri parse the result: an update that ships a broken tree must fail here.
-log "materializing the niri config and validating it with niri"
+# materialize for the test user with NO neutral store yet: this is the fresh
+# install exactly as the installer chroot sees it (the default keyboard seeds
+# no desktop.json), and niri hard-includes settings.kdl and rebinds.kdl, so
+# the run itself must author both generated files from the provider's defaults
+# and niri must parse the result. Before the fix the includes were missing and
+# the first login was a dead grey screen (#331).
+log "materializing the niri config with no store and validating it with niri"
 runuser -u "$TESTUSER" -- env "HOME=/home/$TESTUSER" "USER=$TESTUSER" "LOGNAME=$TESTUSER" \
   ryoku materialize >/dev/null || die "ryoku materialize failed on the niri variant"
 [[ -f "$cfg/niri/config.kdl" ]] || die "materialize did not lay the niri config"
+[[ -f "$cfg/niri/settings.kdl" && -f "$cfg/niri/rebinds.kdl" ]] \
+  || die "materialize with no store left the generated includes missing (#331)"
+niri validate -c "$cfg/niri/config.kdl" || die "niri rejects the includes materialize rendered from defaults"
 mkdir -p "$cfg/ryoku"
 printf '{"desktop":{},"wm":{"niri":{}}}\n' >"$cfg/ryoku/desktop.json"
 runuser -u "$TESTUSER" -- env "HOME=/home/$TESTUSER" "XDG_CURRENT_DESKTOP=niri" \

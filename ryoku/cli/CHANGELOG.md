@@ -88,6 +88,16 @@
   `internal/sys/release.go`, `internal/updater/release.go`).
 
 ### Fixed
+- **A fresh install's first niri login starts.** The installer runs
+  `ryoku materialize` before a neutral store exists on a box with the default
+  keyboard layout, and materialize skipped rendering a compositor's generated
+  includes without one. niri treats a missing include as a hard parse error, so
+  the first login came up a grey screen with a config error until a later login
+  wrote the files. Materialize now renders the provider's defaults into a laid
+  tree that has no generated files, a fork or a laid edit of one still wins
+  over defaults, and `ryoku doctor`'s config-tree check reports a laid tree
+  whose includes are missing instead of reading it as healthy
+  (`internal/updater/materialize.go`, `internal/doctor/reconcile_config_tree.go`).
 - **`ryoku doctor` clears what it used to report on every run.** The TPM
   units that fail only for want of NvPCRs are re-run once the TPM carries the
   new udev mark, instead of sitting in "failed services" until reboot. A
