@@ -88,6 +88,14 @@
   `internal/sys/release.go`, `internal/updater/release.go`).
 
 ### Fixed
+- **`ryoku doctor` clears what it used to report on every run.** The TPM
+  units that fail only for want of NvPCRs are re-run once the TPM carries the
+  new udev mark, instead of sitting in "failed services" until reboot. A
+  `.pacnew` whose live file nobody has written since before the box was
+  installed (it is still an older package's file, pacman's own timestamp) is
+  now applied, since that loses nothing; a config written on the box stays a
+  review for `pacdiff` (`internal/doctor/reconcile_tpm_nvpcr.go`,
+  `internal/doctor/doctor.go`).
 - **The update console no longer stacks copies of the running step.** While
   a step runs something under sudo, sudo switches the terminal to raw mode,
   so a plain newline stopped returning to the left edge; every redraw then

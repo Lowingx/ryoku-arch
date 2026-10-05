@@ -17,6 +17,14 @@
   headless one exits at once.
 
 ### Fixed
+- `tpm/60-ryoku-tpm-nvpcr.rules`: **four TPM units no longer fail on every
+  boot.** systemd 262 sets up NvPCRs only from a PCR-signed UKI's
+  `tpm2-pcr-public-key.pem`, which Ryoku does not build, so
+  `systemd-tpm2-setup-early`, `systemd-pcrproduct` and each
+  `systemd-pcrlogin@` failed with "No such file or directory". The rule marks
+  such a TPM `TPM2_BROKEN_NVPCR`, systemd's own switch, and they skip cleanly;
+  a box that carries the key keeps its NvPCRs. Shipped in `ryoku-desktop` and
+  laid by `deploy.sh`.
 - `power/ryoku-clamshell`: **a refused lid suspend now says why in the
   journal.** The close path runs detached from the compositor, so the
   rejection reason `ryoku-shell` printed died with the process and a laptop

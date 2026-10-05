@@ -586,6 +586,11 @@ EOF
   install -Dm644 "$_repo/system/hardware/ddc/60-ryoku-i2c.rules" \
     "$pkgdir/usr/lib/udev/rules.d/60-ryoku-i2c.rules"
 
+  # No usable NvPCRs without a PCR-signed UKI, which Ryoku does not build:
+  # tells systemd so, instead of failing four TPM units on every boot.
+  install -Dm644 "$_repo/system/hardware/tpm/60-ryoku-tpm-nvpcr.rules" \
+    "$pkgdir/usr/lib/udev/rules.d/60-ryoku-tpm-nvpcr.rules"
+
   # Maono USB mics: their control features sit on a vendor HID page the kernel
   # leaves root-only, so uaccess is what lets a control app reach them at all.
   install -Dm644 "$_repo/system/hardware/audio/70-ryoku-maono.rules" \

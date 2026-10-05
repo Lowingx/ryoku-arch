@@ -412,6 +412,14 @@ if command -v sudo >/dev/null 2>&1; then
   # and routes every non-docked close through the secure shell transaction.
   _priv_install "$here/../../system/hardware/power/logind-ryoku-lid.conf" \
     /etc/systemd/logind.conf.d/10-ryoku-lid.conf 644
+  # The packaged TPM rule: without it systemd fails its NvPCR units on every
+  # boot of a box whose UKI is not PCR-signed, which is every Ryoku box.
+  if ! cmp -s "$here/../../system/hardware/tpm/60-ryoku-tpm-nvpcr.rules" /usr/lib/udev/rules.d/60-ryoku-tpm-nvpcr.rules; then
+    _priv_install "$here/../../system/hardware/tpm/60-ryoku-tpm-nvpcr.rules" \
+      /usr/lib/udev/rules.d/60-ryoku-tpm-nvpcr.rules 644
+    sudo udevadm control --reload 2>/dev/null || true
+    sudo udevadm trigger --action=change --subsystem-match=tpmrm --settle 2>/dev/null || true
+  fi
   sudo systemctl daemon-reload || true
   sudo systemctl enable --quiet ryoku-network-kill-guard.service ryoku-network-kill-disconnect.service || true
   say "installed privileged network helpers + polkit rules"

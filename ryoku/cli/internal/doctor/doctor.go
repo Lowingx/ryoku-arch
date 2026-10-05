@@ -3497,7 +3497,8 @@ func balancedRunes(s string, open, shut rune) bool {
 // ---- reconciler: failed systemd units ----------------------------------------
 
 func reconcileFailedUnits(checkOnly bool) recResult {
-	// Clear the lingering transient app scopes (safe: the app is already gone),
+	// Clear the lingering transient app scopes (safe: the app is already gone)
+	// and the TPM units that failed only for want of NvPCRs (reconcile_tpm_nvpcr.go),
 	// then report whatever real failures remain.
 	var reset int
 	if !checkOnly {
@@ -3506,6 +3507,7 @@ func reconcileFailedUnits(checkOnly bool) recResult {
 				reset++
 			}
 		}
+		reset += len(clearNvpcrFailures(failedUnits()))
 	}
 	var failed []string
 	failed = append(failed, failedUnits()...)
@@ -3518,7 +3520,7 @@ func reconcileFailedUnits(checkOnly bool) recResult {
 	}
 	if len(failed) == 0 {
 		if reset > 0 {
-			return fixedRes(i18n.T("reset %d stale app scope(s)"), reset)
+			return fixedRes(i18n.T("cleared %d failed unit(s) with nothing left wrong (stale app scopes, TPM NvPCR setup)"), reset)
 		}
 		return okRes(i18n.T("no failed services"))
 	}
@@ -3644,33 +3646,77 @@ func stripRyokuRepoStanza(conf []byte) []byte {
 // difference never reads as a conflict.
 func trimTrailing(b []byte) []byte { return bytes.TrimRight(b, " \t\r\n") }
 
+// untouchedSinceInstall reports whether a live config predates the box itself.
+// pacman lays a file with the timestamp it carries in the package, and any
+// write on the box (an editor, sed, the installer) stamps it with the time of
+// that write; a file older than the box's first pacman transaction is exactly
+// what an older package shipped. Taking the .pacnew then loses nothing: it is
+// the update pacman would have applied itself, had its record of the old file
+// matched. An unknown install time never qualifies. pure.
+func untouchedSinceInstall(liveMTime, installedAt time.Time) bool {
+	return !installedAt.IsZero() && liveMTime.Before(installedAt)
+}
+
+// boxInstalledAt is the time of the box's first pacman transaction, the first
+// line of pacman.log ("[2026-06-17T16:10:08+0000] ..."); zero when unreadable.
+// A var so tests pin it.
+var boxInstalledAt = func() time.Time {
+	f, err := os.Open("/var/log/pacman.log")
+	if err != nil {
+		return time.Time{}
+	}
+	defer f.Close()
+	line, _ := bufio.NewReader(f).ReadString('\n')
+	stamp, _, ok := strings.Cut(strings.TrimPrefix(line, "["), "]")
+	if !ok {
+		return time.Time{}
+	}
+	t, err := time.Parse("2006-01-02T15:04:05-0700", stamp)
+	if err != nil {
+		return time.Time{}
+	}
+	return t
+}
+
 // reconcilePacnew resolves the .pacnew files pacman drops when it upgrades a
 // package whose tracked /etc file the install (or a later edit) changed. it
-// auto-clears only the provably safe ones -- a .pacnew identical to the live
-// file, or a pacman.conf whose sole diff is the [ryoku] repo stanza the
-// installer appends -- and never overwrites a user-modified base config with the
-// packaged default. genuine merges are reported for `sudo pacdiff`. idempotent:
-// once the safe ones are gone a re-run only sees (and reports) the conflicts.
+// auto-resolves only the provably safe ones: a .pacnew identical to the live
+// file, a pacman.conf whose sole diff is the [ryoku] repo stanza the installer
+// appends, or a re-commented locale.gen are dropped; a live file nobody has
+// written since before the box was installed is replaced by the packaged
+// update. it never overwrites a config written on this box. genuine merges are
+// reported for `sudo pacdiff`. idempotent: once the safe ones are gone a
+// re-run only sees (and reports) the conflicts.
 func reconcilePacnew(checkOnly bool) recResult {
 	out, _ := sys.RunOut("find", "/etc", "-name", "*.pacnew")
 	files := nonEmptyLines(out)
 	if len(files) == 0 {
 		return okRes(i18n.T("no pending config updates"))
 	}
+	installedAt := boxInstalledAt()
 	resolved, conflicts := 0, 0
 	for _, pacnew := range files {
 		live := strings.TrimSuffix(pacnew, ".pacnew")
 		lb, lerr := os.ReadFile(live)
 		pb, perr := os.ReadFile(pacnew)
-		if lerr != nil || perr != nil || classifyPacnew(live, lb, pb) == pacnewConflict {
+		if lerr != nil || perr != nil {
 			conflicts++
 			continue
+		}
+		apply := []string{"rm", "-f", pacnew}
+		if classifyPacnew(live, lb, pb) == pacnewConflict {
+			st, err := os.Stat(live)
+			if err != nil || !untouchedSinceInstall(st.ModTime(), installedAt) {
+				conflicts++
+				continue
+			}
+			apply = []string{"mv", "-f", pacnew, live}
 		}
 		if checkOnly {
 			resolved++
 			continue
 		}
-		if err := sys.Sudo("rm", "-f", pacnew); err != nil {
+		if err := sys.Sudo(apply...); err != nil {
 			conflicts++
 			continue
 		}
@@ -3678,15 +3724,15 @@ func reconcilePacnew(checkOnly bool) recResult {
 	}
 	if conflicts == 0 {
 		if checkOnly {
-			return wouldRes(i18n.T("%d pending .pacnew are safe to drop (identical to the live config, only the [ryoku] repo addition, or a re-commented locale.gen)"), resolved)
+			return wouldRes(i18n.T("%d pending .pacnew are safe to resolve (identical to the live config, only the [ryoku] repo addition, a re-commented locale.gen, or a config never edited on this box)"), resolved)
 		}
-		return fixedRes(i18n.T("cleared %d safe .pacnew (identical to the live config, only the [ryoku] repo addition, or a re-commented locale.gen)"), resolved)
+		return fixedRes(i18n.T("resolved %d safe .pacnew (identical to the live config, only the [ryoku] repo addition, a re-commented locale.gen, or a config never edited on this box)"), resolved)
 	}
 	msg := warnRes(i18n.T("%d pending config update(s) (.pacnew) need review"), conflicts)
 	if resolved > 0 {
-		verb := i18n.T("cleared")
+		verb := i18n.T("resolved")
 		if checkOnly {
-			verb = i18n.T("safe to drop")
+			verb = i18n.T("safe to resolve")
 		}
 		msg = warnRes(i18n.T("%d pending config update(s) (.pacnew) need review (%d %s)"), conflicts, resolved, verb)
 	}
