@@ -50,7 +50,7 @@ Required:
 | `RYOKU_DISK_STRATEGY` | `whole` (wipe the disk) or `alongside` (dual-boot; keeps existing partitions and chooses shared or dedicated ESP boot automatically). No default: an empty value aborts rather than risk a silent wipe. |
 | `RYOKU_COMPOSITOR`        | Window manager to install, e.g. `hyprland`. Selects the `ryoku-desktop-<name>` variant package. |
 | `RYOKU_COMPOSITOR_CONFIG_DIR` | The `~/.config` subdir that compositor owns (the TUI derives it from `wm.ConfigDir`, e.g. `hypr`); seeds the keymap and GPU pin. Empty means an unknown compositor and the install aborts. |
-| `RYOKU_COMPOSITOR_GPU_PIN` | The render-pin file inside that dir the TUI derives from `wm.GpuPinFile` (`gpu.lua` on Hyprland, `gpu.conf` on mango). Empty means the compositor picks its own render device (niri) and the GPU-mode step skips. |
+| `RYOKU_COMPOSITOR_GPU_PIN` | The render-pin file inside that dir the TUI derives from `wm.GpuPinFile` (`gpu.lua` on Hyprland). Empty means the compositor picks its own render device (niri) and the GPU-mode step skips. |
 | `RYOKU_BROWSER`               | The one browser to install: `zen` \| `chromium` \| `firefox` (empty = `zen`). The backend drops the other two from the pacstrap/AUR sets, points xdg and the desktop's `browser` role at the pick. |
 | `RYOKU_DROP_PACKAGES`         | Comma-separated package names the user removed at the installer's apps checklist. Every package-set reader (pacstrap, the AUR build, the offline AUR batch) filters this set out, and `deploy.sh` records it in the doctor's provisioning ledger so `ryoku update` honours the removal instead of reinstalling. |
 

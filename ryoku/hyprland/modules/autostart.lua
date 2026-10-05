@@ -80,9 +80,8 @@ hl.on("hyprland.start", function()
     -- Welcome tour and first-boot keyboard hint: the tour once per tour
     -- version, the hint exactly once ever. The behaviour lives in
     -- ryoku-session-intro so every compositor's autostart calls the same
-    -- script: mango's config grammar truncates a value at 255 characters,
-    -- so an inline chain there silently loses its tail. Bump the tour
-    -- version in the helper when the tour changes materially (beta 18 = 18).
+    -- script. Bump the tour version in the helper when the tour changes
+    -- materially (beta 18 = 18).
     hl.exec_cmd("command -v ryoku-session-intro >/dev/null 2>&1 && ryoku-session-intro welcome")
     hl.exec_cmd("command -v ryoku-session-intro >/dev/null 2>&1 && ryoku-session-intro keys-hint")
 end)

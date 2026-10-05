@@ -52,11 +52,10 @@ ryoku_drivers() {
 #   vfio    -> passthrough  (pin the iGPU alone, freeing the dGPU for a VM)
 # run `ryoku-gpu mode <mapped>` as the user against the provider's render pin,
 # via runuser like deploy.sh's materialize. the pin file is the seam's answer
-# (wm.GpuPinFile, exported as RYOKU_COMPOSITOR_GPU_PIN): hyprland writes
-# gpu.lua, mango writes gpu.conf (wlroots' WLR_DRM_DEVICES), and niri names no
-# file at all because it picks its own render device, so the step skips there
-# (niri's gpu.kdl still gets the cursor half of the policy from `ryoku-gpu
-# persist`, which lands at login).
+# (wm.GpuPinFile, exported as RYOKU_COMPOSITOR_GPU_PIN): Hyprland writes
+# gpu.lua, while niri names no file because it picks its own render device.
+# niri's gpu.kdl still gets the cursor half of the policy from `ryoku-gpu
+# persist`, which lands at login.
 # ryoku-gpu's analyze reads /sys/class/drm,
 # which arch-chroot bind-mounts, so detection sees the real target GPUs; the tool
 # self-gates (a single GPU no-ops, a missing iGPU refuses passthrough), so a

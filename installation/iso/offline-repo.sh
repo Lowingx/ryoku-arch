@@ -73,12 +73,9 @@ mapfile -t PKGS < <(
     broadcom-wl-dkms
   # The desktop set plus the hardware-only ASUS Aura provider: the target
   # installer selects asusctl only on a matching laptop. Both compositor
-  # variants bake: the TUI offers every compositor the checkout knows about,
-  # and an offline install has no network to fetch a missing variant from --
-  # a bake without ryoku-desktop-niri bricks the niri choice at configure.
-  # The variants coexist (they own disjoint paths), so the closure carries all
-  # of them; mangowm and its scenefx library ride in as the variant's deps.
-  printf '%s\n' ryoku-keyring ryoku-desktop ryoku-desktop-hyprland ryoku-desktop-niri ryoku-desktop-mango asusctl
+  # variants bake because the TUI offers each one and an offline install has no
+  # network to fetch a missing variant.
+  printf '%s\n' ryoku-keyring ryoku-desktop ryoku-desktop-hyprland ryoku-desktop-niri asusctl
 )
 # dedupe, keep order.
 mapfile -t PKGS < <(printf '%s\n' "${PKGS[@]}" | awk '!seen[$0]++')
@@ -416,7 +413,7 @@ mapfile -t aur_expected < <(read_list "$pkgdir/aur.packages")
 for req in nvidia-open nvidia-open-dkms nvidia-utils libva-nvidia-driver \
            mesa vulkan-radeon vulkan-intel vulkan-icd-loader \
            ryoku-keyring ryoku-desktop ryoku-desktop-hyprland ryoku-desktop-niri \
-           ryoku-desktop-mango "${aur_expected[@]}"; do
+           "${aur_expected[@]}"; do
   repo_has_pkg "$req" || missing+=("$req")
 done
 if (( ${#missing[@]} )); then
@@ -470,7 +467,7 @@ EOF
     # an unqualified ryoku-desktop with two providers in the repo makes pacman
     # prompt for a choice, which a build script cannot answer.
     printf '%s\n' amd-ucode intel-ucode ryoku-keyring ryoku-desktop \
-      ryoku-desktop-hyprland ryoku-desktop-niri ryoku-desktop-mango
+      ryoku-desktop-hyprland ryoku-desktop-niri
   } | awk '!seen[$0]++' )
 
   local resolved

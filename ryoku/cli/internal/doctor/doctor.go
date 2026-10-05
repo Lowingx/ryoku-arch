@@ -171,6 +171,7 @@ func reconcilers() []reconciler {
 		{i18n.T("retired Shima frame music key"), reconcileShimaFrameMusic},
 		{i18n.T("shipped app packages"), reconcileShippedApps},
 		{i18n.T("retired app packages"), reconcileRetiredApps},
+		{i18n.T("retired compositor"), reconcileRetiredCompositor},
 		{i18n.T("release control manifest"), reconcileManifest},
 		{i18n.T("ghostty theme include"), reconcileGhostty},
 		{i18n.T("obsidian palette snippet"), reconcileObsidianSnippet},
@@ -193,7 +194,6 @@ func reconcilers() []reconciler {
 		{i18n.T("decor art"), reconcileRyodecors},
 		{i18n.T("Hyprland config integrity"), reconcileHyprlandConfig},
 		{i18n.T("niri config integrity"), reconcileNiriConfig},
-		{i18n.T("mango config integrity"), reconcileMangoConfig},
 		{i18n.T("window manager plugin builds"), reconcileWmPlugins},
 		{i18n.T("stale window-border pin"), reconcileBorderPin},
 		{i18n.T("orphaned theme.lua"), reconcileThemeLua},
@@ -1608,7 +1608,7 @@ func defaultFrameBarsFromLegacy(_ map[string]any) map[string]any {
 			"weather":   map[string]any{"anchor": "right", "minWidth": float64(320), "expansion": "never", "widgets": []any{"weather"}},
 		},
 		"surfaces": map[string]any{},
-		"dock": map[string]any{"pinned": []any{}},
+		"dock":     map[string]any{"pinned": []any{}},
 	}
 }
 

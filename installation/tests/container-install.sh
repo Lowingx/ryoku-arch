@@ -364,37 +364,5 @@ runuser -u "$TESTUSER" -- env "HOME=/home/$TESTUSER" "XDG_CURRENT_DESKTOP=niri" 
 [[ -f "$cfg/niri/settings.kdl" && -f "$cfg/niri/rebinds.kdl" ]] || die "the niri provider did not write its generated includes"
 niri validate -c "$cfg/niri/config.kdl" || die "the niri config the packages ship does not parse"
 
-# 11. the third compositor variant, the mango twin of the assertions above:
-#     the same coexistence check, the same provider-authored tree, validated
-#     with mango's own parser (`mango -p`), which is the cheapest proof the
-#     shipped + generated config ever loads.
-log "installing the third compositor variant"
-pacman -S --needed --noconfirm ryoku-desktop-mango || die "ryoku-desktop-mango did not install beside the other variants"
-pacman -Qq ryoku-desktop-mango >/dev/null 2>&1 || die "the mango variant is not installed"
-pacman -Qq ryoku-desktop-niri >/dev/null 2>&1 || die "installing the mango variant removed the niri one (variants must coexist)"
-pacman -Qq ryoku-desktop-hyprland >/dev/null 2>&1 || die "installing the mango variant removed the hyprland one (variants must coexist)"
-[[ -x /usr/bin/ryoku-wm-mango ]] || die "ryoku-desktop-mango did not ship the ryoku-wm-mango provider"
-[[ -f /usr/share/ryoku/config/mango/config.conf ]] || die "ryoku-desktop-mango did not ship the mango config tree"
-pacman -Ql ryoku-desktop-mango | grep -q "config/hypr" && die "the mango variant ships the Hyprland tree"
-[[ -f /usr/share/wayland-sessions/mango.desktop ]] || die "the mango session entry is not installed"
-pacman -Qo /usr/share/wayland-sessions/mango.desktop | grep -q ryoku-desktop-mango \
-  || die "the mango session entry is not owned by the variant package"
-[[ -x /usr/bin/ryoku-mango-session ]] || die "the mango variant did not ship the session wrapper"
-grep -q 'ryoku-mango-session' /usr/share/wayland-sessions/mango.desktop \
-  || die "the mango session entry does not exec the wrapper"
-
-# materialize + the provider's apply, then let mango parse the result: an
-# update that ships or authors a broken tree must fail here.
-log "materializing the mango config and validating it with mango"
-runuser -u "$TESTUSER" -- env "HOME=/home/$TESTUSER" "USER=$TESTUSER" "LOGNAME=$TESTUSER" \
-  ryoku materialize >/dev/null || die "ryoku materialize failed on the mango variant"
-[[ -f "$cfg/mango/config.conf" ]] || die "materialize did not lay the mango config"
-printf '{"desktop":{},"wm":{"mango":{}}}\n' >"$cfg/ryoku/desktop.json"
-runuser -u "$TESTUSER" -- env "HOME=/home/$TESTUSER" "XDG_CURRENT_DESKTOP=mango" \
-  /usr/bin/ryoku-wm-mango apply "$cfg/ryoku/desktop.json" >/dev/null \
-  || die "the mango provider did not apply the store"
-[[ -f "$cfg/mango/settings.conf" && -f "$cfg/mango/rebinds.conf" ]] || die "the mango provider did not write its generated sources"
-runuser -u "$TESTUSER" -- env "HOME=/home/$TESTUSER" mango -c "$cfg/mango/config.conf" -p \
-  || die "the mango config the packages ship does not parse"
 
 log "container-install: OK -- ryoku-desktop delivered the full config to $cfg"

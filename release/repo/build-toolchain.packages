@@ -61,19 +61,6 @@ gtk4
 gtk4-layer-shell
 glm
 
-# The mango compositor stack: mangowm's meson resolves wlroots-0.20,
-# scenefx-0.5, libcjson, libpcre2-8 and the xcb util pc files, so their
-# owners join the host. build-repo.sh never installs what it builds, and
-# mangowm sorts before any repo recipe could provide them, so the official
-# packages are the build host's providers.
-wlroots0.20
-scenefx
-cjson
-pcre2
-libxcb
-xcb-util-wm
-xcb-util-renderutil
-
 # ryoku-cursor-material compiles a Bibata variant at build time: fish + jq run
 # the vendored recipe, and python + librsvg (rsvg-convert) + xorg-xcursorgen
 # (xcursorgen) plus xcur2png (the recipe's -x PNG export) rasterise the cursors.

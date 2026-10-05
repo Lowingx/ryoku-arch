@@ -689,7 +689,6 @@ func compositors() []item {
 	return []item{
 		{wm.ProviderHyprland, "Hyprland", i18n.T("dynamic tiling, the Ryoku default")},
 		{wm.ProviderNiri, "niri", i18n.T("scrollable tiling")},
-		{wm.ProviderMango, "MangoWM", i18n.T("dwm-style tags, scroller tiling, effects")},
 	}
 }
 

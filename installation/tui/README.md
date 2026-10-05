@@ -42,10 +42,10 @@ compositor -> browser -> apps -> diskpick (target disk) -> disk (strategy) ->
 partitions (layout) -> hostname -> username -> password -> encryption ->
 review`
 
-The `compositor` step picks the window manager (Hyprland, niri, MangoWM --
-whatever the `ryoku/wm` seam ships; it auto-skips when there is one provider);
-`browser` picks exactly one of the three browsers Ryoku ships (Zen, Chromium,
-Firefox); `apps` is a grouped keep/remove checklist over every optional app
+The `compositor` step picks the window manager (Hyprland or niri, whatever the
+`ryoku/wm` seam ships; it auto-skips when there is one provider); `browser`
+picks exactly one of the three browsers Ryoku ships (Zen, Chromium, Firefox);
+`apps` is a grouped keep/remove checklist over every optional app
 and tool (apps.go), with role-defining rows marked REQUIRED and refused.
 Some steps are conditional: the `gpu` (graphics mode) step matters only on a
 hybrid iGPU + dGPU laptop, and the pickers fall back to a small built-in list

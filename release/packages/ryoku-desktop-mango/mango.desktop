@@ -1,7 +1,0 @@
-[Desktop Entry]
-Name=Mango (Ryoku)
-Comment=Ryoku desktop on the MangoWM compositor
-Exec=ryoku-mango-session
-Icon=mango
-Type=Application
-DesktopNames=mango;wlroots

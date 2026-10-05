@@ -455,12 +455,14 @@ func dbRejection(err error) bool {
 	return false
 }
 
-// splitMetapackages are the compositor-split metas the 0.73.x packaging
-// introduced. A release that predates the split does not serve them, and their
-// exact-version pins on six packages make any downgrade transaction
-// unsatisfiable, so moving across the split has to drop them first; the
-// downgrade of ryoku-desktop itself re-ties the graph afterwards (#271).
-var splitMetapackages = []string{"ryoku-desktop-hyprland", "ryoku-desktop-niri"}
+// splitMetapackages are compositor variants that may have exact-version pins
+// the target channel cannot satisfy. Removing an unserved meta with -Rdd lets
+// the channel transaction replace it without touching the compositor itself.
+var splitMetapackages = []string{
+	"ryoku-desktop-hyprland",
+	"ryoku-desktop-niri",
+	wm.RetiredCompositor().VariantPackage,
+}
 
 // Seams over the live box, replaced in tests.
 var (

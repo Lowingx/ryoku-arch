@@ -59,6 +59,21 @@ func ryokuMoveArgs(set []string) []string {
 	return append(args, set...)
 }
 
+func prependMissingMoveTargets(set []string, targets ...string) []string {
+	present := make(map[string]bool, len(set))
+	for _, name := range set {
+		present[name] = true
+	}
+	prefix := make([]string, 0, len(targets))
+	for _, name := range targets {
+		if !present[name] {
+			prefix = append(prefix, name)
+			present[name] = true
+		}
+	}
+	return append(prefix, set...)
+}
+
 // moveRyokuSetToChannel performs the pacman side of a channel move against the
 // currently pointed [ryoku] repo. The pin is the caller's job (retargetChannel);
 // this only moves packages. Returns the set it moved so the caller can exclude
@@ -75,6 +90,30 @@ func moveRyokuSetToChannel() ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf(i18n.T("cannot read the [ryoku] repository, so there is nothing safe to move: %w"), err)
 	}
+	retired := wm.RetiredCompositor()
+	if splitMetaInstalled(retired.VariantPackage) {
+		name := detectCompositorForMove()
+		supported := false
+		for _, candidate := range wm.Providers() {
+			if candidate == name {
+				supported = true
+				break
+			}
+		}
+		if !supported {
+			name = ""
+			for _, candidate := range wm.Providers() {
+				if pkgInstalledForMove(ryokuDesktopPkg + "-" + candidate) {
+					name = candidate
+					break
+				}
+			}
+		}
+		if name == "" {
+			name = wm.Providers()[0]
+		}
+		set = prependMissingMoveTargets(set, ryokuRepo+"/"+ryokuDesktopPkg+"-"+name)
+	}
 	// A box migrating onto packages (a checkout retired by `ryoku track`) has
 	// no ryoku-desktop installed, and the set above is installed-only: without
 	// this the move would run, succeed, and install nothing -- the track
@@ -88,10 +127,10 @@ func moveRyokuSetToChannel() ([]string, error) {
 		if name == "" {
 			name = wm.Providers()[0] // the shipped default variant
 		}
-		set = append([]string{
-			ryokuRepo + "/" + ryokuDesktopPkg,
-			ryokuRepo + "/" + ryokuDesktopPkg + "-" + name,
-		}, set...)
+		set = prependMissingMoveTargets(set,
+			ryokuRepo+"/"+ryokuDesktopPkg,
+			ryokuRepo+"/"+ryokuDesktopPkg+"-"+name,
+		)
 	}
 	// A channel that predates the compositor split carries no
 	// ryoku-desktop-hyprland/niri; their exact-version pins would fail the

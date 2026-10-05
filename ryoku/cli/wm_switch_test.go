@@ -14,9 +14,9 @@ import (
 // carries is --overwrite for exactly those paths. Pin that the switch lane
 // uses the shared glob, so a new seed path joins it in one place.
 func TestWmSwitchInstallCarriesTheOverwriteGlob(t *testing.T) {
-	args := wmSwitchInstallArgs("ryoku-desktop-mango")
+	args := wmSwitchInstallArgs("ryoku-desktop-niri")
 	joined := strings.Join(args, " ")
-	if !strings.Contains(joined, "--overwrite "+updater.RyokuOverwriteGlob+" ryoku-desktop-mango") {
+	if !strings.Contains(joined, "--overwrite "+updater.RyokuOverwriteGlob+" ryoku-desktop-niri") {
 		t.Fatalf("switch install = %q, want --overwrite %q before the target", joined, updater.RyokuOverwriteGlob)
 	}
 	// The move stays in the Ryoku lane: never a sysupgrade, never -Sy.

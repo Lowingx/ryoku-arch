@@ -106,9 +106,9 @@ End to end, USB stick to first login:
    never drops mid-install; the serial console stays a plain root shell.
 4. **ryoku-tui.** The terminal runs the installer. It collects keyboard, locale,
    time zone, network, hardware profile, graphics mode, window manager
-   (Hyprland / niri / MangoWM), the one browser to install (Zen / Chromium /
-   Firefox), the keep/remove checklist over every optional app, target disk,
-   disk strategy, layout, user, and encryption, and refuses to proceed past
+   (Hyprland / niri), the one browser to install (Zen / Chromium / Firefox),
+   the keep/remove checklist over every optional app, target disk, disk
+   strategy, layout, user, and encryption, and refuses to proceed past
    its safety gates (BIOS, Secure Boot, live-medium exclusion, wipe ack,
    online).
 5. **RYOKU_\* handoff.** On the Review screen `system.go` builds the `RYOKU_*`

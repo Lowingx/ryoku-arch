@@ -5,6 +5,14 @@ for finer detail.
 
 ## Unreleased
 
+### Removed
+- The mango compositor is gone: its provider, config tree, packages,
+  installer choice, deploy steps, tests and docs. Ryoku ships Hyprland and
+  niri. A box that still carries the mango variant is moved onto the variant
+  for its running (or installed) compositor by `ryoku update` and the doctor,
+  which then remove the mango packages, config and provider binary once the
+  user is no longer in a mango session.
+
 ### Fixed
 - The doctor's reverse-PRIME warning (#270, a black panel after login on a
   hybrid-GPU laptop) now also fires when a forced or drifted GPU render pin

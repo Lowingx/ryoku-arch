@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"ryoku-cli/internal/sys"
+
+	wm "ryoku-wm"
 )
 
 // pacmanOp reports whether any recorded call runs `pacman <op>`.
@@ -187,5 +189,64 @@ func TestMoveRyokuSetAddsPackagedBaseWhenMigrating(t *testing.T) {
 	}
 	if !reflect.DeepEqual(set, want) {
 		t.Fatalf("returned set = %v, want %v", set, want)
+	}
+}
+
+func TestMoveRyokuSetMigratesRetiredVariant(t *testing.T) {
+	legacy := wm.RetiredCompositor()
+	var movedSet, dropped []string
+
+	oldPriv := privileged
+	privileged = func(...string) error { return nil }
+	t.Cleanup(func() { privileged = oldPriv })
+
+	oldMove := runRyokuMove
+	runRyokuMove = func(set []string) error {
+		movedSet = append([]string(nil), set...)
+		return nil
+	}
+	t.Cleanup(func() { runRyokuMove = oldMove })
+
+	oldSet, oldServed, oldPkg, oldDetect :=
+		ryokuSetForMove, servedSetForMove, pkgInstalledForMove, detectCompositorForMove
+	ryokuSetForMove = func() ([]string, error) {
+		return []string{ryokuRepo + "/" + ryokuDesktopPkg, ryokuRepo + "/ryogami"}, nil
+	}
+	servedSetForMove = func() map[string]bool {
+		return map[string]bool{
+			ryokuDesktopPkg:                         true,
+			ryokuDesktopPkg + "-" + wm.ProviderNiri: true,
+			"ryogami":                               true,
+		}
+	}
+	pkgInstalledForMove = func(name string) bool { return name == ryokuDesktopPkg }
+	detectCompositorForMove = func() string { return wm.ProviderNiri }
+	t.Cleanup(func() {
+		ryokuSetForMove, servedSetForMove, pkgInstalledForMove, detectCompositorForMove =
+			oldSet, oldServed, oldPkg, oldDetect
+	})
+
+	oldInstalled, oldRemove := splitMetaInstalled, splitMetaRemove
+	splitMetaInstalled = func(name string) bool { return name == legacy.VariantPackage }
+	splitMetaRemove = func(name string) error {
+		dropped = append(dropped, name)
+		return nil
+	}
+	t.Cleanup(func() { splitMetaInstalled, splitMetaRemove = oldInstalled, oldRemove })
+
+	set, err := moveRyokuSetToChannel()
+	if err != nil {
+		t.Fatalf("move: %v", err)
+	}
+	wantSet := []string{
+		ryokuRepo + "/" + ryokuDesktopPkg + "-" + wm.ProviderNiri,
+		ryokuRepo + "/" + ryokuDesktopPkg,
+		ryokuRepo + "/ryogami",
+	}
+	if !reflect.DeepEqual(set, wantSet) || !reflect.DeepEqual(movedSet, wantSet) {
+		t.Fatalf("moved set = %v, returned set = %v, want %v", movedSet, set, wantSet)
+	}
+	if want := []string{legacy.VariantPackage}; !reflect.DeepEqual(dropped, want) {
+		t.Fatalf("dropped variants = %v, want %v", dropped, want)
 	}
 }

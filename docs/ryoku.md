@@ -75,10 +75,10 @@ locked behind a text editor.
   door: `ryoku update` (snapshot, then pacman and the AUR, then materialize, then
   reload), plus `rollback`, `snapshots`, `status`, and `materialize`. It
   orchestrates pacman, yay, and snapper.
-- **The compositor** is one of three: Hyprland (`ryoku/hyprland/`, configured in
-  Lua), niri (`ryoku/niri/`, KDL) or MangoWM (`ryoku/mango/`, its ini dialect).
-  Each is a provider under `ryoku/wm/`, configured in its own language, one
-  concern per file. Its autostart brings up the shell and the hardware helpers.
+- **The compositor** is Hyprland (`ryoku/hyprland/`, configured in Lua) or
+  niri (`ryoku/niri/`, KDL). Each is a provider under `ryoku/wm/`, configured
+  in its own language, one concern per file. Its autostart brings up the shell
+  and the hardware helpers.
 - **Theming** is wallpaper-driven: `matugen` regenerates the palette from the
   current wallpaper, and the terminal and compositor colors follow it. With *Theme
   apps* on (the default), `matugen` fans that same palette into GTK / GUI apps
