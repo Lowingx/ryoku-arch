@@ -84,7 +84,7 @@ Item {
 
                     Behavior on height {
                         enabled: !Tokens.reduceMotion && !Motion.reduce
-                        NumberAnimation { duration: Tokens.flap; easing.type: Tokens.ease }
+                        NumberAnimation { duration: root.monitor.samplePeriodMs; easing.type: Easing.Linear }
                     }
                 }
             }

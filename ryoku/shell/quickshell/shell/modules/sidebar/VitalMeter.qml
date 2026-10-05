@@ -15,6 +15,7 @@ Item {
     property bool showProgress: false
     property real progressValue: 0
     property real progressMaximum: 100
+    property int settle: Tokens.flap
     property color accent: Tokens.inkDim
     property Component meterContent: null
 
@@ -79,7 +80,7 @@ Item {
 
                 Behavior on width {
                     enabled: !Tokens.reduceMotion && !Motion.reduce
-                    NumberAnimation { duration: Tokens.flap; easing.type: Tokens.ease }
+                    NumberAnimation { duration: root.settle; easing.type: Easing.Linear }
                 }
             }
         }

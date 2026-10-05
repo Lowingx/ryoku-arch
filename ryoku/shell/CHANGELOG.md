@@ -11,6 +11,14 @@
   motion respects the reduced-motion settings.
   (`quickshell/shell/modules/sidebar/`, `plugin/systemmonitor.cpp`,
   `plugin/systemgraph.cpp`)
+- **The system monitor reads continuously.** Vitals sample four times a second
+  with loads and transfer rates measured over a sliding one-second window, the
+  graph keeps a full minute at that density and eases every new point, rate
+  axis change, and meter over one sample period, so readings glide instead of
+  stepping once a second. Expensive sensors (temperatures, battery, disk
+  usage) still refresh once a second.
+  (`plugin/systemmonitor.cpp`, `plugin/systemgraph.cpp`,
+  `quickshell/shell/modules/sidebar/ControlsHero.qml`)
 - **ryoshot is the one capture UI.** Super+Shift+S opens its floating Shot,
   Edit, OCR, Search, and Record bar. The bar gains a delay timer that captures
   the live region after the wait, the screenshots folder, and, with Record

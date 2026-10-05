@@ -23,10 +23,13 @@ temperature, memory and swap, GPU load, temperature and VRAM, network traffic,
 disk traffic with root usage and drive temperature, and battery state. Missing
 sensors are omitted rather than shown as zero.
 
-`SystemMonitor` samples once per second on a worker thread while the panel is
-active. `SystemGraph` draws bounded native histories for CPU, memory, GPU,
-network, disk, and temperatures. Sampling and graph animation stop when the
-panel is inactive.
+`SystemMonitor` samples four times a second on a worker thread while the panel
+is active; loads and transfer rates are measured over a sliding one-second
+window, and slow sensors (temperatures, battery, disk usage) refresh once a
+second. `SystemGraph` draws bounded native histories for CPU, memory, GPU,
+network, disk, and temperatures, a minute deep, and eases each new sample in
+over one sample period so the trace never steps. Sampling and graph animation
+stop when the panel is inactive.
 
 ### Connections
 

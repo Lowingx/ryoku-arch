@@ -17,16 +17,24 @@
 namespace {
 
 using Vertex = QSGGeometry::ColoredPoint2D;
-constexpr int Subdivisions = 4;
+constexpr int MaxSubdivisions = 4;
+// A curve segment is subdivided to roughly this many pixels; dense sampling
+// already lands a sample under every pixel, so the buffers follow the width.
+constexpr float SubdivisionPixels = 3.0f;
 constexpr int MaxIntervals = SystemMonitor::HistoryCapacity - 1;
-constexpr int MaxFillVertices = MaxIntervals * Subdivisions * 6;
-constexpr int MaxLineVertices = MaxIntervals * Subdivisions * 18;
+constexpr int FillVerticesPerStep = 6;
+constexpr int LineVerticesPerStep = 18;
 constexpr int PointSegments = 12;
 constexpr int PointVertices = PointSegments * 3;
 constexpr int GridLines = 7;
 constexpr int GridVertices = GridLines * 6;
-constexpr qint64 ValueBlendMilliseconds = 420;
+// The newest sample eases in over exactly one sample period, so the curve's
+// right end is always in motion and never steps when the next sample lands.
+constexpr qint64 ValueBlendMilliseconds = SystemMonitor::SamplePeriodMs;
 constexpr float RateScaleFloor = 1024.0f * 1024.0f;
+// The rate axis follows the window maximum with this time constant so a burst
+// entering or leaving the window rescales the sparkline smoothly.
+constexpr float RateScaleSeconds = 0.45f;
 
 qint64 monotonicMilliseconds() {
     return std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -57,6 +65,13 @@ public:
         markDirty(QSGNode::DirtyGeometry);
     }
 
+    void ensureCapacity(int vertexCount) {
+        if (buffer->vertexCount() >= vertexCount)
+            return;
+        buffer->allocate(vertexCount);
+        clear();
+    }
+
     QSGGeometry* buffer = nullptr;
     int usedVertices = 0;
 };
@@ -75,8 +90,8 @@ struct GraphNode final : QSGNode {
 
     void ensureTraceCount(int count) {
         while (fills.size() < count) {
-            auto* fill = new ColorNode(MaxFillVertices);
-            auto* line = new ColorNode(MaxLineVertices);
+            auto* fill = new ColorNode(FillVerticesPerStep);
+            auto* line = new ColorNode(LineVerticesPerStep);
             auto* point = new ColorNode(PointVertices);
             fillGroup->appendChildNode(fill);
             lineGroup->appendChildNode(line);
@@ -367,10 +382,7 @@ void SystemGraph::setLineWidth(qreal width) {
 }
 
 int SystemGraph::windowSeconds() const {
-    if (m_sampleCount < 2)
-        return 10;
-    const qint64 observed = std::max<qint64>(1000, m_sampleTimes[m_sampleCount - 1] - m_sampleTimes[0] + 1000);
-    return std::clamp(static_cast<int>((observed + 999) / 1000), 10, 60);
+    return SystemMonitor::HistoryCapacity * SystemMonitor::SamplePeriodMs / 1000;
 }
 
 QColor SystemGraph::colorForTrace(int trace) const {
@@ -503,16 +515,33 @@ QSGNode* SystemGraph::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*) {
 
     const float plotWindowMilliseconds = static_cast<float>(windowSeconds() * 1000);
     const qint64 now = monotonicMilliseconds();
-    float rateScale = RateScaleFloor;
+    float rateTarget = RateScaleFloor;
     for (const TraceSamples& trace : std::as_const(m_traces)) {
         if (!isRateChannel(trace.channel))
             continue;
         for (int index = 0; index < m_sampleCount; ++index) {
             const qint64 age = std::max<qint64>(0, now - m_sampleTimes[index]);
             if (age <= plotWindowMilliseconds && std::isfinite(trace.values[index]))
-                rateScale = std::max(rateScale, trace.values[index]);
+                rateTarget = std::max(rateTarget, trace.values[index]);
         }
     }
+    if (!m_animated || m_rateScale <= 0.0f || m_lastFrameMs <= 0) {
+        m_rateScale = rateTarget;
+    } else {
+        const float elapsed = static_cast<float>(now - m_lastFrameMs) / 1000.0f;
+        const float blend = 1.0f - std::exp(-elapsed / RateScaleSeconds);
+        m_rateScale += (rateTarget - m_rateScale) * blend;
+        if (std::abs(rateTarget - m_rateScale) < rateTarget * 0.002f)
+            m_rateScale = rateTarget;
+    }
+    m_lastFrameMs = now;
+    const float rateScale = m_rateScale;
+
+    const float intervalPixels = m_sampleCount > 1
+        ? graphWidth * static_cast<float>(SystemMonitor::SamplePeriodMs) / plotWindowMilliseconds
+        : graphWidth;
+    const int subdivisions = std::clamp(static_cast<int>(std::ceil(intervalPixels / SubdivisionPixels)), 1, MaxSubdivisions);
+    const int steps = std::max(1, std::min(m_sampleCount - 1, MaxIntervals)) * subdivisions;
     for (qsizetype traceIndex = 0; traceIndex < m_traces.size(); ++traceIndex) {
         const TraceSamples& trace = m_traces[traceIndex];
         const QColor color = colorForTrace(traceIndex);
@@ -526,6 +555,8 @@ QSGNode* SystemGraph::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*) {
         const float plotHeight = std::max(0.0f, graphHeight - margin * 2.0f);
         ColorNode* fillNode = root->fills[traceIndex];
         ColorNode* lineNode = root->lines[traceIndex];
+        fillNode->ensureCapacity(steps * FillVerticesPerStep);
+        lineNode->ensureCapacity(steps * LineVerticesPerStep);
         Vertex* fillVertices = fillNode->buffer->vertexDataAsColoredPoint2D();
         Vertex* lineVertices = lineNode->buffer->vertexDataAsColoredPoint2D();
         int fillOffset = 0;
@@ -572,8 +603,8 @@ QSGNode* SystemGraph::updatePaintNode(QSGNode* oldNode, UpdatePaintNodeData*) {
                 continue;
 
             Point previous{std::clamp(p1.x, 0.0f, graphWidth), p1.y};
-            for (int subdivision = 1; subdivision <= Subdivisions; ++subdivision) {
-                const float t = static_cast<float>(subdivision) / static_cast<float>(Subdivisions);
+            for (int subdivision = 1; subdivision <= subdivisions; ++subdivision) {
+                const float t = static_cast<float>(subdivision) / static_cast<float>(subdivisions);
                 Point current;
                 current.x = std::clamp(p1.x + (p2.x - p1.x) * t, 0.0f, graphWidth);
                 const float value = std::clamp(catmullRom(p0Value, p1Value, p2Value, p3Value, t), 0.0f, 100.0f);

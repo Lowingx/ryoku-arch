@@ -845,16 +845,20 @@ bool ignoredNetworkInterface(const QString& name) {
         || name.startsWith(QStringLiteral("br-"));
 }
 
+// Rates are measured over a one-second window that slides forward every sample
+// period, so each reading is a full second of traffic re-evaluated four times a
+// second: live without the jitter of a quarter-second window.
 class NetworkSampler {
 public:
     NetworkReading sample(qint64 monotonicMs) {
         QFile file(QStringLiteral("/proc/net/dev"));
         if (!file.open(QIODevice::ReadOnly)) {
-            reset();
+            m_window.clear();
             return {};
         }
 
-        QHash<QString, NetworkCounters> current;
+        Snapshot current;
+        current.monotonicMs = monotonicMs;
         QByteArray line;
         while (!(line = file.readLine()).isEmpty()) {
             const qsizetype colon = line.indexOf(':');
@@ -871,23 +875,24 @@ public:
             const quint64 received = fields[0].toULongLong(&rxOk);
             const quint64 transmitted = fields[8].toULongLong(&txOk);
             if (rxOk && txOk)
-                current.insert(name, {received, transmitted});
+                current.counters.insert(name, {received, transmitted});
         }
-        if (current.isEmpty()) {
-            reset();
+        if (current.counters.isEmpty()) {
+            m_window.clear();
             return {};
         }
 
         NetworkReading reading;
-        const qint64 elapsedMs = monotonicMs - m_previousTime;
-        if (m_hasPrevious && elapsedMs > 0) {
+        if (!m_window.isEmpty()) {
+            const Snapshot& oldest = m_window.first();
+            const qint64 elapsedMs = monotonicMs - oldest.monotonicMs;
             quint64 receivedDelta = 0;
             quint64 transmittedDelta = 0;
             quint64 busiestDelta = 0;
             bool matchedPrevious = false;
-            for (auto it = current.constBegin(); it != current.constEnd(); ++it) {
-                const auto previous = m_previous.constFind(it.key());
-                if (previous == m_previous.constEnd())
+            for (auto it = current.counters.constBegin(); it != current.counters.constEnd(); ++it) {
+                const auto previous = oldest.counters.constFind(it.key());
+                if (previous == oldest.counters.constEnd())
                     continue;
                 matchedPrevious = true;
                 const quint64 rx = it->received >= previous->received ? it->received - previous->received : 0;
@@ -899,42 +904,32 @@ public:
                     reading.busiestInterface = it.key();
                 }
             }
-            if (matchedPrevious) {
+            if (matchedPrevious && elapsedMs > 0) {
                 const double seconds = static_cast<double>(elapsedMs) / 1000.0;
                 reading.receivedPerSecond = static_cast<double>(receivedDelta) / seconds;
                 reading.transmittedPerSecond = static_cast<double>(transmittedDelta) / seconds;
                 reading.available = true;
             }
         }
-        m_previous = std::move(current);
-        m_previousTime = monotonicMs;
-        m_hasPrevious = true;
+        m_window.append(std::move(current));
+        while (m_window.size() > SystemMonitor::RateWindowSamples + 1)
+            m_window.removeFirst();
         return reading;
     }
 
 private:
-    void reset() {
-        m_previous.clear();
-        m_previousTime = 0;
-        m_hasPrevious = false;
-    }
+    struct Snapshot {
+        qint64 monotonicMs = 0;
+        QHash<QString, NetworkCounters> counters;
+    };
 
-    QHash<QString, NetworkCounters> m_previous;
-    qint64 m_previousTime = 0;
-    bool m_hasPrevious = false;
+    QVector<Snapshot> m_window;
 };
 
 bool ignoredBlockDevice(const QString& name) {
     return name.startsWith(QStringLiteral("loop")) || name.startsWith(QStringLiteral("ram"))
         || name.startsWith(QStringLiteral("zram")) || name.startsWith(QStringLiteral("dm-"));
 }
-
-struct DiskDevice {
-    quint64 blockSize = 0;
-    quint64 previousReadSectors = 0;
-    quint64 previousWriteSectors = 0;
-    bool previousValid = false;
-};
 
 struct DiskReading {
     double readPerSecond = 0.0;
@@ -956,76 +951,81 @@ public:
                 || blockSize == 0) {
                 continue;
             }
-            m_devices.insert(name, {blockSize, 0, 0, false});
+            m_blockSizes.insert(name, blockSize);
         }
     }
 
     DiskReading sample(qint64 monotonicMs) {
         QFile file(QStringLiteral("/proc/diskstats"));
         if (!file.open(QIODevice::ReadOnly)) {
-            clearPrevious();
+            m_window.clear();
             return {};
         }
 
-        quint64 readBytes = 0;
-        quint64 writeBytes = 0;
-        bool parsedDevice = false;
-        bool hadPrevious = false;
+        Snapshot current;
+        current.monotonicMs = monotonicMs;
         QByteArray line;
         while (!(line = file.readLine()).isEmpty()) {
             const QList<QByteArray> fields = line.simplified().split(' ');
             if (fields.size() < 10)
                 continue;
             const QString name = QString::fromLatin1(fields[2]);
-            auto device = m_devices.find(name);
-            if (device == m_devices.end())
+            const auto blockSize = m_blockSizes.constFind(name);
+            if (blockSize == m_blockSizes.constEnd())
                 continue;
             bool readOk = false;
             bool writeOk = false;
             const quint64 readSectors = fields[5].toULongLong(&readOk);
             const quint64 writeSectors = fields[9].toULongLong(&writeOk);
-            if (!readOk || !writeOk)
-                continue;
-            parsedDevice = true;
-            if (device->previousValid) {
-                const quint64 readDelta = readSectors >= device->previousReadSectors
-                    ? readSectors - device->previousReadSectors
-                    : 0;
-                const quint64 writeDelta = writeSectors >= device->previousWriteSectors
-                    ? writeSectors - device->previousWriteSectors
-                    : 0;
-                readBytes += readDelta * device->blockSize;
-                writeBytes += writeDelta * device->blockSize;
-                hadPrevious = true;
-            }
-            device->previousReadSectors = readSectors;
-            device->previousWriteSectors = writeSectors;
-            device->previousValid = true;
+            if (readOk && writeOk)
+                current.bytes.insert(name, {readSectors * *blockSize, writeSectors * *blockSize});
+        }
+        if (current.bytes.isEmpty()) {
+            m_window.clear();
+            return {};
         }
 
         DiskReading reading;
-        const qint64 elapsedMs = monotonicMs - m_previousTime;
-        if (parsedDevice && hadPrevious && m_previousTime > 0 && elapsedMs > 0) {
-            const double seconds = static_cast<double>(elapsedMs) / 1000.0;
-            reading.readPerSecond = static_cast<double>(readBytes) / seconds;
-            reading.writePerSecond = static_cast<double>(writeBytes) / seconds;
-            reading.available = true;
+        if (!m_window.isEmpty()) {
+            const Snapshot& oldest = m_window.first();
+            const qint64 elapsedMs = monotonicMs - oldest.monotonicMs;
+            quint64 readBytes = 0;
+            quint64 writeBytes = 0;
+            bool matchedPrevious = false;
+            for (auto it = current.bytes.constBegin(); it != current.bytes.constEnd(); ++it) {
+                const auto previous = oldest.bytes.constFind(it.key());
+                if (previous == oldest.bytes.constEnd())
+                    continue;
+                matchedPrevious = true;
+                readBytes += it->read >= previous->read ? it->read - previous->read : 0;
+                writeBytes += it->written >= previous->written ? it->written - previous->written : 0;
+            }
+            if (matchedPrevious && elapsedMs > 0) {
+                const double seconds = static_cast<double>(elapsedMs) / 1000.0;
+                reading.readPerSecond = static_cast<double>(readBytes) / seconds;
+                reading.writePerSecond = static_cast<double>(writeBytes) / seconds;
+                reading.available = true;
+            }
         }
-        m_previousTime = parsedDevice ? monotonicMs : 0;
-        if (!parsedDevice)
-            clearPrevious();
+        m_window.append(std::move(current));
+        while (m_window.size() > SystemMonitor::RateWindowSamples + 1)
+            m_window.removeFirst();
         return reading;
     }
 
 private:
-    void clearPrevious() {
-        for (auto it = m_devices.begin(); it != m_devices.end(); ++it)
-            it->previousValid = false;
-        m_previousTime = 0;
-    }
+    struct DiskBytes {
+        quint64 read = 0;
+        quint64 written = 0;
+    };
 
-    QHash<QString, DiskDevice> m_devices;
-    qint64 m_previousTime = 0;
+    struct Snapshot {
+        qint64 monotonicMs = 0;
+        QHash<QString, DiskBytes> bytes;
+    };
+
+    QHash<QString, quint64> m_blockSizes;
+    QVector<Snapshot> m_window;
 };
 
 struct BatterySensor {
@@ -1174,31 +1174,52 @@ void SystemMonitor::startWorker() {
                 applyIdentity(generation, std::move(identity));
             }, Qt::QueuedConnection);
 
-            CpuSnapshot previousCpu;
+            // CPU load is the busy share over the last second, re-evaluated every
+            // sample period: the snapshot window holds one second of history so a
+            // quarter-second sample never shows a quarter-second spike.
+            QVector<CpuSnapshot> cpuWindow;
+            // Sensors that cost a device query (hwmon, battery, statvfs) and values
+            // that only move per second are refreshed once a second and carried.
+            struct SlowReadings {
+                double cpuTemp = 0.0;
+                bool cpuTempAvailable = false;
+                double storageTemp = 0.0;
+                bool storageTempAvailable = false;
+                BatteryReading battery;
+                LoadReading load;
+                StorageReading storage;
+                qulonglong uptimeSeconds = 0;
+            } slow;
+            int tick = 0;
             auto nextSample = Clock::now();
             while (!cancelled()) {
                 SampleResult result;
                 result.monotonicMs = monotonicMilliseconds();
 
-                const CpuSnapshot cpu = readCpuSnapshot();
-                result.cpuPercent = cpuLoad(cpu.aggregate, previousCpu.aggregate, result.cpuAvailable);
-                result.coreCount = cpu.cores.size();
-                if (cpu.cores.size() == previousCpu.cores.size() && !cpu.cores.isEmpty()) {
-                    result.coreLoads.reserve(cpu.cores.size());
-                    bool allAvailable = true;
-                    for (qsizetype index = 0; index < cpu.cores.size(); ++index) {
-                        bool available = false;
-                        const double load = cpuLoad(cpu.cores[index], previousCpu.cores[index], available);
-                        if (!available) {
-                            allAvailable = false;
-                            break;
+                CpuSnapshot cpu = readCpuSnapshot();
+                if (!cpuWindow.isEmpty()) {
+                    const CpuSnapshot& oldest = cpuWindow.first();
+                    result.cpuPercent = cpuLoad(cpu.aggregate, oldest.aggregate, result.cpuAvailable);
+                    if (cpu.cores.size() == oldest.cores.size() && !cpu.cores.isEmpty()) {
+                        result.coreLoads.reserve(cpu.cores.size());
+                        bool allAvailable = true;
+                        for (qsizetype index = 0; index < cpu.cores.size(); ++index) {
+                            bool available = false;
+                            const double load = cpuLoad(cpu.cores[index], oldest.cores[index], available);
+                            if (!available) {
+                                allAvailable = false;
+                                break;
+                            }
+                            result.coreLoads.append(load);
                         }
-                        result.coreLoads.append(load);
+                        if (!allAvailable)
+                            result.coreLoads.clear();
                     }
-                    if (!allAvailable)
-                        result.coreLoads.clear();
                 }
-                previousCpu = cpu;
+                result.coreCount = cpu.cores.size();
+                cpuWindow.append(std::move(cpu));
+                while (cpuWindow.size() > RateWindowSamples + 1)
+                    cpuWindow.removeFirst();
                 result.cpuFrequencyGhz = readMeanFrequencyGhz(frequencySources);
 
                 const MemoryReading memory = readMemory();
@@ -1209,12 +1230,28 @@ void SystemMonitor::startWorker() {
                 result.swapTotalGiB = memory.swapTotalGiB;
                 result.memoryAvailable = memory.available;
 
-                const LoadReading load = readLoad();
-                result.loadAverage = load.average;
-                result.processCount = load.processCount;
+                if (tick % RateWindowSamples == 0) {
+                    slow.load = readLoad();
+                    slow.cpuTempAvailable = readTemperature(cpuTemperature, slow.cpuTemp);
+                    slow.storageTempAvailable = readTemperature(storageTemperature, slow.storageTemp);
+                    slow.battery = readBattery(batterySensor);
+                    slow.uptimeSeconds = readUptimeSeconds();
+                    slow.storage = readRootStorage();
+                }
+                ++tick;
+                result.loadAverage = slow.load.average;
+                result.processCount = slow.load.processCount;
                 result.cpuTempLabel = cpuTemperature.label;
-                result.cpuTempAvailable = readTemperature(cpuTemperature, result.cpuTemp);
-                result.storageTempAvailable = readTemperature(storageTemperature, result.storageTemp);
+                result.cpuTemp = slow.cpuTemp;
+                result.cpuTempAvailable = slow.cpuTempAvailable;
+                result.storageTemp = slow.storageTemp;
+                result.storageTempAvailable = slow.storageTempAvailable;
+                result.batteryPercent = slow.battery.percent;
+                result.batteryCharging = slow.battery.charging;
+                result.batteryAvailable = slow.battery.available;
+                result.uptimeSeconds = slow.uptimeSeconds;
+                result.storageUsedGiB = slow.storage.usedGiB;
+                result.storageTotalGiB = slow.storage.totalGiB;
 
                 const GpuReading gpuReading = gpu.sample();
                 result.gpuPercent = gpuReading.percent;
@@ -1236,25 +1273,15 @@ void SystemMonitor::startWorker() {
                 result.diskWriteBytesPerSec = diskReading.writePerSecond;
                 result.diskAvailable = diskReading.available;
 
-                const BatteryReading battery = readBattery(batterySensor);
-                result.batteryPercent = battery.percent;
-                result.batteryCharging = battery.charging;
-                result.batteryAvailable = battery.available;
-
-                result.uptimeSeconds = readUptimeSeconds();
-                const StorageReading storage = readRootStorage();
-                result.storageUsedGiB = storage.usedGiB;
-                result.storageTotalGiB = storage.totalGiB;
-
                 if (!cancelled()) {
                     QMetaObject::invokeMethod(
                         this, [this, generation, result] { applySample(generation, result); }, Qt::QueuedConnection);
                 }
 
-                nextSample += std::chrono::seconds(1);
+                nextSample += std::chrono::milliseconds(SamplePeriodMs);
                 const auto finished = Clock::now();
                 if (nextSample <= finished)
-                    nextSample = finished + std::chrono::seconds(1);
+                    nextSample = finished + std::chrono::milliseconds(SamplePeriodMs);
                 std::unique_lock sampleLock(m_workerMutex);
                 m_workerWake.wait_until(sampleLock, stop, nextSample, [this, generation] {
                     return !m_workerActive.load(std::memory_order_acquire)

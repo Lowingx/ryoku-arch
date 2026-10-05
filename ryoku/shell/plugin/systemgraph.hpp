@@ -110,4 +110,6 @@ private:
     QColor m_gridColor = Qt::transparent;
     qreal m_lineWidth = 2.0;
     std::atomic<qulonglong> m_frameCount{0};
+    float m_rateScale = 0.0f;
+    qint64 m_lastFrameMs = 0;
 };

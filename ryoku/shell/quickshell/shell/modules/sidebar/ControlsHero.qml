@@ -77,9 +77,13 @@ Item {
         return I18n.tr("Up %1d %2h").arg(Math.floor(hours / 24)).arg(hours % 24);
     }
 
+    // Each reading glides to its next value over exactly one sample period, so
+    // it is still in motion when the following sample lands and never steps.
     QtObject {
         id: displayed
 
+        readonly property int settle: root.monitor.samplePeriodMs
+        readonly property bool eased: !Tokens.reduceMotion && !Motion.reduce
         property real cpu: root.monitor.cpuAvailable && isFinite(root.monitor.cpuPercent)
                            ? root.monitor.cpuPercent
                            : 0
@@ -93,24 +97,24 @@ Item {
         property real uptime: isFinite(root.monitor.uptimeSeconds) ? root.monitor.uptimeSeconds : 0
 
         Behavior on cpu {
-            enabled: !Tokens.reduceMotion && !Motion.reduce
-            NumberAnimation { duration: Tokens.flap; easing.type: Tokens.ease }
+            enabled: displayed.eased
+            NumberAnimation { duration: displayed.settle; easing.type: Easing.Linear }
         }
         Behavior on cpuFrequency {
-            enabled: !Tokens.reduceMotion && !Motion.reduce
-            NumberAnimation { duration: Tokens.flap; easing.type: Tokens.ease }
+            enabled: displayed.eased
+            NumberAnimation { duration: displayed.settle; easing.type: Easing.Linear }
         }
         Behavior on cpuTemperature {
-            enabled: !Tokens.reduceMotion && !Motion.reduce
-            NumberAnimation { duration: Tokens.flap; easing.type: Tokens.ease }
+            enabled: displayed.eased
+            NumberAnimation { duration: displayed.settle; easing.type: Easing.Linear }
         }
         Behavior on load {
-            enabled: !Tokens.reduceMotion && !Motion.reduce
-            NumberAnimation { duration: Tokens.flap; easing.type: Tokens.ease }
+            enabled: displayed.eased
+            NumberAnimation { duration: displayed.settle; easing.type: Easing.Linear }
         }
         Behavior on uptime {
-            enabled: !Tokens.reduceMotion && !Motion.reduce
-            NumberAnimation { duration: Tokens.flap; easing.type: Tokens.ease }
+            enabled: displayed.eased
+            NumberAnimation { duration: displayed.settle; easing.type: Easing.Linear }
         }
     }
 
@@ -443,6 +447,7 @@ Item {
                 height: meters.rowHeight
                 visible: root.monitor.memoryAvailable
                 s: root.s
+                settle: root.monitor.samplePeriodMs
                 label: I18n.tr("Memory")
                 valueText: {
                     const memory = I18n.tr("%1 / %2 GiB")
@@ -463,6 +468,7 @@ Item {
                 height: meters.rowHeight
                 visible: root.monitor.gpuAvailable
                 s: root.s
+                settle: root.monitor.samplePeriodMs
                 label: I18n.tr("GPU")
                 valueText: root.monitor.gpuTempAvailable
                            ? I18n.tr("%1% · %2 °C")
@@ -485,6 +491,7 @@ Item {
                 height: meters.rowHeight
                 visible: root.monitor.networkAvailable
                 s: root.s
+                settle: root.monitor.samplePeriodMs
                 label: I18n.tr("Network")
                 valueText: I18n.tr("↓ %1  ↑ %2")
                     .arg(root.formatRate(root.monitor.networkRxBytesPerSec))
@@ -511,6 +518,7 @@ Item {
                 height: meters.rowHeight
                 visible: root.monitor.diskAvailable && root.monitor.storageTotalGiB > 0
                 s: root.s
+                settle: root.monitor.samplePeriodMs
                 label: I18n.tr("Disk")
                 valueText: root.formatDiskRates(root.monitor.diskReadBytesPerSec,
                                                 root.monitor.diskWriteBytesPerSec)
@@ -532,6 +540,7 @@ Item {
                 height: meters.rowHeight
                 visible: root.monitor.batteryAvailable
                 s: root.s
+                settle: root.monitor.samplePeriodMs
                 label: I18n.tr("Battery")
                 valueText: I18n.tr("%1% · %2")
                     .arg(Math.round(root.monitor.batteryPercent))

@@ -20,6 +20,7 @@ class SystemMonitor : public QObject {
     Q_OBJECT
     QML_ELEMENT
     Q_PROPERTY(bool active READ active WRITE setActive NOTIFY activeChanged)
+    Q_PROPERTY(int samplePeriodMs READ samplePeriodMs CONSTANT)
     Q_PROPERTY(qreal cpuPercent READ cpuPercent NOTIFY samplesChanged)
     Q_PROPERTY(qreal memoryPercent READ memoryPercent NOTIFY samplesChanged)
     Q_PROPERTY(qreal gpuPercent READ gpuPercent NOTIFY samplesChanged)
@@ -67,7 +68,13 @@ class SystemMonitor : public QObject {
 public:
     explicit SystemMonitor(QObject* parent = nullptr);
     ~SystemMonitor() override;
-    static constexpr int HistoryCapacity = 60;
+    // Four samples a second; loads and rates are measured over the last
+    // RateWindowSamples (one second), and the history keeps one minute.
+    static constexpr int SamplePeriodMs = 250;
+    static constexpr int RateWindowSamples = 1000 / SamplePeriodMs;
+    static constexpr int HistoryCapacity = 60 * 1000 / SamplePeriodMs;
+
+    static constexpr int samplePeriodMs() { return SamplePeriodMs; }
 
     bool active() const { return m_active; }
     void setActive(bool active);
