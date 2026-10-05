@@ -17,6 +17,18 @@
   headless one exits at once.
 
 ### Fixed
+- `power/ryoku-power-cutover`: **the session bind no longer strips the live X
+  display.** Xwayland starts lazily with the first X client, so the compositor
+  child whose environment the bind snapshots often predates it: the file then
+  carries WAYLAND_DISPLAY but no DISPLAY, and the manager bind, which clears
+  the key before replaying the file, removed the DISPLAY the compositor
+  bootstrap had already pushed. Every X11-only app the launcher spawned died
+  at startup (Steam: "XOpenDisplay failed") until the next full relogin, and
+  whether a boot was affected depended on which process won the snapshot
+  race. The snapshot writer now borrows a missing DISPLAY from the session's
+  own X server process (matched by scope cgroup, session id, and the X server
+  binary itself, never a client, whose DISPLAY could name another machine);
+  with no X server in the session the file is written exactly as before.
 - `tpm/60-ryoku-tpm-nvpcr.rules`: **four TPM units no longer fail on every
   boot.** systemd 262 sets up NvPCRs only from a PCR-signed UKI's
   `tpm2-pcr-public-key.pem`, which Ryoku does not build, so
