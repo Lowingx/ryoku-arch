@@ -106,7 +106,8 @@ Item {
 
     function _movable(id, item) {
         return String(id).indexOf("visualizer") !== 0
-            && item !== null && item !== undefined;
+            && item !== null && item !== undefined
+            && item.locked !== true;
     }
 
     function _bounds(item) {
@@ -306,10 +307,14 @@ Item {
         Qt.callLater(() => root.widgetPressActive = false);
         root.flushNudge();
         const mods = modifiers === undefined ? root.heldModifiers : modifiers;
-        if ((mods & Qt.ShiftModifier) || (mods & Qt.ControlModifier))
+        if ((mods & Qt.ShiftModifier) || (mods & Qt.ControlModifier)) {
             StageCfg.StageSession.toggleSelect(id);
-        else
+        } else if (StageCfg.StageSession.contains(id)) {
+            StageCfg.StageSession.selectMany(
+                StageCfg.StageSession.selection, id);
+        } else {
             StageCfg.StageSession.select(id);
+        }
         StageCfg.StageSession.closePanel();
         if (root.keyboardEnabled)
             root.forceActiveFocus();
@@ -421,7 +426,7 @@ Item {
         root.flushNudge();
         if (!StageCfg.StageSession.contains(id)) {
             root._drag = null;
-            return { minX: -Infinity, maxX: Infinity,
+            return { active: false, minX: -Infinity, maxX: Infinity,
                 minY: -Infinity, maxY: Infinity };
         }
         const members = [];
@@ -448,7 +453,8 @@ Item {
         const leader = members.find(member => member.id === id);
         if (!leader) {
             root._drag = null;
-            return { minX: -Infinity, maxX: Infinity, minY: -Infinity, maxY: Infinity };
+            return { active: false, minX: -Infinity, maxX: Infinity,
+                minY: -Infinity, maxY: Infinity };
         }
         root._drag = {
             leader: id,
@@ -464,6 +470,7 @@ Item {
             snapTargets: root._snapTargets()
         };
         return {
+            active: true,
             minX: leader.x + deltaMinX,
             maxX: leader.x + deltaMaxX,
             minY: leader.y + deltaMinY,

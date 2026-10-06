@@ -328,6 +328,7 @@ Item {
             win.tAngle = win.va;
         }
         onReleased: grab.mode = ""
+        onDoubleClicked: win.menuRequested(win.box.x, win.box.y)
         // Deltas from the press, never absolute positions, so nothing jumps.
         onPositionChanged: (m) => {
             if (!grab.pressed || grab.mode === "" || win.aura)

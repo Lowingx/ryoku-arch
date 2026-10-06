@@ -112,6 +112,14 @@ Item {
     property real resizeStartScale: 1
     property real resizeStartDiag: 1
     readonly property bool holding: slot.dragging || slot.resizing || guard.running
+    property bool stageMoveActive: false
+    property real stageMoveGrabX: 0
+    property real stageMoveGrabY: 0
+    property real groupDragMinX: -Infinity
+    property real groupDragMaxX: Infinity
+    property real groupDragMinY: -Infinity
+    property real groupDragMaxY: Infinity
+    readonly property string stageMoveId: "plugin:" + slot.pluginId
 
     // live scale during a resize scrub. mirrors scaleCfg when idle; mutates
     // while resizing so the readout and content track the cursor without
@@ -144,6 +152,86 @@ Item {
     }
     function stageToggleLock() {
         slot.lockRequested(!slot.locked);
+    }
+    function stageBeginMove(point, modifiers) {
+        if (slot.locked || slot.stageInputBlocked)
+            return false;
+        slot.stageMoveActive = true;
+        slot.stageMoveGrabX = point.x - slot.x;
+        slot.stageMoveGrabY = point.y - slot.y;
+        slot.dragX = slot.x;
+        slot.dragY = slot.y;
+        if (slot.composing && slot.stageController) {
+            const bounds = slot.stageController.widgetDragStarted(slot.stageMoveId);
+            if (bounds.active === false) {
+                slot.stageMoveActive = false;
+                return false;
+            }
+            slot.groupDragMinX = bounds.minX;
+            slot.groupDragMaxX = bounds.maxX;
+            slot.groupDragMinY = bounds.minY;
+            slot.groupDragMaxY = bounds.maxY;
+        }
+        return true;
+    }
+    function stageUpdateMove(point, modifiers) {
+        if (!slot.stageMoveActive || slot.locked)
+            return;
+        const nx = point.x - slot.stageMoveGrabX;
+        const ny = point.y - slot.stageMoveGrabY;
+        if (!slot.dragging) {
+            if (Math.abs(nx - slot.x) < 6 && Math.abs(ny - slot.y) < 6)
+                return;
+            slot.dragging = true;
+        }
+        slot.dragX = Math.max(slot.groupDragMinX,
+            Math.min(slot.groupDragMaxX, slot.clampX(nx)));
+        slot.dragY = Math.max(slot.groupDragMinY,
+            Math.min(slot.groupDragMaxY, slot.clampY(ny)));
+        if (slot.composing && slot.stageController) {
+            const bounded = slot.stageController.widgetDragMoved(
+                slot.stageMoveId, slot.dragX, slot.dragY, modifiers);
+            slot.dragX = bounded.x;
+            slot.dragY = bounded.y;
+        }
+    }
+    function stageEndMove(modifiers) {
+        if (!slot.stageMoveActive)
+            return;
+        if (slot.dragging) {
+            const fx = Math.round(Math.max(slot.groupDragMinX,
+                Math.min(slot.groupDragMaxX, slot.composing
+                    ? slot.dragX : slot.snap(slot.dragX))));
+            const fy = Math.round(Math.max(slot.groupDragMinY,
+                Math.min(slot.groupDragMaxY, slot.composing
+                    ? slot.dragY : slot.snap(slot.dragY))));
+            const handled = slot.composing && slot.stageController
+                && slot.stageController.widgetDragEnded(
+                    slot.stageMoveId, fx, fy, modifiers);
+            if (!handled)
+                slot.moved(fx, fy);
+            slot.dragging = false;
+            guard.restart();
+        } else if (slot.composing && slot.stageController) {
+            slot.stageController.widgetDragCancelled(slot.stageMoveId);
+        }
+        slot.stageMoveActive = false;
+        slot.groupDragMinX = -Infinity;
+        slot.groupDragMaxX = Infinity;
+        slot.groupDragMinY = -Infinity;
+        slot.groupDragMaxY = Infinity;
+    }
+    function stageCancelMove() {
+        if (!slot.stageMoveActive)
+            return;
+        if (slot.composing && slot.stageController)
+            slot.stageController.widgetDragCancelled(slot.stageMoveId);
+        slot.dragging = false;
+        slot.stageMoveActive = false;
+        slot.groupDragMinX = -Infinity;
+        slot.groupDragMaxX = Infinity;
+        slot.groupDragMinY = -Infinity;
+        slot.groupDragMaxY = Infinity;
     }
     function stageBeginResize(corner, point, modifiers) {
         if (slot.locked || slot.stageInputBlocked)
@@ -278,19 +366,16 @@ Item {
         }
     }
 
-    // left-drag anywhere moves the tile. a DragHandler (a passive pointer grab)
-    // shares the surface with the plugin's own controls: it only takes the grab
-    // once the press travels past the drag threshold, so a click or double-click
-    // that never moves stays with the plugin (a button, a style cycle) while a
-    // real drag moves the tile. persisted through moved() on release.
+    // Outside compose mode the DragHandler shares the tile with plugin controls.
+    // The compose frame calls the same move API after taking the topmost grab.
     DragHandler {
         id: dragger
         target: null
-        enabled: !slot.locked && !slot.stageInputBlocked
+        enabled: !slot.composing && !slot.locked && !slot.stageInputBlocked
         acceptedButtons: Qt.LeftButton
-        // decline to steal when the press began inside a plugin's own scroll
-        // area, so list scrolling stays with the list; steal freely otherwise.
-        grabPermissions: slot._scrollableAt(dragger.centroid.pressPosition.x, dragger.centroid.pressPosition.y)
+        grabPermissions: slot._scrollableAt(
+                dragger.centroid.pressPosition.x,
+                dragger.centroid.pressPosition.y)
             ? PointerHandler.TakeOverForbidden
             : (PointerHandler.CanTakeOverFromItems
                 | PointerHandler.CanTakeOverFromHandlersOfDifferentType
@@ -298,32 +383,24 @@ Item {
                 | PointerHandler.ApprovesTakeOverByHandlersOfDifferentType
                 | PointerHandler.ApprovesTakeOverByItems
                 | PointerHandler.ApprovesCancellation)
-        property real grabOX: 0
-        property real grabOY: 0
         onActiveChanged: {
             if (dragger.active) {
-                const p = slot.mapToItem(slot.parent, dragger.centroid.pressPosition.x, dragger.centroid.pressPosition.y);
-                dragger.grabOX = p.x - slot.x;
-                dragger.grabOY = p.y - slot.y;
-                slot.dragX = slot.x;
-                slot.dragY = slot.y;
-                slot.dragging = true;
-            } else if (slot.dragging) {
-                if (!slot.composing) {
-                    slot.dragX = slot.clampX(slot.snap(slot.dragX));
-                    slot.dragY = slot.clampY(slot.snap(slot.dragY));
-                }
-                slot.moved(Math.round(slot.dragX), Math.round(slot.dragY));
-                slot.dragging = false;
-                guard.restart();
+                const pressPoint = slot.mapToItem(slot.parent,
+                    dragger.centroid.pressPosition.x,
+                    dragger.centroid.pressPosition.y);
+                slot.stageBeginMove(pressPoint, Qt.NoModifier);
+                const currentPoint = slot.mapToItem(slot.parent,
+                    dragger.centroid.position.x,
+                    dragger.centroid.position.y);
+                slot.stageUpdateMove(currentPoint, Qt.NoModifier);
+            } else {
+                slot.stageEndMove(Qt.NoModifier);
             }
         }
         onCentroidChanged: {
-            if (!slot.dragging || slot.locked)
-                return;
-            const p = slot.mapToItem(slot.parent, dragger.centroid.position.x, dragger.centroid.position.y);
-            slot.dragX = slot.clampX(p.x - dragger.grabOX);
-            slot.dragY = slot.clampY(p.y - dragger.grabOY);
+            const point = slot.mapToItem(slot.parent,
+                dragger.centroid.position.x, dragger.centroid.position.y);
+            slot.stageUpdateMove(point, Qt.NoModifier);
         }
     }
 
@@ -333,14 +410,11 @@ Item {
     TapHandler {
         acceptedButtons: Qt.RightButton
         gesturePolicy: TapHandler.ReleaseWithinBounds
-        enabled: !slot.stageInputBlocked
-        onTapped: (eventPoint) => {
-            if (slot.composing)
-                slot.settingsRequested(slot.pluginId);
-            else {
-                const pr = slot.mapToItem(slot.parent, eventPoint.position.x, eventPoint.position.y);
-                slot.menuRequested(pr.x, pr.y, slot.pluginId);
-            }
+        enabled: !slot.composing && !slot.stageInputBlocked
+        onTapped: eventPoint => {
+            const position = slot.mapToItem(slot.parent,
+                eventPoint.position.x, eventPoint.position.y);
+            slot.menuRequested(position.x, position.y, slot.pluginId);
         }
     }
 

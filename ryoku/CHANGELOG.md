@@ -154,6 +154,24 @@
   `hub/quickshell/schema/DesktopScenePage.js`, `shell/ipc/control.go`).
 
 ### Fixed
+- **Every widget moves in the Stage Editor again.** A press anywhere inside a
+  widget's frame selects it and a drag moves it, whatever the widget's own
+  buttons are and whichever bar style is on, for built-ins, Shima and Python
+  faces, and store tiles alike; a selected group still moves together with one
+  undo step. Double-click or right-click opens the widget's settings. A locked
+  widget now shows a lock, says "Locked" when dragged, and has Lock and Unlock in
+  its action strip instead of silently refusing to move
+  (`shell/quickshell/shell/modules/stage/StageOutline.qml`,
+  `shell/quickshell/shell/modules/desktop/WidgetSlot.qml`,
+  `shell/quickshell/shell/modules/desktop/PluginDesktopSlot.qml`).
+- **The framing dock's turn and mirror buttons work every time.** After a wheel,
+  pinch, or touchpad zoom the steps were never written and the preview stopped
+  following the dock, so a turn or mirror saved but did not show, and the next
+  drag overwrote it. The settled steps are written now, the dock's buttons take
+  the click even when the pointer drifts, and a click between buttons no longer
+  reaches the picture's drag or double-click reset
+  (`shell/quickshell/stage/services/WallpaperLayout.qml`,
+  `shell/quickshell/stage/modules/ii/editMode/EditWallpaperFramingOverlay.qml`).
 - **Wallpaper framing stays where it was released and every layer follows it.**
   Dragging after a zoom no longer bounces when the committed record reloads,
   and mirror or rotation redraws the shown picture after a reveal transition.

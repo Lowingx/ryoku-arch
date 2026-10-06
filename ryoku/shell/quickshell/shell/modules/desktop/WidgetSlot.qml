@@ -59,6 +59,9 @@ Item {
     property real groupDragMaxX: Infinity
     property real groupDragMinY: -Infinity
     property real groupDragMaxY: Infinity
+    property bool stageMoveActive: false
+    property real stageMoveGrabX: 0
+    property real stageMoveGrabY: 0
     readonly property string storeMonitor: (slot.composing || Config.isForked(slot.monitor))
         ? slot.monitor : ""
     function _captureGesture() {
@@ -109,6 +112,95 @@ Item {
         slot._captureGesture();
         Config.setFor(slot.storeMonitor, slot.widget + "Locked", !slot.locked);
         slot.resized();
+    }
+    function stageBeginMove(point, modifiers) {
+        if (slot.locked || slot.stageInputBlocked)
+            return false;
+        slot.stageMoveActive = true;
+        slot._captureGesture();
+        slot.stageMoveGrabX = point.x - slot.x;
+        slot.stageMoveGrabY = point.y - slot.y;
+        slot.dragX = slot.x;
+        slot.dragY = slot.y;
+        if (slot.composing && slot.stageController) {
+            const bounds = slot.stageController.widgetDragStarted(slot.widget);
+            if (bounds.active === false) {
+                slot.stageMoveActive = false;
+                slot.gestureBefore = null;
+                return false;
+            }
+            slot.groupDragMinX = bounds.minX;
+            slot.groupDragMaxX = bounds.maxX;
+            slot.groupDragMinY = bounds.minY;
+            slot.groupDragMaxY = bounds.maxY;
+        }
+        return true;
+    }
+    function stageUpdateMove(point, modifiers) {
+        if (!slot.stageMoveActive || slot.locked)
+            return;
+        const nx = point.x - slot.stageMoveGrabX;
+        const ny = point.y - slot.stageMoveGrabY;
+        if (!slot.dragging) {
+            if (Math.abs(nx - slot.x) < 6 && Math.abs(ny - slot.y) < 6)
+                return;
+            slot.dragging = true;
+        }
+        slot.dragX = Math.max(slot.groupDragMinX,
+            Math.min(slot.groupDragMaxX, slot.clampX(nx)));
+        slot.dragY = Math.max(slot.groupDragMinY,
+            Math.min(slot.groupDragMaxY, slot.clampY(ny)));
+        if (slot.composing && slot.stageController) {
+            const bounded = slot.stageController.widgetDragMoved(
+                slot.widget, slot.dragX, slot.dragY, modifiers);
+            slot.dragX = bounded.x;
+            slot.dragY = bounded.y;
+        }
+    }
+    function stageEndMove(modifiers) {
+        if (!slot.stageMoveActive)
+            return;
+        if (slot.dragging) {
+            const fx = Math.round(Math.max(slot.groupDragMinX,
+                Math.min(slot.groupDragMaxX, slot.composing
+                    ? slot.dragX : slot.snap(slot.dragX))));
+            const fy = Math.round(Math.max(slot.groupDragMinY,
+                Math.min(slot.groupDragMaxY, slot.composing
+                    ? slot.dragY : slot.snap(slot.dragY))));
+            const handled = slot.composing && slot.stageController
+                && slot.stageController.widgetDragEnded(
+                    slot.widget, fx, fy, modifiers);
+            if (!handled) {
+                slot._setFree(fx, fy);
+                slot.dropped(Qt.rect(fx, fy, slot.width, slot.height));
+            } else {
+                slot.gestureBefore = null;
+            }
+            slot.dragging = false;
+            guard.restart();
+        } else {
+            if (slot.composing && slot.stageController)
+                slot.stageController.widgetDragCancelled(slot.widget);
+            slot.gestureBefore = null;
+        }
+        slot.stageMoveActive = false;
+        slot.groupDragMinX = -Infinity;
+        slot.groupDragMaxX = Infinity;
+        slot.groupDragMinY = -Infinity;
+        slot.groupDragMaxY = Infinity;
+    }
+    function stageCancelMove() {
+        if (!slot.stageMoveActive)
+            return;
+        if (slot.composing && slot.stageController)
+            slot.stageController.widgetDragCancelled(slot.widget);
+        slot.dragging = false;
+        slot.stageMoveActive = false;
+        slot.gestureBefore = null;
+        slot.groupDragMinX = -Infinity;
+        slot.groupDragMaxX = Infinity;
+        slot.groupDragMinY = -Infinity;
+        slot.groupDragMaxY = Infinity;
     }
     function stageBeginResize(corner, point, modifiers) {
         if (slot.locked || slot.stageInputBlocked)
@@ -384,111 +476,33 @@ Item {
         }
     }
 
-    // interaction grip UNDER the content: left-drag on bare widget area moves
-    // the tile (free-follow, snapping to the grid on release) and right-click
-    // interactive widget keeps its own clicks on top. the clock has no
-    // interactive children, so the whole surface still drags. a grip above the
-    // content would swallow every click.
+    // Outside compose mode the grip stays under the content, preserving every
+    // widget control. The compose frame calls the same move API from above.
     MouseArea {
         id: grip
         anchors.fill: parent
         acceptedButtons: Qt.LeftButton | Qt.RightButton
-        enabled: !slot.stageInputBlocked
+        enabled: !slot.composing && !slot.stageInputBlocked
         hoverEnabled: true
-        cursorShape: slot.locked ? Qt.ArrowCursor : (slot.dragging ? Qt.ClosedHandCursor : Qt.OpenHandCursor)
+        cursorShape: slot.locked ? Qt.ArrowCursor
+            : (slot.dragging ? Qt.ClosedHandCursor : Qt.OpenHandCursor)
 
-        property bool leftDown: false
-        property real grabOX: 0
-        property real grabOY: 0
-
-        onPressed: (mouse) => {
+        onPressed: mouse => {
             if (mouse.button === Qt.RightButton) {
-                if (slot.composing && slot.stageController)
-                    slot.stageController.settingsRequested(slot.widget);
-                else {
-                    Config.selectMonitor(slot.monitor, slot.composing);
-                    const pr = slot.mapToItem(slot.parent, mouse.x, mouse.y);
-                    slot.menuRequested(pr.x, pr.y, slot.widget);
-                }
+                Config.selectMonitor(slot.monitor, false);
+                const position = grip.mapToItem(slot.parent, mouse.x, mouse.y);
+                slot.menuRequested(position.x, position.y, slot.widget);
                 return;
             }
-            if (slot.locked)
-                return;
-            grip.leftDown = true;
-            slot._captureGesture();
-            const p = slot.mapToItem(slot.parent, mouse.x, mouse.y);
-            grip.grabOX = p.x - slot.x;
-            grip.grabOY = p.y - slot.y;
-            if (slot.composing && slot.stageController) {
-                const bounds = slot.stageController.widgetDragStarted(slot.widget);
-                slot.groupDragMinX = bounds.minX;
-                slot.groupDragMaxX = bounds.maxX;
-                slot.groupDragMinY = bounds.minY;
-                slot.groupDragMaxY = bounds.maxY;
-            }
+            const point = grip.mapToItem(slot.parent, mouse.x, mouse.y);
+            slot.stageBeginMove(point, mouse.modifiers);
         }
-        onPositionChanged: (mouse) => {
-            if (!grip.leftDown || slot.locked)
-                return;
-            const p = slot.mapToItem(slot.parent, mouse.x, mouse.y);
-            const nx = p.x - grip.grabOX;
-            const ny = p.y - grip.grabOY;
-            if (!slot.dragging) {
-                if (Math.abs(nx - slot.x) < 6 && Math.abs(ny - slot.y) < 6)
-                    return;
-                slot.dragging = true;
-            }
-            // The slot follows the pointer directly. The stage controller adds
-            // guide snapping while composing; ordinary desktop moves snap once.
-            slot.dragX = Math.max(slot.groupDragMinX,
-                Math.min(slot.groupDragMaxX, slot.clampX(nx)));
-            slot.dragY = Math.max(slot.groupDragMinY,
-                Math.min(slot.groupDragMaxY, slot.clampY(ny)));
-            if (slot.composing && slot.stageController) {
-                const bounded = slot.stageController.widgetDragMoved(
-                    slot.widget, slot.dragX, slot.dragY, mouse.modifiers);
-                slot.dragX = bounded.x;
-                slot.dragY = bounded.y;
-            }
+        onPositionChanged: mouse => {
+            const point = grip.mapToItem(slot.parent, mouse.x, mouse.y);
+            slot.stageUpdateMove(point, mouse.modifiers);
         }
-        onReleased: (mouse) => {
-            if (slot.dragging) {
-                const fx = Math.round(Math.max(slot.groupDragMinX,
-                    Math.min(slot.groupDragMaxX, slot.composing
-                        ? slot.dragX : slot.snap(slot.dragX))));
-                const fy = Math.round(Math.max(slot.groupDragMinY,
-                    Math.min(slot.groupDragMaxY, slot.composing
-                        ? slot.dragY : slot.snap(slot.dragY))));
-                const handled = slot.composing && slot.stageController
-                    && slot.stageController.widgetDragEnded(
-                        slot.widget, fx, fy, mouse.modifiers);
-                if (!handled) {
-                    slot._setFree(fx, fy);
-                    slot.dropped(Qt.rect(fx, fy, slot.width, slot.height));
-                } else {
-                    slot.gestureBefore = null;
-                }
-                slot.dragging = false;
-                guard.restart();
-            } else if (slot.composing && slot.stageController) {
-                slot.stageController.widgetDragCancelled(slot.widget);
-            }
-            slot.groupDragMinX = -Infinity;
-            slot.groupDragMaxX = Infinity;
-            slot.groupDragMinY = -Infinity;
-            slot.groupDragMaxY = Infinity;
-            grip.leftDown = false;
-        }
-        onCanceled: {
-            if (slot.composing && slot.stageController)
-                slot.stageController.widgetDragCancelled(slot.widget);
-            slot.dragging = false;
-            slot.groupDragMinX = -Infinity;
-            slot.groupDragMaxX = Infinity;
-            slot.groupDragMinY = -Infinity;
-            slot.groupDragMaxY = Infinity;
-            grip.leftDown = false;
-        }
+        onReleased: mouse => slot.stageEndMove(mouse.modifiers)
+        onCanceled: slot.stageCancelMove()
     }
 
     // lift a bare widget off the wallpaper for legibility on any backdrop. a

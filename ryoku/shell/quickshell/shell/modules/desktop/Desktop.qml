@@ -413,11 +413,13 @@ Scope {
     // document for a built-in or a hosted face; plugin tiles go through the
     // provider's snapshot/restore, since their write is the place tool's.
     function stageRecordGesture(s) {
-        if (!root.stageComposing || s.gestureBefore === null)
-            return;
-        const w = s.widget;
+        // Consumed even outside the editor: a snapshot left from a desktop
+        // drag would otherwise become the walk-back of the next edit.
         const before = s.gestureBefore;
         s.gestureBefore = null;
+        if (!root.stageComposing || before === null)
+            return;
+        const w = s.widget;
         const after = {
             Anchor: root.widgetValue(w, "Anchor"), X: root.widgetValue(w, "X"),
             Y: root.widgetValue(w, "Y"), Scale: root.widgetValue(w, "Scale"),
@@ -730,9 +732,9 @@ Scope {
                         win.width, win.height,
                         Stage.GlobalStates.editProgress,
                         Stage.GlobalStates.editDrawerProgress).width / Math.max(1, win.width))
-                onPicked: {
+                onPicked: modifiers => {
                     VizCfg.Config.setActive(index);
-                    stageSelection.pick(instanceId);
+                    stageSelection.pick(instanceId, modifiers);
                 }
                 onSettings: root.stageOpenSettings(instanceId)
                 onRemove: root.stageRemoveWidget(instanceId)
@@ -1376,38 +1378,12 @@ Scope {
                 radius: slot.dw.radius || 26
 
                 onMoved: (x, y) => {
-                    const handled = root.stageComposing
-                        && stageSelection.widgetDragEnded(slot.stageId, x, y);
-                    if (handled)
-                        return;
-                    const cmd = [root.placeTool, slot.pid, "desktopWidget", "" + x, "" + y];
+                    const cmd = [root.placeTool, slot.pid, "desktopWidget",
+                        "" + x, "" + y];
                     root.stageRecordPluginGesture(slot.pid, cmd);
                     persist.command = cmd;
                     persist.running = true;
                 }
-                onDraggingChanged: {
-                    if (!root.stageComposing)
-                        return;
-                    if (slot.dragging) {
-                        if (!StageCfg.StageSession.contains(slot.stageId))
-                            stageSelection.pick(slot.stageId);
-                        stageSelection.widgetDragStarted(slot.stageId);
-                    } else {
-                        stageSelection.widgetDragCancelled(slot.stageId);
-                    }
-                }
-                function syncStageGroupDrag() {
-                    if (!root.stageComposing || !slot.dragging)
-                        return;
-                    const bounded = stageSelection.widgetDragMoved(
-                        slot.stageId, slot.x, slot.y);
-                    if (Math.abs(bounded.x - slot.dragX) > 0.01)
-                        slot.dragX = bounded.x;
-                    if (Math.abs(bounded.y - slot.dragY) > 0.01)
-                        slot.dragY = bounded.y;
-                }
-                onXChanged: slot.syncStageGroupDrag()
-                onYChanged: slot.syncStageGroupDrag()
                 onResized: (sc) => {
                     const x = slot.resizing ? Math.round(slot.dragX)
                         : (slot.dw.x !== undefined) ? slot.dw.x : Math.round(slot.x);
@@ -1524,7 +1500,8 @@ Scope {
                             Stage.GlobalStates.editProgress,
                             Stage.GlobalStates.editDrawerProgress).width
                                 / Math.max(1, win.width))
-                    onPicked: stageSelection.pick(slot.stageId)
+                    onPicked: modifiers =>
+                        stageSelection.pick(slot.stageId, modifiers)
                     onSettings: root.stageOpenSettings(slot.stageId)
                     onRemove: root.stageRemoveWidget(slot.stageId)
                 }
@@ -1668,7 +1645,7 @@ Scope {
                         wf.slotItem = root.slotFor(wf.wid);
                     }
                 }
-                onPicked: stageSelection.pick(wf.wid)
+                onPicked: modifiers => stageSelection.pick(wf.wid, modifiers)
                 onSettings: root.stageOpenSettings(wf.wid)
                 onRemove: root.stageRemoveWidget(wf.wid)
             }

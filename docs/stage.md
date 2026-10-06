@@ -92,12 +92,17 @@ tabs. Visualizer and Depth come from `StageWidgetProvider.extraSections`; the
 provider passes them to the island's `Config.extraSections`. There is no
 lockscreen, bar, or dock editing in this mode.
 
-Frames appear on hover or selection. Each has four corner handles, a size badge,
-and an action strip with the widget name, Settings, and Remove. Resizing updates
-the preview locally, then writes the per-display store once on release and adds
-one undo step. Size snaps to 5%; hold Shift for free sizing and double-click a
-handle to reset to 100%. Moves snap to the grid, the card centre, and other
-widgets' edges and centres; hold Alt to move freely.
+Frames appear on hover or selection, and while composing the frame owns the
+pointer over its widget: a press anywhere on a widget, buttons included, selects
+it and a drag moves it, so the widget's own controls do not react until Done.
+Each frame has four corner handles, a size badge, and an action strip with the
+widget name, Lock or Unlock, Settings, and Remove. A locked widget shows a lock
+beside its name, keeps its corners hidden, and says "Locked" when dragged.
+Resizing updates the preview locally, then writes the per-display store once on
+release and adds one undo step. Size snaps to 5%; hold Shift for free sizing and
+double-click a handle to reset to 100%. Moves snap to the grid, the card centre,
+and other widgets' edges and centres; hold Alt to move freely. Visualizer
+instances keep their own grips for moving, sizing, and turning.
 
 Shift-click or Ctrl-click builds a selection; dragging a marquee on bare
 wallpaper can select widgets and desktop icons. A selected group moves together.
@@ -129,10 +134,13 @@ pick goes through `ryoku-stage-wallpaper --screen`, so ryogami remains the
 wallpaper owner. On the card, drag to move the real wallpaper, use the wheel or
 a pinch to zoom, and use the restyled framing dock to rotate, mirror, centre, or
 reset it. A live drag remains authoritative until its committed record can be
-read, so releasing after zoom no longer bounces the picture. Mirror and rotation
-also re-render the visible picture after a reveal transition. While framing,
-widgets, desktop icons, and the visualizer dim to one quarter opacity and stop
-taking input. Framing is stored per monitor and wallpaper path in
+read, so releasing after zoom no longer bounces the picture. Wheel, pinch, and
+touchpad steps are written once they settle, so the dock's buttons build on the
+zoom you see. Mirror and rotation also re-render the visible picture after a
+reveal transition, and a click on the dock between its buttons never reaches the
+picture's drag or double-click reset. While framing, widgets, desktop icons, and
+the visualizer dim to one quarter opacity and stop taking input. Framing is
+stored per monitor and wallpaper path in
 `~/.config/ryoku/stage/stage-editor.json`, so returning to a picture restores
 its framing.
 

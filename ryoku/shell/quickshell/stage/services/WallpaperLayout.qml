@@ -554,11 +554,13 @@ Singleton {
         });
     }
 
+    // A single-shot Timer no longer reports `running` inside its own
+    // onTriggered, so the expiry commits directly, not through flushGesture().
     Timer {
         id: commitTimer
         interval: 450
         repeat: false
-        onTriggered: root.flushGesture()
+        onTriggered: root.commitSteps()
     }
 
     // Writes a run of steps now instead of when the timer would have: before
@@ -569,11 +571,14 @@ Singleton {
         if (!commitTimer.running)
             return;
         commitTimer.stop();
+        root.commitSteps();
+    }
+
+    function commitSteps() {
+        root.interacting = false;
         if (root.liveScreen === "")
             return;
-        const target = root.gestureTarget();
-        root.interacting = false;
-        root.commitFraming(root.liveScreen, root.livePath, target);
+        root.commitFraming(root.liveScreen, root.livePath, root.gestureTarget());
     }
 
     // ── Writes ───────────────────────────────────────────────────────────────

@@ -615,6 +615,13 @@ Item {
             HoverHandler {
                 id: dockHover
             }
+            // The plate is not picture: a press between its buttons must not
+            // start a drag of the wallpaper, and a quick second click there
+            // must not read as the picture's double-click reset.
+            MouseArea {
+                anchors.fill: parent
+                acceptedButtons: Qt.AllButtons
+            }
 
             RowLayout {
                 id: dockRow
@@ -633,8 +640,8 @@ Item {
                     Layout.preferredWidth: Tokens.s7 + Tokens.s4 + Tokens.s1
                     implicitHeight: root.controlHeight
                     radius: Tokens.radius
-                    color: readoutTap.pressed ? Tokens.tint16
-                        : readoutHover.hovered ? Tokens.tint10 : Tokens.tint5
+                    color: readoutArea.pressed && readoutArea.enabled ? Tokens.tint16
+                        : readoutArea.containsMouse && readoutArea.enabled ? Tokens.tint10 : Tokens.tint5
                     border.width: Tokens.border
                     border.color: Tokens.lineSoft
                     opacity: root.target.zoom > WallpaperFraming.zoomMin + 0.0001 ? 1 : 0.55
@@ -647,19 +654,17 @@ Item {
                         font.weight: Font.DemiBold
                         color: Tokens.ink
                     }
-                    HoverHandler {
-                        id: readoutHover
-                        enabled: readout.enabled
-                        cursorShape: Qt.PointingHandCursor
-                    }
-                    TapHandler {
-                        id: readoutTap
+                    MouseArea {
+                        id: readoutArea
+                        anchors.fill: parent
                         enabled: root.target.zoom > WallpaperFraming.zoomMin + 0.0001
-                        onTapped: root.zoomTo(WallpaperFraming.zoomMin)
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.zoomTo(WallpaperFraming.zoomMin)
                     }
                     StyledToolTip {
                         requireOverlay: false
-                        extraVisibleCondition: readoutHover.hovered
+                        extraVisibleCondition: readoutArea.containsMouse
                         text: Translation.tr("Back to 100%")
                     }
                 }
@@ -739,11 +744,11 @@ Item {
         radius: Tokens.radius
         opacity: enabled ? 1 : 0.35
         color: button.toggled ? Tokens.bone
-            : buttonTap.pressed && button.enabled ? Tokens.tint16
-            : buttonHover.hovered && button.enabled ? Tokens.tint10 : "transparent"
+            : buttonArea.pressed && button.enabled ? Tokens.tint16
+            : buttonArea.containsMouse && button.enabled ? Tokens.tint10 : "transparent"
         border.width: Tokens.border
         border.color: button.toggled ? Tokens.bone
-            : buttonHover.hovered && button.enabled ? Tokens.lineStrong : Tokens.line
+            : buttonArea.containsMouse && button.enabled ? Tokens.lineStrong : Tokens.line
 
         Behavior on color {
             enabled: !Tokens.reduceMotion
@@ -761,19 +766,19 @@ Item {
             iconSize: Tokens.fValue
             color: button.toggled ? Tokens.inkOnBone : Tokens.inkDim
         }
-        HoverHandler {
-            id: buttonHover
+        // An exclusive grab: a click that drifts a few pixels on a touchpad
+        // still lands, where a passive TapHandler would cancel it.
+        MouseArea {
+            id: buttonArea
+            anchors.fill: parent
             enabled: button.enabled
+            hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-        }
-        TapHandler {
-            id: buttonTap
-            enabled: button.enabled
-            onTapped: button.clicked()
+            onClicked: button.clicked()
         }
         StyledToolTip {
             requireOverlay: false
-            extraVisibleCondition: buttonHover.hovered
+            extraVisibleCondition: buttonArea.containsMouse
             text: button.tooltip
         }
     }
