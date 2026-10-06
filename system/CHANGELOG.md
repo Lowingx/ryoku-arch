@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- **The package power cutover only touches sessions Ryoku runs in.** The
+  `ryoku-desktop` hook used to pick up any Wayland session whose compositor has
+  a Ryoku provider. That included a rival shell's Hyprland session during a
+  shell install, where it started the Ryoku session inside that desktop. It now
+  skips sessions with no Ryoku daemon running. A failed cutover also stops its
+  qylock generation guard instead of leaving it holding the launch lock, which
+  blocked every lock screen and later `install-qylock` run.
+
 - **The base set gained the iRiS frame's fonts.** `ttf-rubik-vf` and
   `ttf-readex-pro` join `base.packages`, both shipped from [ryoku], so every
   install and update carries the numerals and title faces the frame's QML
