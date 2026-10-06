@@ -3,6 +3,11 @@
 ## Unreleased
 
 ### Added
+- **Clipboard history supports keyboard selection.** The up and down arrows
+  move through the entries and Enter copies the selected one and closes the
+  panel, so the history is usable without reaching for the mouse
+  (`quickshell/shell/modules/clipboard/`).
+
 - **The Ask bar names its agent mode.** The mode strip reads Ask / Agent /
   Tools / Web and the answer chip says Continue with the agent: the bar is
   Rashin's Ryoku lane, and Chat is now the companion window's plain
