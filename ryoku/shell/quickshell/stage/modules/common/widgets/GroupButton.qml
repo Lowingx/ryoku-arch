@@ -15,7 +15,7 @@ Button {
     property string buttonText
     readonly property bool isHovered: buttonMouseArea.containsMouse
     property bool isPressed: false
-    property real buttonRadius: Appearance?.rounding?.small ?? 8
+    property real buttonRadius: Appearance?.rounding?.small ?? 6
     property real buttonRadiusPressed: Appearance?.rounding?.small ?? 6
     property var downAction // When left clicking (down)
     property var releaseAction // When left clicking (release)
@@ -59,9 +59,9 @@ Button {
     property color colBackground: ColorUtils.transparentize(colBackgroundHover, 1) || "transparent"
     property color colBackgroundHover: Appearance?.colors.colLayer1Hover ?? "#E5DFED"
     property color colBackgroundActive: Appearance?.colors.colLayer1Active ?? "#D6CEE2"
-    property color colBackgroundToggled: Appearance?.colors.colPrimary ?? "#65558F"
-    property color colBackgroundToggledHover: Appearance?.colors.colPrimaryHover ?? "#77699C"
-    property color colBackgroundToggledActive: Appearance?.colors.colPrimaryActive ?? "#D6CEE2"
+    property color colBackgroundToggled: Appearance?.colors.colSecondary ?? "#f1dedb"
+    property color colBackgroundToggledHover: Appearance?.colors.colSecondaryHover ?? "#f1dedb"
+    property color colBackgroundToggledActive: Appearance?.colors.colSecondaryActive ?? "#d8c6c3"
 
     property real radius: root.isPressed ? root.buttonRadiusPressed : root.buttonRadius
     property real leftRadius: root.isPressed ? root.buttonRadiusPressed : root.buttonRadius
@@ -168,11 +168,15 @@ Button {
             animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
         }
 
-        border.width: root.tabbedTo ? 2 : 0
-        border.color: Appearance.colors.colSecondary
+        border.width: root.tabbedTo ? 2 : 1
+        border.color: root.toggled ? Appearance.colors.colSecondary
+            : root.tabbedTo ? Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.7)
+            : Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.24)
+
     }
 
     contentItem: StyledText {
         text: root.buttonText
+        color: root.toggled ? Appearance.colors.colOnSecondary : Appearance.colors.colOnSurface
     }
 }

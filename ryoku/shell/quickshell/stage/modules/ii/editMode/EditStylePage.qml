@@ -68,11 +68,8 @@ StyledFlickable {
         spacing: 3
 
         // ── Presets ──────────────────────────────────────────────────────────
-        // The island's preset engine (presets.sh, its own theme.json) is not
-        // Ryoku's; the block stands down under the mount.
         EditStylePresets {
             Layout.fillWidth: true
-            visible: !Config.widgetProvider
             onFieldFocusRequested: field => root.fieldFocusRequested(field)
             onFieldFocusReleased: root.fieldFocusReleased()
         }

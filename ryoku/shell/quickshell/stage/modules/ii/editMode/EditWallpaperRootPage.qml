@@ -23,9 +23,8 @@ import stage.modules.common.functions
  * has one, the light-mode one in light mode when there is one, the shared one
  * otherwise - and the page says which.
  *
- * Writes go through WallpaperLayout and Wallpapers, both of which the mode's
- * history already hears: the per-screen list records its own entries, and a
- * shared wallpaper change is the style history's (EditModeChromeSurface).
+ * Ryogami owns every per-output path through Wallpapers; WallpaperLayout keeps
+ * only the framing history for the provider path painted on each screen.
  */
 StyledFlickable {
     id: root
@@ -332,10 +331,9 @@ StyledFlickable {
                     WallpaperLayout.attach(root.screenName);
                     return;
                 }
-                // A shared video cannot be copied to one screen: pick a
-                // picture for it instead.
-                if (!WallpaperLayout.detach(root.screenName))
-                    root.openPageRequested("wallpapers:screen");
+                // Choosing the first distinct path is what gives this output
+                // its own wallpaper in Ryogami.
+                root.openPageRequested("wallpapers:screen");
             }
         }
 
@@ -399,18 +397,16 @@ StyledFlickable {
         }
 
         // ── Position & zoom ──────────────────────────────────────────────────
-        // Position & zoom is the island's own wallpaper plane, which Ryoku's
-        // desktop does not have (ryogami paints the picture); the section
-        // stands down entirely under the Ryoku mount.
+        // Ryoku's backdrop consumes the same framing record as the island's
+        // wallpaper plane, so the panel and card gestures stay in lockstep.
         EditPanelSectionLabel {
-            visible: !Config.widgetProvider
             text: Translation.tr("Position & zoom")
         }
 
         EditPanelNotice {
             Layout.leftMargin: 4
             Layout.rightMargin: 4
-            visible: !Config.widgetProvider && !root.framingAvailable
+            visible: !root.framingAvailable
             symbol: root.lockTab ? "desktop_windows" : "movie"
             text: root.lockTab
                 ? Translation.tr("Moving, zooming and turning the wallpaper happens on the Desktop tab, where the card becomes the picture.")

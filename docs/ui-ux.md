@@ -353,8 +353,8 @@ it in `Ryoku.Ui` and use it somewhere in the same change.
 
 Under `ryoku/ui/lib/` sit the four maths files, each with a `.test.mjs` beside
 it, because they are the arithmetic a component cannot eyeball: `spectrum.js`
-(band resampling), `place.js` (box tilt and rotation, shared by `SpectrumField`
-and the visualiser's `Placer` so the preview and the real thing cannot drift),
+(band resampling), `place.js` (the box's tilt and rotation maths, used by
+`SpectrumField` so previews and the live look cannot drift),
 `keypress.js` (the keypress stack), and `hero.js` (image framing, imported by
 relative path rather than exported, since only `HeroCrop` needs it).
 
@@ -536,10 +536,10 @@ and per-monitor visibility from `ShellState`.
   snap, which turns auto into free), scroll to resize, right click for the
   widget's own menu. A drag draws a faint grid and centre guides under the
   widgets, and the release flashes the edges and any centre line it snapped to.
-  The desktop's own right-click menu toggles each widget, opens the visualiser
-  placement, and reaches Settings and Reload shell. Each widget is configured in
-  place -- select it while arranging to set its size, look and position, or open
-  its own right-click menu for everything else.
+  The desktop's own right-click menu has Wallpaper and Search in its quick row.
+  Its single accent row, Edit desktop, opens the Stage Editor on that monitor;
+  Settings and Reload shell remain below it. Each widget is configured in place
+  while arranging, or through its own right-click menu.
 - **the desktop spectrum** the audio visualiser, described in full below.
 
 ### Summoned
@@ -553,7 +553,7 @@ and per-monitor visibility from `ShellState`.
 |**Ask**|`Alt+Space`|quick Rashin answers, chat, tools, web search, and the optional desktop bubble|
 |**clipboard**|`Super+V`|clipboard history at the bottom edge, with fuzzy search and a starred pane|
 |**wallpaper and theme menu**|`Super+W`|the wallpaper carousel and theme picker|
-|**visualiser placement**|`Super+Alt+M`|grab the spectrum box and aim it|
+|**visualiser placement**|`Super+Alt+M`|open the Stage Editor's Visualizer catalogue|
 |**voice**|`Super+grave`|speech to text with a live mic wave|
 |**Ryoku Settings**|`Super+,`|the Hub|
 
@@ -745,22 +745,22 @@ maps that bound onto the box. The quad then touches all four sides at every lean
 crosses none of them, which `place.test.mjs` pins as an invariant, and the placement
 guides stay honest without the gestures having to invert a projection.
 
-The box is placed by hand rather than by numbers. `Super+Alt+M`, the Visualiser
-row in the desktop's right-click menu, or the Hub's Placement sheet opens the
-Stage Editor with the look selected. The box takes a grip on its corner and a
-dot on a stem above its top edge: a drag anywhere moves it, the grip or Ctrl+wheel
-sizes it, and the dot turns it through a full circle. Each step writes to
-`visualizer.json` as it happens, and the editor's Done, Escape or a click on bare
-wallpaper ends it; every gesture is on the chrome's undo stack.
+The box is placed by hand rather than by numbers. `Super+Alt+M` or
+`qs -c shell ipc call desktop editSection visualizer` opens the Stage Editor's
+Visualizer catalogue with the look selected. The box has a corner grip and a
+dot on a stem above its top edge. Dragging anywhere moves it, the grip or
+Ctrl+wheel sizes it, and the dot turns it through a full circle. Each step
+writes to `visualizer.json` as it happens and joins the editor's undo stack.
 
-The knobs live on the look's own inspector sheet (the Customize sheet every
-widget opens), which folded the old standalone editing bar in: the look itself
-(a tray of all thirteen drawn from the Hub's catalogue painter, plus the walk
-keys), colour with its gradient stops and the field's triad, instance dots and
-the duplicate/remove pair, bands, mirror, peak caps, gain, smoothing, the two
-leans with a LEVEL reset, playback, and the field's deep knobs. The point is
-unchanged: a look is tuned where you can see it, on the wallpaper, inside the
-same editor that places it; the Hub keeps the enable switch and the settings.
+The catalogue has Look, Place, Colour, Playback, Shape, and Field tabs. Place
+offers width, height, across, down, and turn, with Centre, Square, Full width,
+Top, Middle, and Bottom actions. A Ryoku visualizer is single-instance, so the
+catalogue does not offer Duplicate. Done leaves the editor; Escape first closes
+the open panel and clears the selection.
+
+The Stage chrome uses ryogami's visual language: 6 px corners, 1 px outlines,
+and inverted selected plates. A look is tuned where it is visible, on the live
+wallpaper, rather than in a detached placement surface.
 
 The sheet is built from the desktop menu's own rows (`MenuRow`, `MenuSlider`,
 `MenuChip`, `MenuInkPicker`) and the Hub's `Gallery` with the Hub's painter

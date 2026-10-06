@@ -77,9 +77,17 @@ Item {
         ? GlobalStates.editDrawerPage : ""
     property var dragMetadata: null
 
+    // A provider-added catalogue (Config.extraSections) showing now, or null.
+    readonly property var extraSection: root.extraSectionFor(root.section)
+    function extraSectionFor(section) {
+        return Config.extraSections.find(s => s.section === section) ?? null;
+    }
+
     function pageValidFor(section, page) {
         if (page === "")
             return true;
+        if (root.extraSectionFor(section))
+            return false;
         if (section === "apps")
             return true;
         if (section === "widgets")
@@ -150,6 +158,7 @@ Item {
     // catalogue it filters, pages and all: someone typing is after one row, not
     // after where it lives. The lock screen's switches are not worth a box.
     readonly property bool searchable: root.section !== "lock" && root.section !== "style" && root.section !== "wallpaper"
+        && root.extraSection === null
     property string query: ""
     readonly property string needle: root.query.trim().toLowerCase()
     readonly property bool searching: root.searchable && root.needle !== ""
@@ -623,6 +632,8 @@ Item {
         if (root.searching)
             return Translation.tr("Results");
         if (root.page === "") {
+            if (root.extraSection)
+                return root.extraSection.label;
             if (root.section === "apps")
                 return Translation.tr("Home screen apps");
             if (root.section === "bar")
@@ -675,6 +686,8 @@ Item {
     }
 
     readonly property string headerSymbol: {
+        if (root.extraSection)
+            return root.extraSection.icon;
         if (root.section === "apps") {
             if (root.page === "createPair")
                 return "splitscreen";
@@ -721,8 +734,11 @@ Item {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: Appearance.sizes.editModeDrawerWidth
-        color: Appearance.m3colors.m3surfaceContainer
-        radius: Appearance.rounding.verylarge
+        color: Appearance.withAlpha(Appearance.m3colors.m3surface, 0.99)
+        radius: Appearance.rounding.small
+        border.width: 1
+        border.color: Appearance.withAlpha(Appearance.m3colors.m3outline, 0.58)
+        clip: true
 
         // The remove tint: lit while a desktop widget is carried over the panel.
         Rectangle {
@@ -738,30 +754,32 @@ Item {
         ColumnLayout {
             id: column
             anchors.fill: parent
-            anchors.margins: 14
-            spacing: 8
+            anchors.margins: Appearance.sizes.space4
+            spacing: Appearance.sizes.space3
             // The contents arrive after the panel: faded on the panel's own scalar.
             opacity: Math.max(0, Math.min(1, (GlobalStates.editDrawerProgress - 0.4) / 0.6))
 
             // ── Header ───────────────────────────────────────────────────────
             RowLayout {
                 Layout.fillWidth: true
-                Layout.leftMargin: 2
-                Layout.rightMargin: 4
-                spacing: 10
+                spacing: Appearance.sizes.space3
 
-                // One control does both jobs: an icon at a root, the way back
-                // on a page. Same circle either way, so the header does not
-                // change shape as the panel navigates.
+                // One quiet plate is both the section mark at the root and the
+                // back action deeper in the catalogue.
                 Rectangle {
                     Layout.alignment: Qt.AlignVCenter
-                    implicitWidth: 38
-                    implicitHeight: 38
-                    radius: width / 2
+                    implicitWidth: Appearance.sizes.controlHeight
+                    implicitHeight: Appearance.sizes.controlHeight
+                    radius: Appearance.rounding.small
                     color: root.atRoot ? "transparent"
-                        : backMouse.containsPress ? Appearance.colors.colSurfaceContainerHighestActive
-                        : backMouse.containsMouse ? Appearance.colors.colSurfaceContainerHighest
-                        : Appearance.colors.colSurfaceContainerHigh
+                        : backMouse.containsPress
+                            ? Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.16)
+                            : backMouse.containsMouse
+                                ? Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.09)
+                                : "transparent"
+                    border.width: 1
+                    border.color: root.atRoot ? "transparent"
+                        : Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.18)
 
                     Behavior on color {
                         enabled: !Appearance.reducedMotion
@@ -771,7 +789,7 @@ Item {
                     MaterialSymbol {
                         anchors.centerIn: parent
                         text: root.atRoot ? root.headerSymbol : "arrow_back"
-                        iconSize: 22
+                        iconSize: 18
                         color: Appearance.colors.colOnSurface
                     }
 
@@ -785,27 +803,60 @@ Item {
                     }
                 }
 
-                StyledText {
+                ColumnLayout {
                     Layout.fillWidth: true
-                    text: root.headerTitle
-                    font.pixelSize: Appearance.font.pixelSize.large
-                    font.weight: Font.DemiBold
-                    color: Appearance.colors.colOnSurface
-                    elide: Text.ElideRight
+                    Layout.minimumWidth: 0
+                    spacing: 1
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        spacing: Appearance.sizes.space2
+
+                        Rectangle {
+                            implicitWidth: 2
+                            implicitHeight: 10
+                            radius: 1
+                            color: Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.78)
+                        }
+                        StyledText {
+                            text: Translation.tr("Stage editor").toUpperCase()
+                            font.family: Appearance.font.family.expressive
+                            font.pixelSize: 9
+                            font.weight: Font.DemiBold
+                            font.letterSpacing: 1.6
+                            color: Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.78)
+                        }
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.minimumWidth: 0
+                            implicitHeight: 1
+                            color: Appearance.withAlpha(Appearance.m3colors.m3outline, 0.4)
+                        }
+                    }
+
+                    StyledText {
+                        Layout.fillWidth: true
+                        Layout.minimumWidth: 0
+                        text: root.headerTitle
+                        font.family: Appearance.font.family.title
+                        font.pixelSize: Appearance.font.pixelSize.large
+                        font.weight: Font.DemiBold
+                        color: Appearance.colors.colOnSurface
+                        elide: Text.ElideRight
+                    }
                 }
             }
 
             // ── Catalogue picker ─────────────────────────────────────────────
-            // Up to seven catalogues in a 380px panel. While every label fits
-            // the group shows them all; when they do not, the current
-            // catalogue keeps its label and the others fold to their icon
-            // (named by a tooltip) - nothing is scaled, so text stays at its
-            // real size.
+            // Labels stay full while they fit. In compact mode inactive tabs
+            // fold to icons and the active label receives only the width left
+            // after every icon target, so translations cannot cross the edge.
             Item {
                 id: pickerHost
                 Layout.fillWidth: true
-                Layout.leftMargin: 4
-                Layout.rightMargin: 4
+                Layout.leftMargin: Appearance.sizes.space1
+                Layout.rightMargin: Appearance.sizes.space1
                 visible: root.atRoot
                 implicitHeight: catalogueGroup.implicitHeight
 
@@ -813,14 +864,16 @@ Item {
                     { "section": "widgets", "label": Translation.tr("Widgets"), "icon": "widgets", "shown": true },
                     { "section": "wallpaper", "label": Translation.tr("Wallpaper"), "icon": "wallpaper", "shown": true },
                     { "section": "style", "label": Translation.tr("Style"), "icon": "palette", "shown": true }
-                ]
+                ].concat(Config.extraSections.map(s => ({ "section": s.section, "label": s.label, "icon": s.icon, "shown": true })))
                 readonly property var shownTabs: pickerHost.tabs.filter(tab => tab.shown)
-                // The group with every label: the labels' own widths plus
-                // each button's padding (SelectionGroupButton, 12 a side) and
-                // the group's gaps.
                 readonly property real fullWidth: labelMeasure.implicitWidth
-                    + pickerHost.shownTabs.length * 24 + catalogueGroup.spacing * Math.max(0, pickerHost.shownTabs.length - 1)
+                    + pickerHost.shownTabs.length * 20
+                    + Appearance.sizes.space1 * Math.max(0, pickerHost.shownTabs.length - 1)
                 readonly property bool compact: pickerHost.fullWidth > pickerHost.width
+                readonly property real compactLabelWidth: Math.max(32,
+                    pickerHost.width - (pickerHost.shownTabs.length - 1) * 32
+                    - Appearance.sizes.space1 * Math.max(0, pickerHost.shownTabs.length - 1)
+                    - 36)
 
                 Row {
                     id: labelMeasure
@@ -836,30 +889,47 @@ Item {
 
                 ButtonGroup {
                     id: catalogueGroup
-
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    spacing: Appearance.sizes.space1
                     CatalogueTab {
                         tab: pickerHost.tabs[0]
                         compact: pickerHost.compact
+                        availableLabelWidth: pickerHost.compactLabelWidth
                         leftmost: true
                     }
                     CatalogueTab {
                         tab: pickerHost.tabs[1]
                         compact: pickerHost.compact
+                        availableLabelWidth: pickerHost.compactLabelWidth
                     }
                     CatalogueTab {
                         tab: pickerHost.tabs[2]
                         compact: pickerHost.compact
-                        rightmost: true
+                        availableLabelWidth: pickerHost.compactLabelWidth
+                        rightmost: Config.extraSections.length === 0
+                    }
+                    Repeater {
+                        visible: false
+                        model: pickerHost.tabs.slice(3)
+                        delegate: CatalogueTab {
+                            required property var modelData
+                            required property int index
+                            tab: modelData
+                            compact: pickerHost.compact
+                            availableLabelWidth: pickerHost.compactLabelWidth
+                            rightmost: index === pickerHost.tabs.length - 4
+                        }
                     }
                 }
             }
 
             StyledText {
                 Layout.fillWidth: true
-                Layout.leftMargin: 6
-                Layout.rightMargin: 6
+                Layout.leftMargin: Appearance.sizes.space1
+                Layout.rightMargin: Appearance.sizes.space1
                 visible: root.atRoot && !root.searching
-                text: root.section === "apps"
+                text: root.extraSection ? root.extraSection.intro
+                    : root.section === "apps"
                     ? Translation.tr("Add apps, pairs or folders to the home screen, or drag to place them.")
                     : root.section === "widgets"
                     ? (root.lockTab
@@ -878,9 +948,13 @@ Item {
                         : (PanelFamily.touchFirst
                             ? Translation.tr("Configure taskbar appearance and items.")
                             : Translation.tr("Pin apps, and choose how the dock itself is drawn."))
+                font.family: Appearance.font.family.main
                 font.pixelSize: Appearance.font.pixelSize.smaller
-                color: Appearance.colors.colOnSurfaceVariant
+                font.weight: Font.Bold
+                color: Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.74)
                 wrapMode: Text.Wrap
+                lineHeightMode: Text.ProportionalHeight
+                lineHeight: 1.35
             }
 
             // ── Search ───────────────────────────────────────────────────────
@@ -895,17 +969,16 @@ Item {
                 // over and clearing the field puts the page back.
                 visible: root.searchable && root.atRoot
                 Layout.fillWidth: true
-                Layout.leftMargin: 6
-                Layout.rightMargin: 6
-                implicitHeight: 38
+                Layout.leftMargin: Appearance.sizes.space1
+                Layout.rightMargin: Appearance.sizes.space1
+                implicitHeight: 36
 
                 ToolbarTextField {
                     id: searchField
                     anchors.fill: parent
                     Layout.fillHeight: false
-                    leftPadding: 34
-                    rightPadding: 34
-                    colBackground: Appearance.colors.colLayer1
+                    leftPadding: 32
+                    rightPadding: 32
                     placeholderText: root.section === "apps" || (root.section === "widgets" && root.page === "desktopApps")
                         ? Translation.tr("Search applications")
                         : root.section === "dock" ? Translation.tr("Search apps")
@@ -939,7 +1012,7 @@ Item {
 
                 MaterialSymbol {
                     anchors.left: parent.left
-                    anchors.leftMargin: 10
+                    anchors.leftMargin: Appearance.sizes.space3
                     anchors.verticalCenter: parent.verticalCenter
                     text: "search"
                     iconSize: 18
@@ -948,16 +1021,19 @@ Item {
 
                 FadeLoader {
                     anchors.right: parent.right
-                    anchors.rightMargin: 6
+                    anchors.rightMargin: Appearance.sizes.space1
                     anchors.verticalCenter: parent.verticalCenter
                     shown: searchField.text !== ""
                     sourceComponent: RippleButton {
                         implicitWidth: 26
                         implicitHeight: 26
-                        buttonRadius: Appearance.rounding.full
+                        buttonRadius: Appearance.rounding.small
                         colBackground: "transparent"
-                        colBackgroundHover: Appearance.colors.colLayer2Hover
-                        colRipple: Appearance.colors.colLayer2Active
+                        colBackgroundHover: Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.09)
+                        colBackgroundActive: Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.16)
+                        colRipple: Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.16)
+                        borderWidth: 1
+                        borderColor: Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.18)
                         onClicked: {
                             searchField.text = "";
                             searchField.forceActiveFocus();
@@ -972,22 +1048,13 @@ Item {
                 }
             }
 
-            // ── The page ─────────────────────────────────────────────────────
-            // Clipped to a rounded rectangle, not a square one. The panel's
-            // corner is `verylarge` and this sits `column`'s margin inside it,
-            // so a straight clip cuts across the curve — which is exactly what
-            // the last row of a scrolled list landed on. The inner radius is
-            // the outer one less that inset, which is what keeps two rounded
-            // rectangles concentric.
-            //
-            // `ClippingRectangle` clips through the scene graph rather than
-            // through a layer, so a list being scrolled inside it does not pay
-            // for a full-surface redraw per frame.
+            // The reading pane is a bounded paper layer. Its own six-pixel clip
+            // keeps scrolled labels and thumbnails inside the drawer surface.
             ClippingRectangle {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
-                color: "transparent"
-                radius: Math.max(0, panel.radius - column.anchors.margins)
+                color: Appearance.withAlpha(Appearance.m3colors.m3surface, 0.965)
+                radius: Appearance.rounding.small
 
                 Loader {
                     id: pageLoader
@@ -1008,6 +1075,8 @@ Item {
                     }
 
                     sourceComponent: {
+                        if (root.extraSection)
+                            return root.extraSection.page;
                         if (root.searching)
                             return root.section === "bar" ? barListPage
                                 : root.section === "dock" ? dockAppListPage
@@ -1110,11 +1179,11 @@ Item {
                     EditPanelRow {
                         id: desktopAppsRow
                         Layout.fillWidth: true
-                        visible: !root.lockTab && !Config.widgetProvider
+                        visible: !root.lockTab
                         first: true
                         last: true
                         symbol: "add_to_home_screen"
-                        title: Translation.tr("Add apps manually")
+                        title: Translation.tr("Add apps to desktop")
                         subtitle: Translation.tr("Toggle applications onto the desktop")
                         valueText: root.desktopAppCount > 0 ? `${root.desktopAppCount}` : ""
                         trailingKind: "chevron"
@@ -1126,7 +1195,7 @@ Item {
                     // shortcuts, not of the widget canvas above it.
                     EditPanelRow {
                         Layout.fillWidth: true
-                        visible: !root.lockTab && !Config.widgetProvider
+                        visible: !root.lockTab
                         first: true
                         last: true
                         symbol: "grid_view"
@@ -1162,7 +1231,9 @@ Item {
     // dragging icons onto each other, which the layer already speaks.
     Component {
         id: desktopIconsPage
-        EditDesktopIconsPage {}
+        EditDesktopIconsPage {
+            screenName: root.screenName
+        }
     }
 
     Component {
@@ -2057,20 +2128,23 @@ Item {
     }
 
     // One catalogue in the picker. Folded (`compact`), only the current one
-    // keeps its label; the rest show their icon and say their name on hover.
+    // keeps a bounded label; the rest stay icon-only and name themselves on hover.
     component CatalogueTab: SelectionGroupButton {
         id: catalogueTab
         required property var tab
         property bool compact: false
+        property real availableLabelWidth: 140
         visible: catalogueTab.tab.shown
         toggled: root.section === catalogueTab.tab.section
+        horizontalPadding: catalogueTab.compact ? Appearance.sizes.space2 : 10
+        maximumLabelWidth: catalogueTab.compact ? catalogueTab.availableLabelWidth : 140
         buttonIcon: catalogueTab.compact ? catalogueTab.tab.icon : ""
         buttonText: !catalogueTab.compact || catalogueTab.toggled ? catalogueTab.tab.label : ""
         onClicked: root.setSection(catalogueTab.tab.section)
 
         StyledToolTip {
             requireOverlay: false
-            extraVisibleCondition: catalogueTab.compact && !catalogueTab.toggled
+            extraVisibleCondition: catalogueTab.compact
             text: catalogueTab.tab.label
         }
     }

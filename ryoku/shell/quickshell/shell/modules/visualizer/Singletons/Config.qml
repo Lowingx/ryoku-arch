@@ -222,9 +222,13 @@ Singleton {
     function toggleGradient() { root.setGradient(!root.gradient); }
 
     // persist on/off so the hub toggle and Super+M keybind agree, and it
-    // survives a restart. Global, so it always writes the flat key.
+    // survives a restart. Global, so it always writes the flat key. An
+    // unchanged flag writes nothing: an immediate write here comes back as a
+    // watched reload, which would land on top of any edit made after it.
     function setEnabled(on) {
-        adapter.enabled = on;
+        if (adapter.enabled === (on === true))
+            return;
+        adapter.enabled = on === true;
         file.writeAdapter();
     }
 

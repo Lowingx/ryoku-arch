@@ -7,6 +7,7 @@ import Quickshell.Io
 import Ryoku.Ui.Singletons
 import stage.services
 import stage.modules.common
+import stage.modules.ii.editMode
 
 Singleton {
     id: root
@@ -61,21 +62,13 @@ Singleton {
         const w = screen?.width ?? 1920;
         const h = screen?.height ?? 1080;
         const m = Math.max(0, root.options.margin ?? 0);
-        let top = m, right = m, bottom = m, left = m;
-        if (root.options.avoidPanels) {
-            if (Config.options.bar.vertical) {
-                if (Config.options.bar.bottom)
-                    right += Appearance.sizes.verticalBarWidth;
-                else
-                    left += Appearance.sizes.verticalBarWidth;
-            } else if (Config.options.bar.bottom) {
-                bottom += Appearance.sizes.barHeight;
-            } else {
-                top += Appearance.sizes.barHeight;
-            }
-            if (Config.options.dock?.enable)
-                bottom += (Config.options.dock.height ?? 60) + 10;
-        }
+        const panelInsets = root.options.avoidPanels
+            ? EditModeInsets.insetsFor(screenName)
+            : { "top": 0, "right": 0, "bottom": 0, "left": 0 };
+        const top = m + panelInsets.top;
+        const right = m + panelInsets.right;
+        const bottom = m + panelInsets.bottom;
+        const left = m + panelInsets.left;
         const x = Math.ceil(left / 10) * 10;
         const y = Math.ceil(top / 10) * 10;
         const x2 = Math.floor((w - right) / 10) * 10;
@@ -415,7 +408,8 @@ Singleton {
             return;
         root.error = "";
         root.currentImport = root.importQueue.shift();
-        resolver.command = ["/usr/bin/python3", Directories.scriptPath + "/desktop_shortcuts.py",
+        resolver.command = ["/usr/bin/python3",
+            FileUtils.trimFileProtocol(Qt.resolvedUrl("desktop_shortcuts.py")),
             JSON.stringify(root.currentImport.urls)];
         resolver.running = true;
     }

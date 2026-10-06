@@ -11,25 +11,15 @@ import stage.modules.common.widgets
 import stage.modules.common.functions
 
 /**
- * Presets, at the top of the Style catalogue: save the look on the card,
- * apply one that was saved before, take the last one back, and the way to
- * the store.
+ * Presets at the top of the Style catalogue. The standalone island keeps its
+ * original preset script and store. Under Ryoku, that script is not shipped:
+ * the editor keeps a small store beside stage-editor.json and records only the
+ * settings the mounted desktop actually owns — wallpaper, light/dark mode and
+ * matugen scheme.
  *
- * Edit Mode is where a look gets made, so it is the natural place to keep
- * one: you have just arranged everything and the card is showing exactly
- * what the preset will hold. The list is the same folder Settings' Preset
- * Manager reads, through the same script, so a preset saved here is there
- * and the other way round.
- *
- * Applying replaces the whole config, which is more than the mode's history
- * can walk back one step at a time: the stack is cleared and "Undo preset"
- * - the snapshot the script takes before it merges - stands in for it. The
- * card applies directly, keeping this compact catalogue focused on choosing
- * a look rather than opening another set of controls.
- *
- * The store itself stays in Settings. It needs a sign-in, publishing, diffs
- * and a review dialog, which is a window's worth of surface; the row here
- * says how many installed presets have an update waiting and hands off.
+ * Applying a Ryoku preset goes back through the same wallpaper and settings
+ * seam as the controls below. Nothing copies or replaces Ryoku's live stores,
+ * and a saved look can be renamed or removed without leaving the editor.
  */
 ColumnLayout {
     id: root
@@ -41,45 +31,192 @@ ColumnLayout {
 
     spacing: 3
 
-    // [{name, wallpaper, configVersion}], as the script lists them.
     property var presets: []
     property bool saving: false
-    readonly property string activePreset: PresetStore.activePreset
+    property string renamingPreset: ""
+    property bool ryokuStoreReady: false
+    property bool ryokuApplying: false
+    property string ryokuApplyError: ""
+    property var applyQueue: []
+    property var ryokuSettings: ({})
+    readonly property bool ryokuMounted: Config.widgetProvider !== null
     readonly property string presetsScript: `${Directories.scriptPath}/presets.sh`
+    readonly property string ryokuPresetsPath: `${Directories.shellConfig}/style-presets.json`
+    readonly property string ryokuSettingsPath: `${Directories.config}/ryoku/shell.json`
+    readonly property string activePreset: root.ryokuMounted
+        ? root.matchingRyokuPreset() : PresetStore.activePreset
+
+    function cleanName(text) {
+        return String(text ?? "").replace(/[\/\\"]/g, "").trim();
+    }
+    function currentDarkMode() {
+        const mode = String(root.ryokuSettings?.theme?.matugen?.mode ?? "").toLowerCase();
+        return mode === "dark" || mode === "light"
+            ? mode === "dark" : Appearance.m3colors.darkmode;
+    }
+
+    function currentSchemeType() {
+        const stored = String(root.ryokuSettings?.theme?.matugen?.scheme_type ?? "");
+        if (stored !== "")
+            return "scheme-" + stored.replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+                .replace(/_/g, "-").toLowerCase();
+        return String(Config.options.appearance.palette.type ?? "scheme-auto");
+    }
+
+
+    function matchingRyokuPreset() {
+        const wallpaper = String(Config.wallpaperPath ?? "");
+        const dark = root.currentDarkMode();
+        const scheme = root.currentSchemeType();
+        for (const preset of root.presets) {
+            if (String(preset.wallpaper ?? "") === wallpaper
+                    && Boolean(preset.darkMode) === dark
+                    && String(preset.schemeType ?? "scheme-auto") === scheme)
+                return String(preset.name ?? "");
+        }
+        return "";
+    }
 
     function refresh() {
+        if (root.ryokuMounted) {
+            ryokuPresetFile.reload();
+            return;
+        }
         listProc.running = false;
         listProc.running = true;
     }
 
-    function cleanName(text) {
-        return String(text ?? "").replace(/[\/\\"]/g, "").trim();
+    function writeRyokuPresets() {
+        ryokuPresetFile.setText(JSON.stringify({
+            version: 1,
+            presets: root.presets
+        }, null, 2) + "\n");
     }
 
     function save() {
         const name = root.cleanName(nameField.text);
         if (name === "")
             return;
-        Quickshell.execDetached([root.presetsScript, "save", name]);
+        if (root.ryokuMounted) {
+            const captured = {
+                name: name,
+                wallpaper: String(Config.wallpaperPath ?? ""),
+                darkMode: root.currentDarkMode(),
+                schemeType: root.currentSchemeType()
+            };
+            const updated = Array.from(root.presets);
+            const index = updated.findIndex(preset => String(preset.name ?? "") === name);
+            if (index >= 0)
+                updated[index] = captured;
+            else
+                updated.push(captured);
+            root.presets = updated;
+            root.writeRyokuPresets();
+        } else {
+            Quickshell.execDetached([root.presetsScript, "save", name]);
+            refreshTimer.restart();
+        }
         nameField.text = "";
         root.saving = false;
         root.fieldFocusReleased();
-        refreshTimer.restart();
+    }
+
+    function beginRename(name) {
+        root.saving = false;
+        nameField.text = "";
+        root.renamingPreset = name;
+        renameField.text = name;
+        root.fieldFocusRequested(renameField);
+    }
+
+    function commitRename() {
+        const oldName = root.renamingPreset;
+        const newName = root.cleanName(renameField.text);
+        if (oldName === "" || newName === "")
+            return;
+        const updated = Array.from(root.presets);
+        if (updated.some(preset => String(preset.name ?? "") === newName
+                && String(preset.name ?? "") !== oldName))
+            return;
+        const index = updated.findIndex(preset => String(preset.name ?? "") === oldName);
+        if (index < 0)
+            return;
+        updated[index] = Object.assign({}, updated[index], { name: newName });
+        root.presets = updated;
+        root.renamingPreset = "";
+        renameField.text = "";
+        root.fieldFocusReleased();
+        root.writeRyokuPresets();
+    }
+
+    function deletePreset(name) {
+        root.presets = root.presets.filter(preset => String(preset.name ?? "") !== name);
+        if (root.renamingPreset === name) {
+            root.renamingPreset = "";
+            renameField.text = "";
+            root.fieldFocusReleased();
+        }
+        root.writeRyokuPresets();
     }
 
     function applyPreset(name) {
-        if (root.activePreset === name || PresetStore.busy)
+        if (root.activePreset === name || root.ryokuApplying
+                || (!root.ryokuMounted && PresetStore.busy))
             return;
-        PresetStore.applyPreset(name);
+        if (!root.ryokuMounted) {
+            PresetStore.applyPreset(name);
+            return;
+        }
+        const preset = root.presets.find(entry => String(entry.name ?? "") === name);
+        if (!preset)
+            return;
+
+        Config.options.appearance.palette.type = String(preset.schemeType ?? "scheme-auto");
+        Config.saveOptionsNow();
+
+        const helper = Directories.wallpaperSwitchScriptPath;
+        const commands = [];
+        const wallpaper = String(preset.wallpaper ?? "");
+        const screen = String(Config.widgetProvider?.monitor ?? "");
+        if (wallpaper !== "") {
+            const wallpaperCommand = [helper, "--image", wallpaper];
+            if (screen !== "")
+                wallpaperCommand.push("--screen", screen);
+            commands.push(wallpaperCommand);
+        }
+        commands.push([helper, "--mode", preset.darkMode ? "dark" : "light", "--noswitch"]);
+        commands.push([helper, "--noswitch", "--type",
+            String(preset.schemeType ?? "scheme-auto")]);
+
+        root.ryokuApplyError = "";
+        root.ryokuApplying = true;
+        root.applyQueue = commands;
+        root.runNextApplyCommand();
+    }
+
+    function runNextApplyCommand() {
+        if (root.applyQueue.length === 0) {
+            root.ryokuApplying = false;
+            return;
+        }
+        ryokuApplyProc.command = root.applyQueue[0];
+        root.applyQueue = root.applyQueue.slice(1);
+        ryokuApplyProc.running = true;
     }
 
     Component.onCompleted: {
-        PresetStore.ensureLoaded();
-        root.refresh();
+        if (root.ryokuMounted) {
+            Quickshell.execDetached(["mkdir", "-p", Directories.shellConfig]);
+            ryokuPresetFile.reload();
+        } else {
+            PresetStore.ensureLoaded();
+            root.refresh();
+        }
     }
 
     Connections {
         target: PresetStore
+        enabled: !root.ryokuMounted
         function onPresetFilesChanged() {
             refreshTimer.restart();
         }
@@ -97,6 +234,59 @@ ColumnLayout {
         repeat: false
         onTriggered: root.refresh()
     }
+    FileView {
+        id: ryokuSettingsFile
+        path: root.ryokuMounted ? root.ryokuSettingsPath : ""
+        watchChanges: root.ryokuMounted
+        printErrors: false
+        onLoaded: {
+            try {
+                root.ryokuSettings = JSON.parse(ryokuSettingsFile.text() || "{}");
+            } catch (error) {
+                root.ryokuSettings = ({});
+            }
+        }
+        onLoadFailed: root.ryokuSettings = ({})
+    }
+
+    FileView {
+        id: ryokuPresetFile
+        path: root.ryokuMounted ? root.ryokuPresetsPath : ""
+        watchChanges: root.ryokuMounted
+        atomicWrites: true
+        printErrors: false
+        onLoaded: {
+            try {
+                const document = JSON.parse(ryokuPresetFile.text() || "{}");
+                root.presets = Array.isArray(document) ? document
+                    : Array.isArray(document.presets) ? document.presets : [];
+                root.ryokuStoreReady = true;
+            } catch (error) {
+                root.presets = [];
+                root.ryokuStoreReady = true;
+            }
+        }
+        onLoadFailed: error => {
+            if (error === FileViewError.FileNotFound) {
+                root.presets = [];
+                root.ryokuStoreReady = true;
+            }
+        }
+    }
+
+    Process {
+        id: ryokuApplyProc
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode !== 0) {
+                root.applyQueue = [];
+                root.ryokuApplying = false;
+                root.ryokuApplyError = Translation.tr("The preset could not be applied.");
+                return;
+            }
+            root.runNextApplyCommand();
+        }
+    }
+
 
     Process {
         id: listProc
@@ -136,15 +326,20 @@ ColumnLayout {
         last: !root.saving
         symbol: "save"
         title: Translation.tr("Save the current look")
-        subtitle: Translation.tr("Layout, wallpaper, colours and settings, as a preset")
+        subtitle: root.ryokuMounted
+            ? Translation.tr("Wallpaper, theme and colour scheme")
+            : Translation.tr("Layout, wallpaper, colours and settings, as a preset")
         trailingKind: root.saving ? "none" : "add"
         selected: root.saving
         onActivated: {
             root.saving = !root.saving;
-            if (root.saving)
+            if (root.saving) {
+                root.renamingPreset = "";
+                renameField.text = "";
                 root.fieldFocusRequested(nameField);
-            else
+            } else {
                 root.fieldFocusReleased();
+            }
         }
     }
 
@@ -183,18 +378,18 @@ ColumnLayout {
             RippleButton {
                 Layout.fillHeight: true
                 implicitWidth: 44
-                buttonRadius: Appearance.rounding.full
+                buttonRadius: Appearance.rounding.small
                 enabled: root.cleanName(nameField.text) !== ""
-                colBackground: Appearance.colors.colPrimary
-                colBackgroundHover: Appearance.colors.colPrimaryHover
-                colRipple: Appearance.colors.colPrimaryActive
+                colBackground: Appearance.colors.colSecondary
+                colBackgroundHover: Appearance.colors.colSecondaryHover
+                colRipple: Appearance.colors.colSecondaryActive
                 onClicked: root.save()
                 contentItem: MaterialSymbol {
                     horizontalAlignment: Text.AlignHCenter
                     verticalAlignment: Text.AlignVCenter
                     text: "check"
                     iconSize: 20
-                    color: Appearance.colors.colOnPrimary
+                    color: Appearance.colors.colOnSecondary
                 }
             }
         }
@@ -205,7 +400,8 @@ ColumnLayout {
         Layout.fillWidth: true
         Layout.leftMargin: 6
         Layout.topMargin: 6
-        visible: root.presets.length === 0 && !listProc.running
+        visible: root.presets.length === 0
+            && (root.ryokuMounted ? root.ryokuStoreReady : !listProc.running)
         text: Translation.tr("Nothing saved yet.")
         font.pixelSize: Appearance.font.pixelSize.smaller
         color: Appearance.colors.colOnSurfaceVariant
@@ -236,16 +432,22 @@ ColumnLayout {
                     required property var modelData
                     width: strip.cardWidth
                     height: strip.cardHeight
-                    radius: Appearance.rounding.normal
-                    color: Appearance.colors.colSurfaceContainerLow
+                    radius: Appearance.rounding.small
+                    color: presetItem.active
+                        ? Appearance.colors.colSecondary : Appearance.colors.colSurfaceContainerLow
+                    border.width: 1
+                    border.color: presetItem.active ? Appearance.colors.colSecondary
+                        : Appearance.colors.colOutline
                     opacity: presetBusy ? 0.5 : 1
                     scale: presetButton.down ? 0.96 : 1
 
                     readonly property string presetName: String(modelData.name ?? "")
                     readonly property string wallpaper: String(modelData.wallpaper ?? "")
                     readonly property bool active: root.activePreset === presetItem.presetName
-                    readonly property bool presetBusy: PresetStore.busyFor(presetItem.presetName)
-                    readonly property bool tooNew: Number(modelData.configVersion ?? 0) > 0
+                    readonly property bool presetBusy: root.ryokuMounted
+                        ? root.ryokuApplying : PresetStore.busyFor(presetItem.presetName)
+                    readonly property bool tooNew: !root.ryokuMounted
+                        && Number(modelData.configVersion ?? 0) > 0
                         && Number(modelData.configVersion) > Config.currentConfigVersion
 
                     Behavior on scale {
@@ -259,13 +461,15 @@ ColumnLayout {
                     RippleButton {
                         id: presetButton
                         anchors.fill: parent
-                        enabled: !presetItem.active && !presetItem.presetBusy && !PresetStore.busy
+                        enabled: !presetItem.active && !presetItem.presetBusy
+                            && (root.ryokuMounted || !PresetStore.busy)
                         hoverEnabled: true
                         pointingHandCursor: true
-                        buttonRadius: Appearance.rounding.normal
+                        buttonRadius: Appearance.rounding.small
+                        borderWidth: 0
                         colBackground: "transparent"
                         colBackgroundHover: "transparent"
-                        colRipple: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.8)
+                        colRipple: Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.16)
                         onClicked: root.applyPreset(presetItem.presetName)
 
                         StyledToolTip {
@@ -335,13 +539,13 @@ ColumnLayout {
                             implicitWidth: 26
                             implicitHeight: 26
                             radius: Appearance.rounding.full
-                            color: Appearance.colors.colPrimary
+                            color: Appearance.colors.colSecondary
 
                             MaterialSymbol {
                                 anchors.centerIn: parent
                                 text: "check"
                                 iconSize: Appearance.font.pixelSize.smaller
-                                color: Appearance.colors.colOnPrimary
+                                color: Appearance.colors.colOnSecondary
                             }
                         }
                     }
@@ -352,13 +556,61 @@ ColumnLayout {
 
                         StyledText {
                             anchors.left: parent.left
-                            anchors.right: parent.right
+                            anchors.right: presetActions.visible ? presetActions.left : parent.right
+                            anchors.rightMargin: presetActions.visible ? 4 : 0
                             anchors.verticalCenter: parent.verticalCenter
                             text: presetItem.presetName
-                            color: Appearance.colors.colOnLayer1
+                            color: presetItem.active
+                                ? Appearance.colors.colOnSecondary : Appearance.colors.colOnLayer1
                             font.pixelSize: Appearance.font.pixelSize.small
                             font.weight: presetItem.active ? Font.DemiBold : Font.Normal
                             elide: Text.ElideRight
+                        }
+
+                        Row {
+                            id: presetActions
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 2
+                            visible: root.ryokuMounted
+
+                            RippleButton {
+                                implicitWidth: 24
+                                implicitHeight: 24
+                                buttonRadius: Appearance.rounding.small
+                                borderWidth: 0
+                                colBackground: "transparent"
+                                colBackgroundHover: presetItem.active
+                                    ? Appearance.withAlpha(Appearance.m3colors.m3surface, 0.12)
+                                    : Appearance.colors.colLayer1Hover
+                                onClicked: root.beginRename(presetItem.presetName)
+                                contentItem: MaterialSymbol {
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    text: "edit"
+                                    iconSize: 15
+                                    color: presetItem.active
+                                        ? Appearance.colors.colOnSecondary : Appearance.colors.colOnSurface
+                                }
+                            }
+
+                            RippleButton {
+                                implicitWidth: 24
+                                implicitHeight: 24
+                                buttonRadius: Appearance.rounding.small
+                                borderWidth: 0
+                                colBackground: "transparent"
+                                colBackgroundHover: Appearance.colors.colErrorContainer
+                                onClicked: root.deletePreset(presetItem.presetName)
+                                contentItem: MaterialSymbol {
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                    text: "delete"
+                                    iconSize: 15
+                                    color: presetItem.active
+                                        ? Appearance.colors.colOnSecondary : Appearance.colors.colError
+                                }
+                            }
                         }
                     }
                 }
@@ -366,11 +618,90 @@ ColumnLayout {
         }
     }
 
+    Rectangle {
+        Layout.fillWidth: true
+        Layout.topMargin: 6
+        visible: root.ryokuMounted && root.renamingPreset !== ""
+        implicitHeight: 52
+        radius: Appearance.rounding.small
+        color: Appearance.colors.colLayer1
+        border.width: 1
+        border.color: Appearance.colors.colOutline
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: 8
+            spacing: 6
+
+            ToolbarTextField {
+                id: renameField
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                colBackground: Appearance.colors.colLayer2
+                placeholderText: Translation.tr("Preset name")
+                onPressed: root.fieldFocusRequested(renameField)
+                onAccepted: root.commitRename()
+                Keys.onEscapePressed: event => {
+                    root.renamingPreset = "";
+                    renameField.text = "";
+                    root.fieldFocusReleased();
+                    event.accepted = true;
+                }
+            }
+
+            RippleButton {
+                Layout.fillHeight: true
+                implicitWidth: 40
+                buttonRadius: Appearance.rounding.small
+                colBackground: "transparent"
+                colBackgroundHover: Appearance.colors.colLayer1Hover
+                onClicked: {
+                    root.renamingPreset = "";
+                    renameField.text = "";
+                    root.fieldFocusReleased();
+                }
+                contentItem: MaterialSymbol {
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    text: "close"
+                    iconSize: 18
+                    color: Appearance.colors.colOnSurface
+                }
+            }
+
+            RippleButton {
+                Layout.fillHeight: true
+                implicitWidth: 40
+                buttonRadius: Appearance.rounding.small
+                enabled: root.cleanName(renameField.text) !== ""
+                colBackground: Appearance.colors.colSecondary
+                colBackgroundHover: Appearance.colors.colSecondaryHover
+                colRipple: Appearance.colors.colSecondaryActive
+                onClicked: root.commitRename()
+                contentItem: MaterialSymbol {
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    text: "check"
+                    iconSize: 18
+                    color: Appearance.colors.colOnSecondary
+                }
+            }
+        }
+    }
+
+    EditPanelNotice {
+        Layout.fillWidth: true
+        Layout.topMargin: 6
+        visible: root.ryokuApplyError !== ""
+        symbol: "error"
+        text: root.ryokuApplyError
+    }
+
     // ── Undo, and the store ──────────────────────────────────────────────────
     EditPanelRow {
         Layout.fillWidth: true
         Layout.topMargin: 6
-        visible: root.activePreset !== ""
+        visible: !root.ryokuMounted && root.activePreset !== ""
         first: true
         last: false
         rowEnabled: !PresetStore.busy
@@ -386,6 +717,7 @@ ColumnLayout {
         Layout.topMargin: root.activePreset !== "" ? 0 : 6
         first: root.activePreset === ""
         last: true
+        visible: !root.ryokuMounted
         symbol: "storefront"
         title: Translation.tr("Browse the store")
         subtitle: Translation.tr("Leaves Edit Mode")

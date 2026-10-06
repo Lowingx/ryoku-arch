@@ -7,8 +7,8 @@
 #
 # Recognised flags (unknown ones are ignored, the way the reference's own
 # script tolerates a newer caller): --mode dark|light, --image PATH,
-# --noswitch (mode-only, no picture), --type scheme-*, --lockscreen,
-# --lightmode, --refresh-frame, --request-seq N.
+# --screen OUTPUT, --noswitch (mode-only, no picture), --type scheme-*,
+# --lockscreen, --lightmode, --refresh-frame, --request-seq N.
 set -uo pipefail
 
 mode=""
@@ -16,11 +16,13 @@ image=""
 noswitch=0
 type=""
 lockscreen=0
+screen=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --mode) mode="${2:-}"; shift 2 ;;
         --image) image="${2:-}"; shift 2 ;;
+        --screen) screen="${2:-}"; shift 2 ;;
         --type) type="${2:-}"; shift 2 ;;
         --noswitch) noswitch=1; shift ;;
         --lockscreen) lockscreen=1; shift ;;
@@ -72,7 +74,9 @@ if [[ -n $type ]]; then
     esac
 fi
 
-if [[ $noswitch -eq 0 && -n $image ]]; then
-    command -v ryogami >/dev/null 2>&1 && exec ryogami wallpaper set "$image"
+if [[ $noswitch -eq 0 && -n $image ]] && command -v ryogami >/dev/null 2>&1; then
+    args=(ryogami wallpaper set "$image")
+    [[ -n $screen ]] && args+=(--screen "$screen")
+    exec "${args[@]}"
 fi
 exit 0

@@ -61,18 +61,21 @@ ColumnLayout {
 
                 implicitWidth: chipRow.width + 24
                 implicitHeight: 38
-                radius: Appearance.rounding.full
+                radius: Appearance.rounding.small
                 opacity: chip.available ? 1 : 0.4
                 color: chip.current
-                    ? (chipMouse.containsPress ? Appearance.colors.colPrimaryActive
-                        : chipMouse.containsMouse ? Appearance.colors.colPrimaryHover
-                        : Appearance.colors.colPrimary)
+                    ? Appearance.colors.colSecondary
                     : (chipMouse.containsPress ? Appearance.colors.colSurfaceContainerHighestActive
                         : chipMouse.containsMouse ? Appearance.colors.colSurfaceContainerHighest
-                        : Appearance.colors.colSurfaceContainerHigh)
+                        : Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.05))
+                border.width: 1
+                border.color: chip.current
+                    ? Appearance.colors.colSecondary
+                    : Appearance.withAlpha(Appearance.m3colors.m3onSurface,
+                        chipMouse.containsMouse ? 0.4 : 0.24)
 
                 readonly property color colOn: chip.current
-                    ? Appearance.colors.colOnPrimary : Appearance.colors.colOnSurface
+                    ? Appearance.colors.colOnSecondary : Appearance.colors.colOnSurface
 
                 Behavior on color {
                     enabled: !Appearance.reducedMotion

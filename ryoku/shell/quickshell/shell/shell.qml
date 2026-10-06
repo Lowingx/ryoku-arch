@@ -665,7 +665,7 @@ ShellRoot {
         }
         if (!VizCfg.Config.enabled)
             VizCfg.Config.setEnabled(true);
-        StageCfg.StageSession.enterWidgets(mon);
+        StageCfg.StageSession.enterWidgets(mon, "visualizer");
     }
 
     // --- Root machinery (ported from the reference pill root) --------------
@@ -967,8 +967,15 @@ ShellRoot {
     // a keybind or the daemon can open it. niri has no global-shortcut protocol,
     // so every shell surface is driven this way; the editor is no exception.
     IpcHandler {
+        id: desktopIpc
         target: "desktop"
         function editWidgets(mon: string): void {
+            desktopIpc.editSection("widgets", mon);
+        }
+        // Open the Stage Editor straight on one catalogue (widgets, wallpaper,
+        // style, visualizer, depth): the Hub's hand-offs and keybinds land on
+        // the editor they mean. Already open, it switches catalogue in place.
+        function editSection(section: string, mon: string): void {
             var m = mon;
             if (!m || m.length === 0) {
                 const st = ShellState.forActive();
@@ -979,7 +986,10 @@ ShellRoot {
             // which matches no desktop, so fall back to the first output.
             if (!m || m.length === 0)
                 m = ShellState.screens.length > 0 ? ShellState.screens[0].name : "";
-            StageCfg.StageSession.enterWidgets(m);
+            if (StageCfg.StageSession.onMonitor(m))
+                StageCfg.StageSession.openSection(section);
+            else
+                StageCfg.StageSession.enterWidgets(m, section);
         }
         function editDone(): void { StageCfg.StageSession.leave(); }
         // Open a widget's right-click menu on a monitor (empty = focused).

@@ -5,11 +5,14 @@ import "../Singletons"
 import Ryoku.Ui
 import Ryoku.Ui.Singletons
 import "../../visualizer/Singletons" as VizCfg
+import Quickshell
+import stage.modules.common as StageIsland
 
-// Options for the desktop visualiser, hosted by the Stage Editor's inspector:
-// the catalogue and the tuning. The old standalone placement bar folded its
-// knobs in here (look, colour, playback, shape, and the edge field's surface);
-// the look's box itself is aimed with the grip on the desktop.
+// Options for the desktop visualiser, hosted by the Stage Editor (its
+// Visualizer catalogue and the look's Customize sheet): the catalogue, the
+// box by number, and the tuning. The old standalone placement bar folded its
+// knobs in here (look, place, colour, playback, shape, and the edge field's
+// surface); the grip on the desktop aims the same box by hand.
 //
 // Reads come off the active instance (VizCfg.Config.instance, already
 // normalised) except the three globals (enabled, fps, adaptive); writes go
@@ -36,6 +39,31 @@ Column {
     readonly property bool bloomSet: ["bars", "split", "dots", "segments", "wave", "ribbon", "curtain", "line", "frame", "radial", "orb", "spiral"].indexOf(opts.sid) >= 0
     readonly property bool segSet: opts.sid === "segments"
     readonly property bool reflSet: opts.growSet && opts.inst.grow === "up"
+    // The framed screen's proportions while the Stage Editor is open, else
+    // the first screen's: the box is fractions of a monitor and its clamp
+    // needs the real ones.
+    readonly property var provider: StageIsland.Config.widgetProvider
+    readonly property real aspect: opts.provider ? opts.provider.aspect()
+        : (Quickshell.screens.length > 0 ? Quickshell.screens[0].width / Math.max(1, Quickshell.screens[0].height) : 1)
+
+    // A placement knob's walk-back: the first step of a drag snapshots the
+    // box, the release records one undo entry through the editor's provider
+    // (none outside the editor, where there is no undo stack to join).
+    property var placeBefore: null
+    function placeBegin() {
+        if (opts.placeBefore === null && opts.provider)
+            opts.placeBefore = opts.provider.snapshot("visualizer");
+    }
+    function placeEnd() {
+        if (opts.provider)
+            opts.provider.recordVisualizer(opts.placeBefore);
+        opts.placeBefore = null;
+    }
+    function placeOnce(change) {
+        opts.placeBegin();
+        change();
+        opts.placeEnd();
+    }
 
     width: parent ? parent.width : 0
     spacing: Theme.s1
@@ -129,6 +157,101 @@ Column {
         color: Theme.inkDim
         font.family: Theme.font
         font.pixelSize: Theme.fSmall
+    }
+
+    // ── Place ───────────────────────────────────────────────────────────
+    // The box by number, beside the grip on the desktop: size, position and
+    // turn, each written through the same clamped store the grip writes, and
+    // each drag of a knob one step on the Stage Editor's walk-back. The field
+    // owns the whole screen and has no box, so the section is hidden for it.
+    MenuSection { visible: !opts.aura; label: I18n.tr("Place"); gloss: "配置" }
+    MenuSlider {
+        id: widthSld
+        visible: !opts.aura
+        label: I18n.tr("Width")
+        from: 0.04; to: 1
+        value: opts.cfg.w
+        valueText: Math.round(widthSld.value * 100) + "%"
+        onMoved: (v) => { opts.placeBegin(); opts.cfg.sizeBox(v, opts.cfg.h, opts.aspect); }
+        onReleased: (v) => { opts.cfg.sizeBox(v, opts.cfg.h, opts.aspect); opts.placeEnd(); }
+    }
+    MenuSlider {
+        id: heightSld
+        visible: !opts.aura
+        label: I18n.tr("Height")
+        from: 0.03; to: 1
+        value: opts.cfg.h
+        valueText: Math.round(heightSld.value * 100) + "%"
+        onMoved: (v) => { opts.placeBegin(); opts.cfg.sizeBox(opts.cfg.w, v, opts.aspect); }
+        onReleased: (v) => { opts.cfg.sizeBox(opts.cfg.w, v, opts.aspect); opts.placeEnd(); }
+    }
+    MenuSlider {
+        id: xSld
+        visible: !opts.aura
+        label: I18n.tr("Across")
+        from: 0; to: 1
+        value: opts.cfg.x + opts.cfg.w / 2
+        valueText: Math.round(xSld.value * 100) + "%"
+        onMoved: (v) => { opts.placeBegin(); opts.cfg.moveBox(v - opts.cfg.w / 2, opts.cfg.y, opts.aspect); }
+        onReleased: (v) => { opts.cfg.moveBox(v - opts.cfg.w / 2, opts.cfg.y, opts.aspect); opts.placeEnd(); }
+    }
+    MenuSlider {
+        id: ySld
+        visible: !opts.aura
+        label: I18n.tr("Down")
+        from: 0; to: 1
+        value: opts.cfg.y + opts.cfg.h / 2
+        valueText: Math.round(ySld.value * 100) + "%"
+        onMoved: (v) => { opts.placeBegin(); opts.cfg.moveBox(opts.cfg.x, v - opts.cfg.h / 2, opts.aspect); }
+        onReleased: (v) => { opts.cfg.moveBox(opts.cfg.x, v - opts.cfg.h / 2, opts.aspect); opts.placeEnd(); }
+    }
+    MenuSlider {
+        id: angleSld
+        visible: !opts.aura
+        label: I18n.tr("Turn")
+        from: -180; to: 180; step: 1; decimals: 0
+        value: opts.cfg.angle > 180 ? opts.cfg.angle - 360 : opts.cfg.angle
+        valueText: Math.round(angleSld.value) + "\u00b0"
+        onMoved: (v) => { opts.placeBegin(); opts.cfg.rotate(v); }
+        onReleased: (v) => { opts.cfg.rotate(v); opts.cfg.moveBox(opts.cfg.x, opts.cfg.y, opts.aspect); opts.placeEnd(); }
+    }
+    Grid {
+        visible: !opts.aura
+        width: parent.width
+        columns: 3
+        columnSpacing: Theme.s1
+        rowSpacing: Theme.s1
+        readonly property real cw: (width - 2 * columnSpacing) / 3
+        MenuChip {
+            width: parent.cw; height: Theme.ctlH
+            label: I18n.tr("Centre")
+            onClicked: opts.placeOnce(() => opts.cfg.moveBox(0.5 - opts.cfg.w / 2, 0.5 - opts.cfg.h / 2, opts.aspect))
+        }
+        MenuChip {
+            width: parent.cw; height: Theme.ctlH
+            label: I18n.tr("Square")
+            onClicked: opts.placeOnce(() => { opts.cfg.rotate(0); opts.cfg.moveBox(opts.cfg.x, opts.cfg.y, opts.aspect); })
+        }
+        MenuChip {
+            width: parent.cw; height: Theme.ctlH
+            label: I18n.tr("Full width")
+            onClicked: opts.placeOnce(() => opts.cfg.setBox(0, opts.cfg.y, 1, opts.cfg.h, opts.aspect))
+        }
+        MenuChip {
+            width: parent.cw; height: Theme.ctlH
+            label: I18n.tr("Top")
+            onClicked: opts.placeOnce(() => opts.cfg.moveBox(opts.cfg.x, 0, opts.aspect))
+        }
+        MenuChip {
+            width: parent.cw; height: Theme.ctlH
+            label: I18n.tr("Middle")
+            onClicked: opts.placeOnce(() => opts.cfg.moveBox(opts.cfg.x, 0.5 - opts.cfg.h / 2, opts.aspect))
+        }
+        MenuChip {
+            width: parent.cw; height: Theme.ctlH
+            label: I18n.tr("Bottom")
+            onClicked: opts.placeOnce(() => opts.cfg.moveBox(opts.cfg.x, 1 - opts.cfg.h, opts.aspect))
+        }
     }
 
     // ── Colour ──────────────────────────────────────────────────────────

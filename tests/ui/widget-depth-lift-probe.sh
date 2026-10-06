@@ -18,6 +18,8 @@ trap 'rm -rf "$work"' EXIT
 mkdir -p "$work/Ryoku" "$work/shell/modules" "$work/cfg/ryoku" "$work/home"
 ln -s "$repo/ryoku/ui" "$work/Ryoku/Ui"
 ln -s "$repo/ryoku/shell/framebars" "$work/Ryoku/FrameBars" 2>/dev/null || true
+# The widget menu's size stepper reads the Stage Editor's island module.
+ln -s "$repo/ryoku/shell/quickshell/stage" "$work/stage"
 for child in "$src"/*; do
     name="$(basename "$child")"
     [[ "$name" == modules ]] && continue

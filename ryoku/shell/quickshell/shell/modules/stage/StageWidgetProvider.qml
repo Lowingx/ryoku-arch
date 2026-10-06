@@ -8,6 +8,7 @@ import stage.modules.common as StageIsland
 import "Singletons" as StageCfg
 import "../desktop/Singletons" as WidgetStore
 import "../visualizer/Singletons" as VizCfg
+import Ryoku.Ui.Singletons
 
 // The Stage Editor's store bridge: Ryoku's real desktop widgets, seen through
 // the ported chrome's own widget API. The chrome (stage.modules.common.Config)
@@ -21,8 +22,7 @@ import "../visualizer/Singletons" as VizCfg
 Scope {
     id: root
 
-    // The screen this provider speaks for (kept for diagnostics; Ryoku's
-    // widget store is not per-monitor forked the way the island's is).
+    // The output whose widget fork this provider reads and writes.
     property string monitor: ""
     // The roster rows, in the chrome's row shape: {id, label, icon, enabled,
     // group}. Fed from Desktop.addItems, so the catalogue is exactly what the
@@ -70,6 +70,36 @@ Scope {
         return 0;
     }
 
+    // The editors Ryoku folds into the mode beside Widgets, Wallpaper and
+    // Style: the visualiser's and the depth stage's, each a toolbar chip and a
+    // drawer catalogue (stage Config.extraSections).
+    readonly property var extraSections: [
+        {
+            "section": "visualizer",
+            "label": I18n.tr("Visualizer"),
+            "icon": "graphic_eq",
+            "tooltip": I18n.tr("The audio visualizer: look, place, colour and motion"),
+            "intro": I18n.tr("Drag the look on the desktop to move it, its corner to size it and the dot to turn it, or set it by number below."),
+            "page": visualizerPage
+        },
+        {
+            "section": "depth",
+            "label": I18n.tr("Depth"),
+            "icon": "layers",
+            "tooltip": I18n.tr("Cut the wallpaper into layers and lift widgets between them"),
+            "intro": I18n.tr("Cut the wallpaper's subject out so widgets can sit behind it, and choose how the layers look and move."),
+            "page": depthPage
+        }
+    ]
+    Component {
+        id: visualizerPage
+        StageVisualizerPage {}
+    }
+    Component {
+        id: depthPage
+        StageDepthPage {}
+    }
+
     // ── Writers ──────────────────────────────────────────────────────────────
 
     // Enable a widget, optionally at a drop point, and record the walk-back:
@@ -107,7 +137,7 @@ Scope {
             return;
         }
         if (x === undefined || y === undefined) {
-            store.set(widgetId + "Enabled", true);
+            store.setFor(root.monitor, widgetId + "Enabled", true);
             return;
         }
         const patch = {};
@@ -115,7 +145,7 @@ Scope {
         patch[widgetId + "Anchor"] = "free";
         patch[widgetId + "X"] = Math.round(x);
         patch[widgetId + "Y"] = Math.round(y);
-        store.setMany(patch);
+        store.setManyFor(root.monitor, patch);
     }
 
     // The drop point is the widget's top-left in screen px; the visualiser has
@@ -158,14 +188,15 @@ Scope {
         if (instanceId === "visualizer")
             return VizCfg.Config.enabled
                 ? { viz: true, x: VizCfg.Config.x, y: VizCfg.Config.y,
-                    w: VizCfg.Config.w, h: VizCfg.Config.h, angle: VizCfg.Config.angle }
+                    w: VizCfg.Config.w, h: VizCfg.Config.h, angle: VizCfg.Config.angle,
+                    tiltX: VizCfg.Config.tiltX, tiltY: VizCfg.Config.tiltY }
                 : null;
-        if (store[instanceId + "Enabled"] !== true)
+        if (store.get(instanceId + "Enabled", root.monitor) !== true)
             return null;
         return { key: instanceId,
-            anchor: store[instanceId + "Anchor"],
-            x: store[instanceId + "X"],
-            y: store[instanceId + "Y"] };
+            anchor: store.get(instanceId + "Anchor", root.monitor),
+            x: store.get(instanceId + "X", root.monitor),
+            y: store.get(instanceId + "Y", root.monitor) };
     }
 
     // Put a widget back the way a snapshot found it; `null` means it was not
@@ -186,18 +217,24 @@ Scope {
         }
         if (instanceId === "visualizer") {
             const v = VizCfg.Config;
-            v.setEnabled(snap !== null && snap !== undefined);
             // A re-add restores the box the walk-back found, not wherever the
             // last session left it; a plain disable leaves the placement alone.
+            // The turn lands first: the box is clamped against its own angle.
+            // The flag goes last, so its immediate write already carries the box.
             if (snap && snap.x !== undefined) {
-                const scr = root._screen();
-                v.setBox(snap.x, snap.y, snap.w, snap.h,
-                         scr ? scr.width / Math.max(1, scr.height) : 1);
+                if (snap.angle !== undefined)
+                    v.rotate(snap.angle);
+                v.setBox(snap.x, snap.y, snap.w, snap.h, root.aspect());
+                if (snap.tiltX !== undefined)
+                    v.setTiltX(snap.tiltX);
+                if (snap.tiltY !== undefined)
+                    v.setTiltY(snap.tiltY);
             }
+            v.setEnabled(snap !== null && snap !== undefined);
             return;
         }
         if (snap === null || snap === undefined) {
-            store.set(instanceId + "Enabled", false);
+            store.setFor(root.monitor, instanceId + "Enabled", false);
             return;
         }
         const patch = {};
@@ -205,7 +242,29 @@ Scope {
         patch[instanceId + "Anchor"] = snap.anchor;
         patch[instanceId + "X"] = snap.x;
         patch[instanceId + "Y"] = snap.y;
-        store.setMany(patch);
+        store.setManyFor(root.monitor, patch);
+    }
+
+    // The visualiser's walk-back, for every way its box changes (the grip's
+    // gestures, the placement knobs): `before` is the snapshot taken when the
+    // change began, and one undo entry lands if the box actually moved.
+    function recordVisualizer(before) {
+        if (!before)
+            return;
+        const after = root.snapshot("visualizer");
+        if (!after || JSON.stringify(before) === JSON.stringify(after))
+            return;
+        GlobalStates.editHistoryPush({
+            "undo": () => root.restore("visualizer", before),
+            "redo": () => root.restore("visualizer", after)
+        });
+    }
+
+    // The framed screen's width over its height: the visualiser box is
+    // fractions of the monitor, and its clamp needs the real proportions.
+    function aspect() {
+        const scr = root._screen();
+        return scr ? scr.width / Math.max(1, scr.height) : 1;
     }
 
     // ── The place tool, one command at a time ────────────────────────────────
@@ -213,9 +272,17 @@ Scope {
     // The chrome's store seam is one global; a monitor switch mounts the next
     // screen's provider before this one dies, so only clear the slot when it
     // still holds this provider.
-    Component.onCompleted: StageIsland.Config.widgetProvider = root
-    Component.onDestruction: if (StageIsland.Config.widgetProvider === root)
-        StageIsland.Config.widgetProvider = null
+    Component.onCompleted: {
+        StageIsland.Config.widgetProvider = root;
+        WidgetStore.Config.selectMonitor(root.monitor, true);
+    }
+    Component.onDestruction: {
+        if (StageIsland.Config.widgetProvider === root) {
+            StageIsland.Config.widgetProvider = null;
+            if (WidgetStore.Config.writeMonitor === root.monitor)
+                WidgetStore.Config.selectMonitor("");
+        }
+    }
 
     property var _queue: []
     Process {

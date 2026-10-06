@@ -3,25 +3,29 @@
 ## Unreleased
 
 ### Added
-- **The Stage Editor is the desktop's edit mode.** Editing widgets opens the
-  shrinking chrome ported from ii-p3drovfx's Edit Mode: the toolbar frames one
-  monitor at a time (Desktop | Widgets | Wallpaper | Style, undo, redo, Done),
-  the drawer lists Ryoku's real catalogue (built-ins, Shima and Python faces,
-  installed plugin sets), and every edit - a catalogue add, a wallpaper frame,
-  a style preset, a widget drag, resize or scale - lands in one undo stack.
-  The old Edit widgets bar, its picker and its Reset button are gone: the
-  desktop is the document and undo is the walk-back. Bar, dock and lock
-  editing stay in the Hub (`ryoku/shell/quickshell/stage/`,
-  `shell/modules/stage/`, docs/stage.md).
-- **The visualizer is edited in the Stage Editor.** Its standalone placement
-  surface, its edge bar and its gear drawer are gone: the look is a framed
-  widget like the rest. The Visualiser row, `Super+Alt+M` and the Hub's
-  Placement sheet open the Stage Editor with the look selected, where a drag
-  moves it, the corner sizes it, the dot turns it and Ctrl+wheel scales it,
-  each gesture on the chrome's undo stack. The look's own menu and Customize
-  sheet carry every knob the old bar owned: the gallery, colour, instances,
-  playback, shape and the field's deep controls
-  (`shell/modules/visualizer/`, `shell/modules/desktop/`).
+- **The Stage Editor is the desktop's edit mode.** Its toolbar frames one
+  monitor at a time (Desktop | Widgets | Wallpaper | Style | Visualizer |
+  Depth, snap, undo, redo, Done), and the drawer lists Ryoku's real catalogue:
+  built-ins, Shima and Python faces, and installed plugin sets. Every edit, from
+  a catalogue add or wallpaper frame to a style preset, widget drag, resize, or
+  scale, lands in one undo stack. The desktop is the document and undo is the
+  walk-back. Bar, dock, and lock editing stay in the Hub
+  (`ryoku/shell/quickshell/stage/`, `shell/modules/stage/`, docs/stage.md).
+- **The visualizer is edited in the Stage Editor.** The look is a framed widget
+  like the rest. `Super+Alt+M` and the Hub hand-off open the Visualizer
+  catalogue with the look selected, where a drag moves it, the corner sizes it,
+  the top handle turns it, and Ctrl+wheel scales it. Each gesture joins the
+  chrome's undo stack, and the Look, Place, Colour, Playback, Shape, and Field
+  tabs carry its controls (`shell/modules/visualizer/`,
+  `shell/modules/desktop/`).
+- **The finished Stage Editor brings every desktop tool into one composition
+  surface.** The desktop menu now has Wallpaper and Search in its quick row and
+  one Edit desktop action. The toolbar adds Visualizer and Depth catalogues
+  beside Widgets, Wallpaper, and Style, with snap, multi-select, group moves,
+  keyboard nudging, alignment, undo and redo. It also edits ryogami's
+  per-screen wallpaper and framing, style presets, desktop icons, and
+  per-output widget layouts on the live rounded desktop card
+  (`shell/modules/stage/`, `quickshell/stage/modules/ii/editMode/`).
 - **Rashin splits into a Ryoku lane and a Chat lane.** The Ryoku lane is the
   machine agent: the Needle with the vault, the `ryoku` skill, the wiki, prowl
   over the Ryoku source and the approval modes, on the Alt+Space bar, in the

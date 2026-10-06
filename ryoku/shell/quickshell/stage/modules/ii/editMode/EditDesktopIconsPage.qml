@@ -1,23 +1,25 @@
 import QtQuick
 import QtQuick.Layouts
-import stage.services
 import stage.modules.common
 import stage.modules.common.widgets
+import stage.modules.ii.background.shortcuts
 
 /**
- * Edit Mode's "Desktop icons" page: how the desktop's shortcut icons are
- * sized, laid out and drawn. Every control writes
- * Config.options.background.desktopIcons (and desktopIconScale); the icon
- * store re-lays the icons out when the cell size changes, so a new size or
- * spacing keeps the arrangement instead of piling it up.
- *
- * Order and one-shot arranging live in the desktop menu's own page, next to
- * the icons they move; this page is the look.
+ * Edit Mode's "Desktop icons" page: management, arrangement and appearance
+ * for the shortcut layer on the monitor being edited.
  */
 StyledFlickable {
     id: root
+    required property string screenName
 
     readonly property var options: Config.options.background.desktopIcons
+    readonly property var sources: DesktopShortcuts.otherScreens(root.screenName)
+    readonly property var sorts: [
+        { "key": "name", "symbol": "sort_by_alpha", "title": Translation.tr("Name") },
+        { "key": "type", "symbol": "category", "title": Translation.tr("Type") },
+        { "key": "added", "symbol": "schedule", "title": Translation.tr("Date added") },
+        { "key": "used", "symbol": "trending_up", "title": Translation.tr("Most used") }
+    ]
 
     contentHeight: column.implicitHeight
     clip: true
@@ -27,6 +29,129 @@ StyledFlickable {
         width: root.width
         spacing: 6
 
+        EditPanelSectionLabel {
+            Layout.topMargin: 0
+            text: Translation.tr("Desktop")
+        }
+        EditPanelRow {
+            Layout.fillWidth: true
+            first: true
+            last: false
+            symbol: DesktopShortcuts.hidden ? "visibility_off" : "visibility"
+            title: Translation.tr("Show icons")
+            trailingKind: "switch"
+            switchChecked: !DesktopShortcuts.hidden
+            onActivated: DesktopShortcuts.setHidden(!DesktopShortcuts.hidden)
+        }
+        EditPanelRow {
+            Layout.fillWidth: true
+            readonly property bool locked: Config.options.background.desktopIconsLocked ?? false
+            first: false
+            last: false
+            symbol: locked ? "lock" : "lock_open"
+            title: Translation.tr("Lock icons")
+            trailingKind: "switch"
+            switchChecked: locked
+            onActivated: Config.options.background.desktopIconsLocked = !locked
+        }
+        EditPanelRow {
+            Layout.fillWidth: true
+            first: false
+            last: false
+            symbol: "grid_on"
+            title: Translation.tr("Align to grid")
+            onActivated: DesktopShortcuts.alignToGrid(root.screenName)
+        }
+        EditPanelRow {
+            Layout.fillWidth: true
+            first: false
+            last: false
+            symbol: "auto_awesome_mosaic"
+            title: Translation.tr("Auto-arrange")
+            subtitle: Translation.tr("Drops snap to the nearest free cell")
+            trailingKind: "switch"
+            switchChecked: root.options.autoArrange
+            onActivated: DesktopShortcuts.setAutoArrange(!root.options.autoArrange)
+        }
+        EditPanelRow {
+            Layout.fillWidth: true
+            first: false
+            last: false
+            symbol: "stacks"
+            title: Translation.tr("Stacks")
+            subtitle: Translation.tr("Group apps, folders and files by kind")
+            trailingKind: "switch"
+            switchChecked: root.options.stacks
+            onActivated: DesktopShortcuts.setStacks(!root.options.stacks)
+        }
+        EditPanelRow {
+            Layout.fillWidth: true
+            first: false
+            last: true
+            symbol: "undo"
+            title: Translation.tr("Undo icon change")
+            enabled: DesktopShortcuts.canUndo
+            onActivated: DesktopShortcuts.undo()
+        }
+
+        EditPanelSectionLabel {
+            text: Translation.tr("Sort by")
+        }
+        Repeater {
+            model: root.sorts
+            delegate: EditPanelRow {
+                required property var modelData
+                required property int index
+                readonly property bool current: root.options.sortBy === modelData.key
+                Layout.fillWidth: true
+                first: index === 0
+                last: index === root.sorts.length - 1
+                symbol: modelData.symbol
+                title: modelData.title
+                selected: current && root.options.keepSorted
+                trailingKind: current ? "value" : "none"
+                valueText: current ? (root.options.sortDescending ? "↓" : "↑") : ""
+                onActivated: DesktopShortcuts.sortBy(root.screenName, modelData.key)
+            }
+        }
+        EditPanelRow {
+            Layout.fillWidth: true
+            first: true
+            last: true
+            symbol: "autorenew"
+            title: Translation.tr("Keep sorted")
+            subtitle: Translation.tr("Re-sort when icons come and go")
+            trailingKind: "switch"
+            switchChecked: root.options.keepSorted
+            onActivated: DesktopShortcuts.setKeepSorted(!root.options.keepSorted)
+        }
+
+        EditPanelSectionLabel {
+            visible: root.sources.length > 0
+            text: Translation.tr("Other screens")
+        }
+        Repeater {
+            model: root.sources
+            delegate: EditPanelRow {
+                required property string modelData
+                required property int index
+                readonly property int iconCount: DesktopShortcuts.itemsFor(modelData).length
+                Layout.fillWidth: true
+                first: index === 0
+                last: index === root.sources.length - 1
+                symbol: DesktopShortcuts.isConnected(modelData) ? "monitor" : "desktop_access_disabled"
+                title: Translation.tr("Bring icons from %1").arg(modelData)
+                subtitle: DesktopShortcuts.isConnected(modelData)
+                    ? Translation.tr("%1 icons").arg(String(iconCount))
+                    : Translation.tr("%1 icons · disconnected").arg(String(iconCount))
+                trailingKind: "add"
+                onActivated: DesktopShortcuts.moveToScreen(modelData, root.screenName, null)
+            }
+        }
+
+        EditPanelSectionLabel {
+            text: Translation.tr("Appearance")
+        }
         EditOptionChips {
             Layout.fillWidth: true
             label: Translation.tr("Icon size")

@@ -18,6 +18,7 @@ Item {
     id: slot
 
     property string widget: "clock"            // config prefix, for persistence
+    property string monitor: ""                 // output owning this slot
     property string anchor: "top-left"         // auto | 9 zones | free
     property real freeX: 72
     property real freeY: 64
@@ -39,6 +40,8 @@ Item {
     // just on hover): the frame overlay above intercepts hover, so a hover-only
     // bracket would never reveal, leaving the widget un-resizable in the editor.
     property bool composing: false
+    // The live canvas controller is supplied only while this monitor is framed.
+    property var stageController: null
 
     signal menuRequested(real x, real y, string widget)
     // emitted on drop with the slot's final pixel box, so the desktop layer can
@@ -55,13 +58,41 @@ Item {
     // clears it, so a drag or resize walks back exactly like the reference's
     // own canvas does.
     property var gestureBefore: null
+    property bool groupDragging: false
+    property real groupX: 0
+    property real groupY: 0
+    property real groupDragMinX: -Infinity
+    property real groupDragMaxX: Infinity
+    property real groupDragMinY: -Infinity
+    property real groupDragMaxY: Infinity
+    readonly property string storeMonitor: (slot.composing || Config.isForked(slot.monitor))
+        ? slot.monitor : ""
     function _captureGesture() {
         slot.gestureBefore = {
-            Anchor: Config[slot.widget + "Anchor"],
-            X: Config[slot.widget + "X"],
-            Y: Config[slot.widget + "Y"],
-            Scale: Config[slot.widget + "Scale"]
+            Anchor: Config.get(slot.widget + "Anchor", slot.monitor),
+            X: Config.get(slot.widget + "X", slot.monitor),
+            Y: Config.get(slot.widget + "Y", slot.monitor),
+            Scale: Config.get(slot.widget + "Scale", slot.monitor)
         };
+    }
+    function _setFree(x, y) {
+        const patch = {};
+        patch[slot.widget + "Anchor"] = "free";
+        patch[slot.widget + "X"] = x;
+        patch[slot.widget + "Y"] = y;
+        Config.setManyFor(slot.storeMonitor, patch);
+    }
+    function stagePreviewPosition(x, y) {
+        if (!slot.groupDragging) {
+            slot.groupX = slot.x;
+            slot.groupY = slot.y;
+            slot.groupDragging = true;
+        }
+        slot.groupX = x;
+        slot.groupY = y;
+    }
+    function stageEndPreview() {
+        slot.groupDragging = false;
     }
 
     default property alias content: holder.data
@@ -82,7 +113,9 @@ Item {
     readonly property string inkColorA: slot.bg === "none" ? (Config[slot.widget + "Color"] || "") : ""
     readonly property string inkColorB: Config[slot.widget + "Color2"] || ""
     readonly property bool cardWidget: slot.widget === "calendar" || slot.widget === "music" || slot.widget === "aio"
-    readonly property bool inkGradient: slot.inkColorA !== "" && (Config[slot.widget + "Gradient"] === true) && slot.inkColorB !== ""
+    readonly property bool inkGradient: slot.inkColorA !== ""
+        && (Config[slot.widget + "Gradient"] === true)
+        && slot.inkColorB !== ""
     readonly property bool inkMaskOn: slot.inkGradient && !slot.cardWidget
 
     // drag state. while holding (dragging, or briefly after release until
@@ -96,7 +129,7 @@ Item {
     property real resizeOY: 0
     property real resizeStartScale: 1
     property real resizeStartDiag: 1
-    readonly property bool holding: slot.dragging || slot.resizing || guard.running
+    readonly property bool holding: slot.dragging || slot.resizing || slot.groupDragging || guard.running
 
     width: Math.max(1, slot.cw + slot.pad * 2)
     height: Math.max(1, slot.ch + slot.pad * 2)
@@ -158,10 +191,12 @@ Item {
         return Qt.point(slot.clampX(s.x * pw), slot.clampY(s.y * ph));
     }
 
-    x: slot.holding ? slot.dragX
+    x: slot.groupDragging ? slot.groupX
+        : slot.holding ? slot.dragX
         : slot.anchor === "free" ? slot.clampX(slot.freeX)
         : slot.anchor === "auto" ? slot.autoPoint.x : slot.zoneX()
-    y: slot.holding ? slot.dragY
+    y: slot.groupDragging ? slot.groupY
+        : slot.holding ? slot.dragY
         : slot.anchor === "free" ? slot.clampY(slot.freeY)
         : slot.anchor === "auto" ? slot.autoPoint.y : slot.zoneY()
 
@@ -266,6 +301,7 @@ Item {
 
         onPressed: (mouse) => {
             if (mouse.button === Qt.RightButton) {
+                Config.selectMonitor(slot.monitor, slot.composing);
                 const pr = slot.mapToItem(slot.parent, mouse.x, mouse.y);
                 slot.menuRequested(pr.x, pr.y, slot.widget);
                 return;
@@ -277,6 +313,13 @@ Item {
             const p = slot.mapToItem(slot.parent, mouse.x, mouse.y);
             grip.grabOX = p.x - slot.x;
             grip.grabOY = p.y - slot.y;
+            if (slot.composing && slot.stageController) {
+                const bounds = slot.stageController.widgetDragStarted(slot.widget);
+                slot.groupDragMinX = bounds.minX;
+                slot.groupDragMaxX = bounds.maxX;
+                slot.groupDragMinY = bounds.minY;
+                slot.groupDragMaxY = bounds.maxY;
+            }
         }
         onPositionChanged: (mouse) => {
             if (!grip.leftDown || slot.locked)
@@ -291,18 +334,50 @@ Item {
             }
             // Follow the pointer freely while dragging (no live grid step, so
             // it never feels laggy); the grid snap happens once, on release.
-            slot.dragX = slot.clampX(nx);
-            slot.dragY = slot.clampY(ny);
+            slot.dragX = Math.max(slot.groupDragMinX,
+                Math.min(slot.groupDragMaxX, slot.clampX(nx)));
+            slot.dragY = Math.max(slot.groupDragMinY,
+                Math.min(slot.groupDragMaxY, slot.clampY(ny)));
+            if (slot.composing && slot.stageController) {
+                const bounded = slot.stageController.widgetDragMoved(
+                    slot.widget, slot.dragX, slot.dragY);
+                slot.dragX = bounded.x;
+                slot.dragY = bounded.y;
+            }
         }
         onReleased: (mouse) => {
             if (slot.dragging) {
-                const fx = Math.round(slot.snap(slot.dragX));
-                const fy = Math.round(slot.snap(slot.dragY));
-                Config.setFree(slot.widget, fx, fy);
-                slot.dropped(Qt.rect(fx, fy, slot.width, slot.height));
+                const fx = Math.round(Math.max(slot.groupDragMinX,
+                    Math.min(slot.groupDragMaxX, slot.snap(slot.dragX))));
+                const fy = Math.round(Math.max(slot.groupDragMinY,
+                    Math.min(slot.groupDragMaxY, slot.snap(slot.dragY))));
+                const handled = slot.composing && slot.stageController
+                    && slot.stageController.widgetDragEnded(slot.widget, fx, fy);
+                if (!handled) {
+                    slot._setFree(fx, fy);
+                    slot.dropped(Qt.rect(fx, fy, slot.width, slot.height));
+                } else {
+                    slot.gestureBefore = null;
+                }
                 slot.dragging = false;
                 guard.restart();
+            } else if (slot.composing && slot.stageController) {
+                slot.stageController.widgetDragCancelled(slot.widget);
             }
+            slot.groupDragMinX = -Infinity;
+            slot.groupDragMaxX = Infinity;
+            slot.groupDragMinY = -Infinity;
+            slot.groupDragMaxY = Infinity;
+            grip.leftDown = false;
+        }
+        onCanceled: {
+            if (slot.composing && slot.stageController)
+                slot.stageController.widgetDragCancelled(slot.widget);
+            slot.dragging = false;
+            slot.groupDragMinX = -Infinity;
+            slot.groupDragMaxX = Infinity;
+            slot.groupDragMinY = -Infinity;
+            slot.groupDragMaxY = Infinity;
             grip.leftDown = false;
         }
     }
@@ -366,14 +441,17 @@ Item {
                 slot._captureGesture();
             const step = event.angleDelta.y > 0 ? 1.06 : 1 / 1.06;
             const ns = Math.max(0.5, Math.min(2.5, slot.scaleCfg * step));
-            Config.setLive(slot.widget + "Scale", ns);
+            Config.setLiveFor(slot.storeMonitor, slot.widget + "Scale", ns);
             scalePersist.restart();
         }
     }
     Timer {
         id: scalePersist
         interval: 350
-        onTriggered: { Config.set(slot.widget + "Scale", slot.scaleCfg); slot.resized(); }
+        onTriggered: {
+            Config.setFor(slot.storeMonitor, slot.widget + "Scale", slot.scaleCfg);
+            slot.resized();
+        }
     }
 
     // quick resize: drag the bottom-right bracket to scrub the widget's
@@ -436,11 +514,11 @@ Item {
                 const p = hgrip.mapToItem(slot.parent, mouse.x, mouse.y);
                 const diag = Math.hypot(p.x - slot.resizeOX, p.y - slot.resizeOY);
                 const ns = Math.max(0.5, Math.min(2.5, slot.resizeStartScale * diag / slot.resizeStartDiag));
-                Config.setLive(slot.widget + "Scale", ns);
+                Config.setLiveFor(slot.storeMonitor, slot.widget + "Scale", ns);
             }
             onReleased: (mouse) => {
                 if (slot.resizing) {
-                    Config.setFree(slot.widget, Math.round(slot.resizeOX), Math.round(slot.resizeOY));
+                    slot._setFree(Math.round(slot.resizeOX), Math.round(slot.resizeOY));
                     slot.resizing = false;
                     slot.resized();
                     guard.restart();

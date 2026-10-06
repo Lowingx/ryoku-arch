@@ -2,16 +2,10 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import shell.services
 import "../../components"
+import "../desktop/Singletons" as DesktopStyle
 
-// A widget's edit frame (docs/stage.md, "Edit widgets"): a 1 px outline that
-// follows the widget's live rect, the widget's name at its top-left, and two
-// small buttons at its top-right (Settings and Remove). Selecting draws the
-// frame stronger.
-//
-// The body is input-transparent: the outline Rectangle takes no mouse, and a
-// TapHandler with the default DragThreshold policy takes only a passive grab,
-// so a tap selects while a press or drag still falls through to the widget's
-// own move grip underneath. Only the two buttons consume their presses.
+// The overlay passes body presses through to the live widget; only its two
+// actions take an exclusive press, so restyling the frame cannot break dragging.
 Item {
     id: outline
     anchors.fill: parent
@@ -19,7 +13,7 @@ Item {
     property rect box: Qt.rect(0, 0, 0, 0)
     property string title: ""
     property bool selected: false
-    property real radius: Theme.radiusWidget
+    property real radius: 6
 
     signal picked()
     signal settings()
@@ -27,11 +21,52 @@ Item {
 
     visible: outline.box.width > 1 && outline.box.height > 1
 
-    // The header (name + buttons) floats just above the frame's top edge, or
-    // drops inside when the widget hugs the top of the screen.
-    readonly property real headerY: outline.box.y > 40 ? outline.box.y - 34 : outline.box.y + 6
+    readonly property real headerHeight: 26
+    readonly property real headerGap: 7
+    readonly property real availableNameWidth: Math.max(0,
+        outline.headerRight - outline.headerLeft - buttons.width - outline.headerGap)
+    readonly property real headerWidth: Math.min(outline.box.width,
+        buttons.width + (nameChip.visible ? outline.headerGap + nameChip.width : 0))
+    // The header row's span, clamped to the desktop: a box that reaches past an
+    // edge (the visualiser's full-width or turned footprint) keeps its name and
+    // buttons on screen instead of cut by the card's edge.
+    readonly property real headerLeft: Math.max(0, outline.box.x)
+    readonly property real headerRight: Math.min(outline.width > 0 ? outline.width : outline.box.x + outline.box.width,
+        outline.box.x + outline.box.width)
 
-    // The 1 px frame following the widget's rect.
+    // A colliding pair moves into its own frames, where the bounded headers can
+    // no longer cover each other.
+    function headerHasRoom() {
+        if (outline.box.y <= outline.headerHeight + 13 || !outline.parent)
+            return false;
+
+        const candidateY = outline.box.y - outline.headerHeight - outline.headerGap;
+        const siblings = outline.parent.children;
+        for (let i = 0; i < siblings.length; ++i) {
+            const other = siblings[i];
+            if (other === outline || !other.visible
+                    || other.box === undefined || other.headerWidth === undefined)
+                continue;
+
+            const otherY = other.box.y > outline.headerHeight + 13
+                ? other.box.y - outline.headerHeight - outline.headerGap
+                : other.box.y + outline.headerGap;
+            const overlapsY = candidateY < otherY + outline.headerHeight
+                && candidateY + outline.headerHeight > otherY;
+            const otherWidth = Math.min(other.box.width, other.headerWidth);
+            const overlapsX = outline.box.x < other.box.x + otherWidth
+                && outline.box.x + outline.headerWidth > other.box.x;
+            if (overlapsX && overlapsY)
+                return false;
+        }
+        return true;
+    }
+
+    readonly property bool headerInside: !outline.headerHasRoom()
+    readonly property real headerY: outline.headerInside
+        ? outline.box.y + outline.headerGap
+        : outline.box.y - outline.headerHeight - outline.headerGap
+
     Rectangle {
         id: frame
         x: outline.box.x
@@ -44,87 +79,108 @@ Item {
         border.color: outline.selected
             ? Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.95)
             : hover.hovered ? Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.55)
-            : Qt.rgba(Theme.onSurface.r, Theme.onSurface.g, Theme.onSurface.b, 0.55)
-        Behavior on border.color { ColorAnimation { duration: Motion.fast } }
+            : Qt.rgba(DesktopStyle.Theme.ink.r, DesktopStyle.Theme.ink.g,
+                DesktopStyle.Theme.ink.b, 0.55)
+        Behavior on border.color { ColorAnimation { duration: 180 } }
 
-        // Hover lights the border, and must reach the slot underneath too so its
-        // resize bracket reveals: a HoverHandler monitors without consuming, and
-        // the MouseArea below is press-only (hoverEnabled false) so hover falls
-        // through to the slot.
         HoverHandler { id: hover }
-        // Left-press selects, then forwards the press (accepted = false) so the
-        // widget's own grip and resize bracket beneath the overlay still get it;
-        // the right button is left untouched so the per-widget menu still opens.
-        // A pointer handler that grabbed here would starve the grip of the drag,
-        // which is the "can't move it" bug.
+
+        // An exclusive pointer grab here would starve the widget's move grip.
         MouseArea {
-            id: bodyMa
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton
             hoverEnabled: false
-            onPressed: mouse => { outline.picked(); mouse.accepted = false; }
+            onPressed: mouse => {
+                outline.picked();
+                mouse.accepted = false;
+            }
         }
     }
 
-    // Name chip, top-left.
     Rectangle {
         id: nameChip
-        visible: outline.title.length > 0
-        x: Math.round(outline.box.x)
+        visible: outline.title.length > 0 && outline.availableNameWidth > 0
+        x: Math.round(outline.headerLeft)
         y: Math.round(outline.headerY)
-        width: nameText.implicitWidth + 20
-        height: 28
-        radius: 8
-        color: outline.selected
-            ? Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.95)
-            : Qt.rgba(Theme.surface.r, Theme.surface.g, Theme.surface.b, 0.94)
+        width: Math.min(nameText.implicitWidth + 18, outline.availableNameWidth)
+        height: outline.headerHeight
+        radius: 6
+        color: outline.selected ? DesktopStyle.Theme.bone
+            : Qt.rgba(DesktopStyle.Theme.surface.r, DesktopStyle.Theme.surface.g,
+                DesktopStyle.Theme.surface.b, 0.99)
         border.width: 1
-        border.color: outline.selected
-            ? Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.55)
-            : Qt.rgba(Theme.outline.r, Theme.outline.g, Theme.outline.b, 0.35)
+        border.color: outline.selected ? DesktopStyle.Theme.bone
+            : Qt.rgba(DesktopStyle.Theme.ink.r, DesktopStyle.Theme.ink.g,
+                DesktopStyle.Theme.ink.b, 0.4)
+
         Text {
             id: nameText
-            anchors.centerIn: parent
+            anchors {
+                fill: parent
+                leftMargin: 9
+                rightMargin: 9
+            }
+            verticalAlignment: Text.AlignVCenter
             text: outline.title
-            color: outline.selected ? Theme.inkOn(Theme.primary, Theme.onPrimary) : Theme.onSurface
-            font.family: Theme.fontPrimary
-            font.pixelSize: Theme.fontSm - 1
+            color: outline.selected ? DesktopStyle.Theme.inkOnBone : DesktopStyle.Theme.ink
+            elide: Text.ElideRight
+            maximumLineCount: 1
+            font.family: DesktopStyle.Theme.font
+            font.pixelSize: 9
             font.weight: Font.DemiBold
+            font.letterSpacing: 0.6
         }
     }
 
-    // Settings + Remove, top-right, right-aligned to the frame.
     Row {
         id: buttons
-        spacing: 6
-        x: Math.round(outline.box.x + outline.box.width - width)
+        spacing: outline.headerGap
+        x: Math.round(outline.headerRight - width)
         y: Math.round(outline.headerY)
         FrameBtn { icon: "tune"; onAct: outline.settings() }
         FrameBtn { icon: "delete"; danger: true; onAct: outline.remove() }
     }
 
-    // A small, quiet icon button with a legibility plate over the wallpaper.
     component FrameBtn: Rectangle {
         id: fb
         property string icon: ""
         property bool danger: false
         signal act()
-        width: 28
-        height: 28
-        radius: 8
+
+        width: outline.headerHeight
+        height: outline.headerHeight
+        radius: 6
         color: fbMa.containsMouse
             ? (fb.danger ? Qt.rgba(Theme.error.r, Theme.error.g, Theme.error.b, 0.9)
-                : Qt.rgba(Theme.onSurface.r, Theme.onSurface.g, Theme.onSurface.b, 0.16))
-            : Qt.rgba(Theme.surface.r, Theme.surface.g, Theme.surface.b, 0.94)
+                : DesktopStyle.Theme.bone)
+            : Qt.rgba(DesktopStyle.Theme.surface.r, DesktopStyle.Theme.surface.g,
+                DesktopStyle.Theme.surface.b, 0.99)
         border.width: 1
-        border.color: Qt.rgba(Theme.outline.r, Theme.outline.g, Theme.outline.b, 0.35)
-        Behavior on color { ColorAnimation { duration: Motion.fast } }
+        border.color: fbMa.containsMouse && !fb.danger
+            ? DesktopStyle.Theme.bone
+            : Qt.rgba(DesktopStyle.Theme.ink.r, DesktopStyle.Theme.ink.g,
+                DesktopStyle.Theme.ink.b, 0.4)
+        scale: fbMa.pressed ? 0.94 : 1
+        Behavior on color { ColorAnimation { duration: 180 } }
+        Behavior on border.color { ColorAnimation { duration: 180 } }
+        Behavior on scale {
+            NumberAnimation {
+                duration: 180
+                easing.type: Easing.OutBack
+                easing.overshoot: 2.2
+            }
+        }
+
         MaterialIcon {
             anchors.centerIn: parent
             text: fb.icon
             font.pixelSize: 16
-            color: (fb.danger && fbMa.containsMouse) ? Theme.onError : Theme.onSurface
+            color: fb.danger && fbMa.containsMouse
+                ? Theme.onError
+                : fbMa.containsMouse ? DesktopStyle.Theme.inkOnBone
+                : DesktopStyle.Theme.ink
         }
+
         MouseArea {
             id: fbMa
             anchors.fill: parent
