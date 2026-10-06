@@ -112,6 +112,13 @@
   (`ui/Singletons/Wm.qml`).
 
 ### Fixed
+- **The keypad choice reaches the login greeter.** Both compositor providers
+  now publish the session's effective numlock state to
+  `/var/lib/ryoku/greeter-numlock` on every apply (the same hand-off shape as
+  greeter-primary), so the login screen and the lock screen agree with the
+  session instead of forcing the keypad on for everyone
+  (`wm/greeter.go`, `wm/hyprland/apply.go`, `wm/niri/apply.go`).
+
 - **The Glass plugin says what it costs on NVIDIA.** Liquid-glass blur and
   refraction re-render per window on every monitor, and reports say it turns
   visibly laggy on NVIDIA multi-monitor setups; the plugin's own card now
