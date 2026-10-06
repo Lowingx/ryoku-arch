@@ -46,6 +46,13 @@ Item {
         StageCfg.StageSession.enterWidgets(menu.activeMonitor());
         menu.close();
     }
+    function newFolder() {
+        const openX = shell.px;
+        const openY = shell.py;
+        menu.close();
+        if (menu.desktop)
+            menu.desktop.newDesktopFolder(openX, openY);
+    }
     function changeWallpaper() {
         Services.ShellState.requestSurfaceActive("wallpaper", null);
         menu.close();
@@ -108,6 +115,7 @@ Item {
         MenuSection {}
 
         MenuRow { icon: "dashboard_customize"; label: I18n.tr("Edit desktop"); accent: true; onTriggered: menu.editDesktop() }
+        MenuRow { icon: "create_new_folder"; label: I18n.tr("New folder"); onTriggered: menu.newFolder() }
         MenuRow { icon: "tune"; label: I18n.tr("Quick controls"); onTriggered: menu.quickControls() }
         // iRiS conveniences: Studio and Edit iRiS on the iris bar style only. On
         // every other style they hide, and the Column skips them with no gap.

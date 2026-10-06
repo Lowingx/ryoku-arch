@@ -2,8 +2,8 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Ryoku.Ui.Singletons
 
-// Compose-mode frames own pointer input for movable widgets. Visualizer frames
-// stay passive so their turned move, size, and rotation grips keep the grab.
+// Compose-mode frames own pointer input for movable widgets and yield presses
+// over a target's direct manipulation handles.
 Item {
     id: outline
     anchors.fill: parent
@@ -86,6 +86,15 @@ Item {
                 : outline.targetItem && outline.targetItem.dragging
                     ? Qt.ClosedHandCursor : Qt.OpenHandCursor
             onPressed: mouse => {
+                if (outline.targetItem
+                        && typeof outline.targetItem.stageHandleAt === "function") {
+                    const handlePoint = bodyArea.mapToItem(
+                        outline.targetItem, mouse.x, mouse.y);
+                    if (outline.targetItem.stageHandleAt(handlePoint) !== "") {
+                        mouse.accepted = false;
+                        return;
+                    }
+                }
                 outline.picked(mouse.modifiers);
                 if (mouse.button === Qt.RightButton) {
                     outline.settings();
@@ -97,7 +106,9 @@ Item {
                 }
                 const point = bodyArea.mapToItem(outline.targetItem.parent,
                     mouse.x, mouse.y);
-                outline.targetItem.stageBeginMove(point, mouse.modifiers);
+                if (outline.targetItem.stageBeginMove(
+                        point, mouse.modifiers) === false)
+                    mouse.accepted = false;
             }
             onPositionChanged: mouse => {
                 if (!outline.targetItem

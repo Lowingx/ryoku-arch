@@ -8,7 +8,6 @@ import Ryoku.Ui.Singletons
 import stage.services
 import stage.modules.common
 import stage.modules.common.widgets
-import stage.modules.ii.editMode
 
 ItemContextDialog {
     id: root
@@ -28,10 +27,13 @@ ItemContextDialog {
     readonly property var otherScreens: Quickshell.screens.filter(s => s.name !== root.screenName)
     readonly property bool writable: Persistent.ready && !Persistent.blockWrites
     readonly property var member: (entry.apps ?? []).find(app => app.id === memberId) ?? null
+    readonly property var otherFolders: DesktopShortcuts.folders(root.screenName)
+        .filter(folder => folder.id !== root.entry.id)
 
     title: entry.name || entry.id || ""
     subtitle: root.selectionCount > 1 ? Translation.tr("%1 items selected").arg(String(root.selectionCount))
-        : entry.path || (entry.type === "group" ? Translation.tr("App group")
+        : entry.path || (entry.type === "group"
+            ? (entry.stack ? Translation.tr("Stack") : Translation.tr("Folder"))
             : entry.type === "url" ? Translation.tr("Web link") : Translation.tr("Application"))
     iconSource: Quickshell.iconPath(entry.icon || (entry.type === "group" ? "folder-applications"
         : entry.type === "directory" ? "folder"
@@ -75,9 +77,13 @@ ItemContextDialog {
             : "file://" + encodeURI(target).replace(/#/g, "%23").replace(/\?/g, "%3F"));
     }
     actions: [
-        { id: "open", text: entry.type === "group" ? Translation.tr("Open group") : Translation.tr("Open"),
+        { id: "open", text: entry.type === "group"
+            ? (entry.stack ? Translation.tr("Open stack") : Translation.tr("Open folder"))
+            : Translation.tr("Open"),
             icon: entry.type === "group" ? "apps" : "open_in_new", submenu: entry.type === "group" },
-        { id: "rename", text: Translation.tr("Rename shortcut"), icon: "edit", submenu: true, enabled: root.writable },
+        { id: "rename", text: entry.type === "group"
+            ? (entry.stack ? Translation.tr("Rename stack") : Translation.tr("Rename folder"))
+            : Translation.tr("Rename shortcut"), icon: "edit", submenu: true, enabled: root.writable },
         { id: "details", text: Translation.tr("Details"), icon: "info", submenu: true },
         { id: "reveal", text: Translation.tr("Show in folder"), icon: "folder_open",
             visible: entry.path !== "" && entry.type !== "url" },
@@ -95,12 +101,15 @@ ItemContextDialog {
             destructive: true, enabled: root.writable }
     ].filter(action => action.visible !== false)
     pageComponent: page === "rename" ? renamePage : page === "members" ? membersPage
-        : page === "add" ? addPage : page === "member" ? memberPage : page === "details" ? detailsPage
-        : page === "arrange" ? arrangePage : page === "screen" ? screenPage : null
-    pageDepth: page === "" ? 0 : (page === "add" || page === "member" ? 2 : 1)
+        : page === "add" ? addPage : page === "member" ? memberPage : page === "moveMember" ? moveMemberPage
+        : page === "details" ? detailsPage : page === "arrange" ? arrangePage
+        : page === "screen" ? screenPage : null
+    pageDepth: page === "" ? 0
+        : (page === "add" || page === "member" ? 2 : page === "moveMember" ? 3 : 1)
     onBackRequested: root.back()
     function back() {
-        root.page = root.page === "add" || root.page === "member" ? "members" : "";
+        root.page = root.page === "moveMember" ? "member"
+            : root.page === "add" || root.page === "member" ? "members" : "";
     }
     function launch(item) {
         DesktopShortcuts.launch(item);
@@ -164,14 +173,12 @@ ItemContextDialog {
     component MenuField: Field {
         id: field
         property bool inputEnabled: true
-        signal textEdited()
         function focusField(selectAll: bool): void {
             field.grabFocus();
         }
         enabled: inputEnabled
         Layout.fillWidth: true
         toolbar: true
-        onEdited: field.textEdited()
     }
 
     component MenuRow: Rectangle {
@@ -247,8 +254,7 @@ ItemContextDialog {
             anchors.right: parent.right
             anchors.rightMargin: Tokens.s3
             anchors.verticalCenter: parent.verticalCenter
-            text: menuRow.trailingKind === "chevron" ? "›"
-                : menuRow.trailingKind === "add" ? "+" : ""
+            text: menuRow.trailingKind === "chevron" ? "›" : ""
             color: menuRow.destructive ? Tokens.alert : Tokens.inkMuted
             font.family: Tokens.ui
             font.pixelSize: Tokens.fBody
@@ -276,12 +282,19 @@ ItemContextDialog {
         id: renamePage
         ColumnLayout {
             spacing: Tokens.s1
-            PageHeader { title: Translation.tr("Rename shortcut") }
+            PageHeader {
+                title: root.entry.type === "group"
+                    ? (root.entry.stack ? Translation.tr("Rename stack") : Translation.tr("Rename folder"))
+                    : Translation.tr("Rename shortcut")
+            }
             Text {
                 Layout.fillWidth: true
                 Layout.leftMargin: Tokens.s2
                 Layout.bottomMargin: Tokens.s1
-                text: Translation.tr("Only the shortcut label changes")
+                text: root.entry.type === "group"
+                    ? (root.entry.stack ? Translation.tr("Choose a name for this stack")
+                        : Translation.tr("Choose a name for this folder"))
+                    : Translation.tr("Only the shortcut label changes")
                 font.family: Tokens.ui
                 font.pixelSize: Tokens.fSmall
                 color: Tokens.inkMuted
@@ -314,11 +327,11 @@ ItemContextDialog {
             id: membersColumn
             spacing: Tokens.s1
             readonly property var apps: root.entry.apps ?? []
-            PageHeader { title: root.entry.name || Translation.tr("App group") }
+            PageHeader { title: root.entry.name || Translation.tr("Folder") }
             MenuRow {
-                visible: !root.entry.stack
+                visible: !root.entry.stack || root.entry.stack === "app"
                 symbol: "add"
-                title: Translation.tr("Add application")
+                title: Translation.tr("Add apps")
                 trailingKind: "chevron"
                 first: true
                 last: membersColumn.apps.length === 0
@@ -333,16 +346,19 @@ ItemContextDialog {
                     title: modelData.name
                     iconSource: Quickshell.iconPath(modelData.icon, "image-missing")
                     trailingKind: "chevron"
-                    first: index === 0 && !!root.entry.stack
+                    first: false
                     last: index === membersColumn.apps.length - 1
-                    onActivated: { root.memberId = modelData.id; root.page = "member"; }
+                    onActivated: {
+                        root.memberId = modelData.id;
+                        root.page = "member";
+                    }
                 }
             }
             Text {
                 Layout.fillWidth: true
                 Layout.margins: Tokens.s3
                 visible: membersColumn.apps.length === 0
-                text: Translation.tr("No applications in this group")
+                text: Translation.tr("This folder is empty.")
                 color: Tokens.inkMuted
                 font.family: Tokens.ui
                 font.pixelSize: Tokens.fSmall
@@ -365,13 +381,69 @@ ItemContextDialog {
             }
             MenuRow {
                 first: false
+                last: false
+                visible: DesktopShortcuts.canTakeOut(root.screenName, root.entry.id)
+                symbol: "drive_file_move"
+                title: Translation.tr("Take out to the desktop")
+                rowEnabled: root.writable && root.member !== null
+                onActivated: {
+                    DesktopShortcuts.takeOut(root.screenName, root.entry.id, root.memberId);
+                    root.page = "members";
+                }
+            }
+            MenuRow {
+                first: false
+                last: false
+                symbol: "folder_copy"
+                title: Translation.tr("Move to folder")
+                trailingKind: "chevron"
+                rowEnabled: root.writable && root.member !== null
+                onActivated: root.page = "moveMember"
+            }
+            MenuRow {
+                first: false
                 last: true
                 symbol: "remove_circle_outline"
-                title: Translation.tr("Remove from group")
+                title: Translation.tr("Remove from desktop")
                 destructive: true
                 rowEnabled: root.writable && root.member !== null
                 onActivated: {
-                    DesktopShortcuts.removeMember(root.screenName, root.entry.id, root.memberId);
+                    DesktopShortcuts.removeApp(root.screenName, root.memberId);
+                    root.page = "members";
+                }
+            }
+        }
+    }
+    Component {
+        id: moveMemberPage
+        ColumnLayout {
+            spacing: Tokens.s1
+            PageHeader { title: Translation.tr("Move to folder") }
+            Repeater {
+                model: root.otherFolders
+                delegate: MenuRow {
+                    required property var modelData
+                    required property int index
+                    first: index === 0
+                    last: false
+                    symbol: "folder"
+                    title: modelData.name
+                    subtitle: Translation.tr("%1 apps").arg(String(modelData.count))
+                    onActivated: {
+                        DesktopShortcuts.moveToFolder(root.screenName, root.entry.id,
+                            root.memberId, modelData.id);
+                        root.page = "members";
+                    }
+                }
+            }
+            MenuRow {
+                first: root.otherFolders.length === 0
+                last: true
+                symbol: "create_new_folder"
+                title: Translation.tr("New folder")
+                onActivated: {
+                    DesktopShortcuts.moveToFolder(root.screenName, root.entry.id,
+                        root.memberId, "");
                     root.page = "members";
                 }
             }
@@ -380,63 +452,14 @@ ItemContextDialog {
     Component {
         id: addPage
         ColumnLayout {
-            id: picker
             spacing: Tokens.s1
-            property string query: ""
-            readonly property var applications: {
-                const search = query.trim().toLowerCase();
-                const existing = new Set((root.entry.apps ?? []).map(app => app.id));
-                return Array.from(DesktopEntries.applications.values).filter(app => !app.noDisplay
-                    && !existing.has(app.id) && (!search || app.name.toLowerCase().includes(search)));
-            }
-            PageHeader { title: Translation.tr("Add application") }
-            MenuField {
-                id: searchField
-                Layout.bottomMargin: Tokens.s1
-                placeholder: Translation.tr("Search applications")
-                onTextEdited: picker.query = searchField.text
-                Component.onCompleted: searchField.focusField(false)
-            }
-            ListView {
-                id: appList
+            PageHeader { title: Translation.tr("Add apps") }
+            DesktopShortcutAppPicker {
                 Layout.fillWidth: true
-                Layout.preferredHeight: Math.min(Tokens.railW + Tokens.s6, contentHeight)
-                clip: true
-                reuseItems: true
-                spacing: Tokens.s1
-                model: picker.applications
-
-                TouchpadScrollHandler {
-                    flickable: appList
-                }
-                delegate: MenuRow {
-                    required property var modelData
-                    required property int index
-                    width: ListView.view.width
-                    first: index === 0
-                    last: index === appList.count - 1
-                    title: modelData.name
-                    iconSource: Quickshell.iconPath(modelData.icon, "image-missing")
-                    trailingKind: "add"
-                    rowEnabled: root.writable
-                    onActivated: {
-                        const app = DesktopShortcuts.application(modelData.id);
-                        if (app) {
-                            DesktopShortcuts.add(root.screenName, [app], root.entry.x, root.entry.y, root.entry.id);
-                            root.page = "members";
-                        }
-                    }
-                }
-            }
-            Text {
-                Layout.fillWidth: true
-                Layout.margins: Tokens.s3
-                visible: picker.applications.length === 0
-                text: Translation.tr("No applications found")
-                color: Tokens.inkMuted
-                font.family: Tokens.ui
-                font.pixelSize: Tokens.fSmall
-                wrapMode: Text.Wrap
+                screenName: root.screenName
+                folderId: root.entry.id
+                refreshKey: root.entry
+                onDone: root.page = "members"
             }
         }
     }
@@ -490,7 +513,8 @@ ItemContextDialog {
                         spacing: Tokens.s1
                         Text {
                             Layout.fillWidth: true
-                            text: root.entry.type === "group" ? Translation.tr("App group")
+                            text: root.entry.type === "group"
+                                ? (root.entry.stack ? Translation.tr("Stack") : Translation.tr("Folder"))
                                 : root.entry.type === "directory" ? Translation.tr("Folder")
                                 : root.entry.type === "file" ? Translation.tr("File")
                                 : root.entry.type === "url" ? Translation.tr("Web link") : Translation.tr("Application")
@@ -619,7 +643,7 @@ ItemContextDialog {
                 last: true
                 visible: DesktopShortcuts.canGroup(root.screenName, root.selectedIds)
                 symbol: "create_new_folder"
-                title: Translation.tr("Group apps")
+                title: Translation.tr("Put in a new folder")
                 onActivated: {
                     DesktopShortcuts.groupSelection(root.screenName, root.selectedIds);
                     root.dismiss();

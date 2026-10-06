@@ -285,6 +285,16 @@ Scope {
         root.pendingWidgetMenu = [widget, x, y];
         widgetMenuLoader.active = true;
     }
+    function newDesktopFolder(x, y) {
+        const folderId = StageShortcuts.DesktopShortcuts.newFolder(
+            root.monitorName, "", x, y);
+        if (!folderId)
+            return;
+        Qt.callLater(() => {
+            if (desktopIcons.item)
+                desktopIcons.item.openFolder(folderId, true);
+        });
+    }
     // Outside Edit Mode Customize keeps its lightweight floating sheet. Inside
     // the mode the drawer owns this content and retargets in place.
     function openInspector(widget) {
@@ -693,6 +703,7 @@ Scope {
                 composing: root.stageComposing
                     && (Stage.GlobalStates.editDrawerSection === "widgets"
                         || Stage.GlobalStates.editDrawerSection === "visualizer")
+                stageController: stageSelection
                 enabled: !root.stageFramingHere
                 opacity: 1 - 0.75 * root.stageFramingDim
                 onActivated: {
@@ -1559,6 +1570,7 @@ Scope {
             sourceComponent: StageShortcuts.DesktopShortcutsLayer {
                 anchors.fill: parent
                 screenName: root.monitorName
+                wallpaperLight: Scheme.wallLstar >= 50
                 surfaceScale: StageEdit.EditModeInsets.cardRectFor(root.monitorName,
                     win.width, win.height,
                     Stage.GlobalStates.editProgress,

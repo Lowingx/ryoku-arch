@@ -103,11 +103,15 @@ Item {
     function _isPlugin(id) {
         return String(id).indexOf("plugin:") === 0;
     }
+    function _isVisualizer(id) {
+        return String(id).indexOf("visualizer:") === 0;
+    }
 
     function _movable(id, item) {
-        return String(id).indexOf("visualizer") !== 0
-            && item !== null && item !== undefined
-            && item.locked !== true;
+        return item !== null && item !== undefined
+            && item.locked !== true
+            && (!root._isVisualizer(id)
+                || typeof item.stagePreviewPosition === "function");
     }
 
     function _bounds(item) {
@@ -208,6 +212,7 @@ Item {
         const patch = {};
         for (const position of positions) {
             const id = position.id;
+            const visualizer = root._isVisualizer(id);
             const before = beforeById && beforeById[id] !== undefined
                 ? beforeById[id] : root._snapshot(id);
             const oldX = before && before.x !== undefined ? before.x
@@ -218,14 +223,25 @@ Item {
                     ? before.entry.desktopWidget.y : undefined;
             const x = Math.round(position.x);
             const y = Math.round(position.y);
-            if (oldX !== undefined && oldY !== undefined
-                    && Math.round(oldX) === x && Math.round(oldY) === y) {
+            const same = visualizer
+                ? position.startX !== undefined && position.startY !== undefined
+                    && Math.round(position.startX) === x
+                    && Math.round(position.startY) === y
+                : oldX !== undefined && oldY !== undefined
+                    && Math.round(oldX) === x && Math.round(oldY) === y;
+            if (same) {
                 root._endPreview(id, root._item(id));
                 root._dropPluginPreview(id);
                 continue;
             }
-            changed.push({ id: id, x: x, y: y, before: before });
-            if (!root._isPlugin(id)) {
+            changed.push({
+                id: id,
+                x: x,
+                y: y,
+                before: before,
+                visualizer: visualizer
+            });
+            if (!root._isPlugin(id) && !visualizer) {
                 patch[id + "Anchor"] = "free";
                 patch[id + "X"] = x;
                 patch[id + "Y"] = y;
@@ -239,14 +255,21 @@ Item {
         if (Object.keys(patch).length > 0)
             WidgetStore.Config.setManyFor(root.monitor, patch);
         for (const move of changed) {
-            if (root._isPlugin(move.id))
-                root._setPreview(move.id, root._item(move.id), move.x, move.y);
-            if (root._isPlugin(move.id) && provider) {
-                const pluginId = move.id.slice(7);
-                provider.enqueue([provider.placeTool, pluginId, "desktopWidget",
-                    "" + move.x, "" + move.y]);
+            const item = root._item(move.id);
+            if (move.visualizer
+                    && item && typeof item.stageCommitPosition === "function") {
+                item.stageCommitPosition(move.x, move.y);
+            } else if (root._isPlugin(move.id)) {
+                root._setPreview(move.id, item, move.x, move.y);
+                if (provider) {
+                    const pluginId = move.id.slice(7);
+                    provider.enqueue([provider.placeTool, pluginId, "desktopWidget",
+                        "" + move.x, "" + move.y]);
+                }
             }
-            const after = root._snapshotAt(move.id, move.before, move.x, move.y);
+            const after = move.visualizer
+                ? root._snapshot(move.id)
+                : root._snapshotAt(move.id, move.before, move.x, move.y);
             if (provider && move.before && after) {
                 const id = move.id;
                 const before = move.before;
@@ -255,7 +278,7 @@ Item {
                     redo: () => provider.restore(id, after)
                 });
             }
-            root._endPreview(move.id, root._item(move.id));
+            root._endPreview(move.id, item);
         }
         GlobalStates.editHistoryEndBatch();
         if (Object.keys(root._pluginPreview).length > 0)
@@ -360,8 +383,7 @@ Item {
         const ys = [root.height / 2];
         const selected = StageCfg.StageSession.selection;
         for (const otherId of root.widgetIds || []) {
-            if (selected.indexOf(otherId) >= 0
-                    || String(otherId).indexOf("visualizer") === 0)
+            if (selected.indexOf(otherId) >= 0)
                 continue;
             const other = root._item(otherId);
             if (!other || other.visible === false)
@@ -506,7 +528,9 @@ Item {
         const positions = drag.members.map(member => ({
             id: member.id,
             x: member.x + dx,
-            y: member.y + dy
+            y: member.y + dy,
+            startX: member.x,
+            startY: member.y
         }));
         for (const position of positions)
             if (root._isPlugin(position.id))
@@ -547,6 +571,8 @@ Item {
                 item: item,
                 x: item.x,
                 y: item.y,
+                startX: item.x,
+                startY: item.y,
                 minX: bounds.minX,
                 maxX: bounds.maxX,
                 minY: bounds.minY,
@@ -599,7 +625,9 @@ Item {
         root._commitPositions(run.members.map(member => ({
             id: member.id,
             x: member.x,
-            y: member.y
+            y: member.y,
+            startX: member.startX,
+            startY: member.startY
         })), run.before);
     }
 
@@ -629,7 +657,13 @@ Item {
         for (const member of members) {
             const move = moves[member.id];
             if (move)
-                positions.push({ id: member.id, x: member.x + move.dx, y: member.y + move.dy });
+                positions.push({
+                    id: member.id,
+                    x: member.x + move.dx,
+                    y: member.y + move.dy,
+                    startX: member.x,
+                    startY: member.y
+                });
         }
         root._commitPositions(positions, before);
     }

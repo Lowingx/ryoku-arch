@@ -13,6 +13,7 @@ Item {
 
     required property string screenName
     property Item overlayParent: null
+    property bool wallpaperLight: false
     // The grid is the store's (DesktopShortcuts.cellWidth/cellHeight): the
     // spacing preset scaled by the icon size, so a bigger icon takes a
     // bigger cell. Positions keep the 10px snap; every hit-test reads the
@@ -278,6 +279,7 @@ Item {
     // and closed by the layer itself when the group is gone.
     property string popupId: ""
     property rect popupRect: Qt.rect(0, 0, 0, 0)
+    property bool popupShowPicker: false
     readonly property var popupEntry: root.items.find(item => item.id === root.popupId && item.type === "group") ?? null
     onPopupEntryChanged: {
         if (!popupEntry)
@@ -287,11 +289,27 @@ Item {
         root.closeContext();
         root.popupId = itemId;
         root.popupRect = Qt.rect(x, y, w, h);
+        root.popupShowPicker = false;
         groupPopup.active = root.popupEntry !== null;
+    }
+    function openFolder(folderId, showPicker = false) {
+        const entry = root.items.find(item => item.id === folderId && item.type === "group");
+        if (!entry)
+            return false;
+        root.closeContext();
+        root.popupId = folderId;
+        root.popupShowPicker = showPicker;
+        const tile = root.tileFor(folderId);
+        root.popupRect = tile
+            ? Qt.rect(tile.x, tile.y, tile.width, tile.height)
+            : Qt.rect(entry.x, entry.y, root.cellWidth, root.cellHeight);
+        groupPopup.active = true;
+        return true;
     }
     function closePopup() {
         groupPopup.active = false;
         root.popupId = "";
+        root.popupShowPicker = false;
     }
 
     function positionAt(x, y) {
@@ -806,7 +824,8 @@ Item {
                         Layout.fillHeight: true
                         readonly property string mode: root.options.labels ?? "always"
                         readonly property string style: root.options.labelStyle ?? "auto"
-                        readonly property bool pill: labelBox.style !== "shadow"
+                        readonly property bool pill: labelBox.style === "pill"
+                            || (labelBox.style === "auto" && root.wallpaperLight)
                         visible: labelBox.mode !== "never"
                         opacity: labelBox.mode === "hover" ? (tile.hovered || tile.selected ? 1 : 0) : 1
                         Behavior on opacity {
@@ -818,9 +837,9 @@ Item {
                             width: Math.min(parent.width, tileLabel.contentWidth + Tokens.s3)
                             height: tileLabel.contentHeight + Tokens.s1
                             radius: Tokens.radius
-                            color: labelBox.style === "pill" ? Tokens.bone : Tokens.paperLift
+                            color: Tokens.bone
                             border.width: Tokens.border
-                            border.color: labelBox.style === "pill" ? Tokens.bone : Tokens.line
+                            border.color: Tokens.bone
                             visible: labelBox.pill
                         }
                         Text {
@@ -832,7 +851,7 @@ Item {
                             text: tile.entry.name || tile.entry.id
                             font.family: Tokens.ui
                             font.pixelSize: Tokens.fSmall
-                            color: labelBox.style === "pill" ? Tokens.inkOnBone : Tokens.ink
+                            color: labelBox.pill ? Tokens.inkOnBone : Tokens.ink
                             elide: Text.ElideRight
                             wrapMode: (root.options.labelLines ?? 1) === 2 ? Text.Wrap : Text.NoWrap
                             horizontalAlignment: Text.AlignHCenter
@@ -1096,23 +1115,18 @@ Item {
         sourceComponent: DesktopShortcutGroupPopup {
             entry: root.popupEntry ?? ({ apps: [] })
             tileRect: root.popupRect
-            onCloseRequested: root.closePopup()
+            screenName: root.screenName
+            showPicker: root.popupShowPicker
             counterScale: root.counterScale
-            // The header's two operations: rename retargets the context
-            // menu onto the same tile's rename page, ungroup dissolves the
-            // members back onto the desktop. Both close the popup first —
-            // it is the one surface that must not survive its own subject.
-            onRenameRequested: {
-                const id = root.popupId;
-                const r = root.popupRect;
-                root.closePopup();
-                root.openContext(id, r.x + r.width / 2, r.y + r.height / 2, "rename");
-            }
-            onUngroupRequested: {
-                const id = root.popupId;
-                root.closePopup();
-                Qt.callLater(() => DesktopShortcuts.ungroup(root.screenName, id));
-            }
+            onCloseRequested: root.closePopup()
+            onRenameRequested: name => DesktopShortcuts.rename(root.screenName, root.popupId, name)
+            onUngroupRequested: DesktopShortcuts.ungroup(root.screenName, root.popupId)
+            onTakeOutRequested: appId => DesktopShortcuts.takeOut(
+                root.screenName, root.popupId, appId)
+            onMoveRequested: (appId, folderId) => DesktopShortcuts.moveToFolder(
+                root.screenName, root.popupId, appId, folderId)
+            onRemoveRequested: appId => DesktopShortcuts.removeApp(root.screenName, appId)
+            onDisableStacksRequested: DesktopShortcuts.setStacks(false)
         }
     }
 }

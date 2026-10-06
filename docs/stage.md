@@ -102,7 +102,9 @@ Resizing updates the preview locally, then writes the per-display store once on
 release and adds one undo step. Size snaps to 5%; hold Shift for free sizing and
 double-click a handle to reset to 100%. Moves snap to the grid, the card centre,
 and other widgets' edges and centres; hold Alt to move freely. Visualizer
-instances keep their own grips for moving, sizing, and turning.
+instances move through the same frame: the drag previews in memory, snaps,
+joins group moves and nudges, and writes `visualizer.json` once on release.
+Their corner grip still sizes and their top dot still turns.
 
 Shift-click or Ctrl-click builds a selection; dragging a marquee on bare
 wallpaper can select widgets and desktop icons. A selected group moves together.
@@ -159,6 +161,24 @@ and source colour. They live in `~/.config/ryoku/stage/style-presets.json`.
 The Widgets catalogue includes **Add apps to desktop** and **Desktop icons**.
 Shortcuts load as soon as the persistent store is ready. Adding or removing an
 app updates the desktop immediately, and adding an app unhides icons if needed.
+**Add apps to desktop** has a destination row (Desktop, each folder, or a new
+folder). Every row says where the app already is, on the desktop, in a folder,
+or in the Apps stack, and a placed app is highlighted wherever it sits; tapping
+it again removes it. An app is never placed twice: adding it somewhere else
+moves it.
+
+**Desktop icons** groups its settings into Desktop, Arrangement, Folders,
+Labels and marks, and Other displays. Start from, Fill direction, Spacing, Edge
+margin, and Keep clear of panels re-lay the icons already on the desktop as one
+undo step; sorting also orders what is inside folders and stacks. The Auto label
+style draws a plate on light wallpapers and a shadow on dark ones.
+
+Folders are made from **New folder** on the Desktop icons page or the desktop
+menu, or by dropping one icon on another. A folder card renames in place, adds
+apps through the same picker, and dissolves back onto the desktop. Each app in
+it has Open, Take out, Move to folder, and Remove. The automatic Apps stack
+shows its apps the same way and offers **Turn off stacks** to take them out.
+
 Right-clicking an icon opens its own Open, Rename, Details, Copy, and Remove
 dialog above widgets without lifting the icon layer. Files, folders, and
 `http`, `https`, or `mailto` links can be dropped onto the desktop. The store is
@@ -225,10 +245,11 @@ Every visualizer instance has its own frame and grip with an id such as
 Remove deletes only that instance and turns the visualizer off only after the
 last instance is gone; undo restores the removed instance at its original index
 with all of its settings. Grips appear only while the Widgets or Visualizer
-catalogue is open. Drag a frame to move it, use a corner to size it, and use the
-top handle to turn it. The Field look fills the screen and is tuned from the
-same catalogue. `visualizer place` and `Super+Alt+M` turn the visualizer on when
-necessary and open this catalogue with its instance selected.
+catalogue is open. Drag a frame to move it like any widget, use a corner to size
+it, and use the top handle to turn it. The Field look fills the screen and is
+tuned from the same catalogue. `visualizer place` and `Super+Alt+M` turn the
+visualizer on when necessary and open this catalogue with its instance
+selected.
 
 ## Session model
 

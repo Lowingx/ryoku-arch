@@ -68,6 +68,23 @@ Singleton {
             return root.primaryData();
         return (adapter.extras || [])[index - 1] || ({});
     }
+    property var previews: ({})
+    function previewAt(index) {
+        return root.previews["" + index] || null;
+    }
+    function setPreview(index, nx, ny) {
+        const next = Object.assign({}, root.previews);
+        next["" + index] = { x: nx, y: ny };
+        root.previews = next;
+    }
+    function clearPreview(index) {
+        const key = "" + index;
+        if (root.previews[key] === undefined)
+            return;
+        const next = Object.assign({}, root.previews);
+        delete next[key];
+        root.previews = next;
+    }
     readonly property var list: {
         var out = [root.primaryData()];
         var ex = adapter.extras || [];
@@ -288,6 +305,30 @@ Singleton {
         var b = root.fitBox(nx, ny, root.w, root.h, root.angle, aspect);
         root.poke("x", b.x);
         root.poke("y", b.y);
+    }
+    function moveBoxAt(index, nx, ny, aspect) {
+        const i = Math.max(0, Math.min(root.count - 1, Math.round(index)));
+        const data = root.dataAt(i);
+        const w = Number(data.w);
+        const h = Number(data.h);
+        const angle = Number(data.angle);
+        const b = root.fitBox(nx, ny,
+            isFinite(w) ? w : 1,
+            isFinite(h) ? h : 0.42,
+            isFinite(angle) ? angle : 0,
+            aspect);
+        if (i === 0) {
+            adapter.x = b.x;
+            adapter.y = b.y;
+        } else {
+            const arr = (adapter.extras || []).slice();
+            const entry = Object.assign({}, arr[i - 1]);
+            entry.x = b.x;
+            entry.y = b.y;
+            arr[i - 1] = entry;
+            adapter.extras = arr;
+        }
+        settle.restart();
     }
     function sizeBox(nw, nh, aspect) {
         root.setBox(root.x, root.y, nw, nh, aspect);

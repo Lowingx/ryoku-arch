@@ -3,19 +3,10 @@ import QtQuick
 import Ryoku.Ui
 import Ryoku.Ui.Singletons as Ui
 import "Singletons"
-// The Stage Editor's placement grip for the visualiser: the corner grip and
-// turn dot of the standalone placer, ported. Drag to move, the corner to size,
-// the dot to turn, Ctrl+wheel to scale. It rides the desktop surface while the
-// Stage Editor frames this monitor, so the look is aimed with every other
-// widget rather than on a surface of its own; the outline, name and buttons
-// are the shared edit frame's (StageOutline), which boxes the look's turned
-// footprint through `boxItem`.
-//
-// The gestures are the placer's, easing included: a gesture aims at a target
-// and the box eases toward it, so an unsteady hand still lands a clean size,
-// and the easing outlives the release or letting go mid-drag would strand the
-// box short of where the pointer asked. The box is fractions of the monitor,
-// so the same numbers land on any screen.
+// The Stage Editor's placement grip for the visualiser. The shared frame owns
+// movement while the corner grip and turn dot keep their direct gestures.
+// Ctrl+wheel scales over the look. The frame boxes the turned footprint exposed
+// through `boxItem`.
 Item {
     id: win
 
@@ -23,10 +14,10 @@ Item {
     required property int instanceIndex
     // Whether the Stage Editor frames this desktop right now.
     required property bool composing
+    property var stageController: null
 
     signal activated()
-    // A gesture's walk-back is the desktop's to record: it started here and it
-    // lands here, so the press and the eased settle raise these together.
+    // Direct size and turn gestures keep their own walk-back.
     signal gestureStarted()
     signal gestureFinished()
     // Right-click on the look asks the desktop for its menu, like a slot does.
@@ -44,13 +35,16 @@ Item {
 
     readonly property real handle: Ui.Tokens.s4
     readonly property var instance: Config.dataAt(win.instanceIndex) || ({})
+    readonly property var preview: Config.previewAt(win.instanceIndex)
     function value(key, fallback) {
         const v = win.instance[key];
         return v === undefined || v === null ? fallback : v;
     }
     readonly property bool aura: String(win.value("style", "bars")) === "aura"
-    readonly property real vx: Number(win.value("x", 0))
-    readonly property real vy: Number(win.value("y", 0.58))
+    readonly property real vx: win.preview
+        ? Number(win.preview.x) : Number(win.value("x", 0))
+    readonly property real vy: win.preview
+        ? Number(win.preview.y) : Number(win.value("y", 0.58))
     readonly property real vw: Number(win.value("w", 1))
     readonly property real vh: Number(win.value("h", 0.42))
     readonly property real va: Number(win.value("angle", 0))
@@ -62,6 +56,102 @@ Item {
     readonly property real cx: win.box.x + win.box.width / 2
     readonly property real cy: win.box.y + win.box.height / 2
     readonly property real aspect: win.height > 0 ? win.width / win.height : 1
+
+    property bool stageMoveActive: false
+    property bool dragging: false
+    property real stageMoveGrabX: 0
+    property real stageMoveGrabY: 0
+    property real stageMoveStartX: 0
+    property real stageMoveStartY: 0
+    property real groupDragMinX: -Infinity
+    property real groupDragMaxX: Infinity
+    property real groupDragMinY: -Infinity
+    property real groupDragMaxY: Infinity
+
+    function stageBeginMove(point, modifiers) {
+        if (win.aura || !win.composing || !win.stageController)
+            return false;
+        const bounds = win.stageController.widgetDragStarted(
+            "visualizer:" + win.instanceIndex);
+        if (bounds.active === false)
+            return false;
+        win.stageMoveActive = true;
+        win.dragging = false;
+        win.stageMoveStartX = footprint.x;
+        win.stageMoveStartY = footprint.y;
+        win.stageMoveGrabX = point.x - footprint.x;
+        win.stageMoveGrabY = point.y - footprint.y;
+        win.groupDragMinX = bounds.minX;
+        win.groupDragMaxX = bounds.maxX;
+        win.groupDragMinY = bounds.minY;
+        win.groupDragMaxY = bounds.maxY;
+        return true;
+    }
+    function stageUpdateMove(point, modifiers) {
+        if (!win.stageMoveActive)
+            return;
+        const nx = point.x - win.stageMoveGrabX;
+        const ny = point.y - win.stageMoveGrabY;
+        if (!win.dragging) {
+            if (Math.abs(nx - win.stageMoveStartX) < 6
+                    && Math.abs(ny - win.stageMoveStartY) < 6)
+                return;
+            win.dragging = true;
+        }
+        let px = Math.max(win.groupDragMinX,
+            Math.min(win.groupDragMaxX, footprint.clampX(nx)));
+        let py = Math.max(win.groupDragMinY,
+            Math.min(win.groupDragMaxY, footprint.clampY(ny)));
+        const bounded = win.stageController.widgetDragMoved(
+            "visualizer:" + win.instanceIndex, px, py, modifiers);
+        footprint.stagePreviewPosition(bounded.x, bounded.y);
+    }
+    function stageEndMove(modifiers) {
+        if (!win.stageMoveActive)
+            return;
+        if (win.dragging) {
+            const px = Math.round(footprint.x);
+            const py = Math.round(footprint.y);
+            const handled = win.stageController.widgetDragEnded(
+                "visualizer:" + win.instanceIndex, px, py, modifiers);
+            if (!handled) {
+                footprint.stageCommitPosition(px, py);
+                footprint.stageEndPreview();
+            }
+        } else {
+            win.stageController.widgetDragCancelled(
+                "visualizer:" + win.instanceIndex);
+        }
+        win.stageMoveActive = false;
+        win.dragging = false;
+        win.groupDragMinX = -Infinity;
+        win.groupDragMaxX = Infinity;
+        win.groupDragMinY = -Infinity;
+        win.groupDragMaxY = Infinity;
+    }
+    function stageCancelMove() {
+        if (!win.stageMoveActive)
+            return;
+        win.stageController.widgetDragCancelled(
+            "visualizer:" + win.instanceIndex);
+        Config.clearPreview(win.instanceIndex);
+        win.stageMoveActive = false;
+        win.dragging = false;
+    }
+    function stageHandleAt(point) {
+        if (win.aura)
+            return "";
+        const turnPoint = spinner.mapToItem(win,
+            spinner.width / 2, spinner.height / 2);
+        if (Math.abs(point.x - turnPoint.x) < win.handle
+                && Math.abs(point.y - turnPoint.y) < win.handle)
+            return "turn";
+        const sizePoint = grip.mapToItem(win, grip.width / 2, grip.height / 2);
+        if (Math.abs(point.x - sizePoint.x) < win.handle
+                && Math.abs(point.y - sizePoint.y) < win.handle)
+            return "size";
+        return "";
+    }
 
     readonly property string customInk: String(win.value("color", ""))
     readonly property color guide: /^#[0-9a-fA-F]{6}$/.test(win.customInk)
@@ -138,14 +228,6 @@ Item {
                 var d = PlaceMath.shortestTurn(win.va, win.tAngle);
                 done = Math.abs(d) < 0.05;
                 Config.rotate(done ? win.tAngle : win.va + d * k);
-            } else if (win.gesture === "move") {
-                done = Math.abs(win.tx - win.vx) < eps && Math.abs(win.ty - win.vy) < eps;
-                if (done)
-                    Config.moveBox(win.tx, win.ty, win.aspect);
-                else
-                    Config.moveBox(win.vx + (win.tx - win.vx) * k,
-                                   win.vy + (win.ty - win.vy) * k,
-                                   win.aspect);
             } else {
                 done = Math.abs(win.tx - win.vx) < eps && Math.abs(win.ty - win.vy) < eps
                     && Math.abs(win.tw - win.vw) < eps && Math.abs(win.th - win.vh) < eps;
@@ -195,6 +277,40 @@ Item {
         y: win.outer.y
         width: win.outer.width
         height: win.outer.height
+        readonly property bool locked: win.aura
+
+        function clampX(value) {
+            const overhang = Math.max(0, Math.min(0.5, Config.overhang));
+            return Math.max(-footprint.width * overhang,
+                Math.min(win.width - footprint.width * (1 - overhang), value));
+        }
+        function clampY(value) {
+            const overhang = Math.max(0, Math.min(0.5, Config.overhang));
+            return Math.max(-footprint.height * overhang,
+                Math.min(win.height - footprint.height * (1 - overhang), value));
+        }
+        function boxPosition(px, py) {
+            return Qt.point(
+                (px + (footprint.width - win.box.width) / 2) / Math.max(1, win.width),
+                (py + (footprint.height - win.box.height) / 2) / Math.max(1, win.height));
+        }
+        function stagePreviewPosition(px, py) {
+            if (win.aura)
+                return;
+            const point = footprint.boxPosition(
+                footprint.clampX(px), footprint.clampY(py));
+            Config.setPreview(win.instanceIndex, point.x, point.y);
+        }
+        function stageEndPreview() {
+            Config.clearPreview(win.instanceIndex);
+        }
+        function stageCommitPosition(px, py) {
+            if (win.aura)
+                return;
+            const point = footprint.boxPosition(
+                footprint.clampX(px), footprint.clampY(py));
+            Config.moveBoxAt(win.instanceIndex, point.x, point.y, win.aspect);
+        }
     }
     // The turned footprint, exposed for the desktop: the edit frame boxes this
     // the way it boxes a slot, and the inspector docks beside it.
@@ -264,30 +380,25 @@ Item {
         }
     }
 
-    // The press area is the box's turned footprint plus the handles' reach, so
-    // a press on the look or its grips lands here and a press anywhere else
-    // falls through to the desktop's own click-away.
+    // The direct press area only owns the two handles. The shared frame owns
+    // movement and forwards handle presses here.
     MouseArea {
         id: grab
 
         enabled: !win.aura
-        x: Math.max(0, win.box.x - win.handle)
-        y: Math.max(0, win.box.y - win.handle * 3)
-        width: Math.min(win.width, win.box.width + 2 * win.handle)
-        height: Math.min(win.height, win.box.height + 4 * win.handle)
+        x: Math.max(0, footprint.x - win.handle * 3)
+        y: Math.max(0, footprint.y - win.handle * 3)
+        width: Math.min(win.width - x, footprint.width + win.handle * 6)
+        height: Math.min(win.height - y, footprint.height + win.handle * 6)
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         hoverEnabled: true
         cursorShape: grab.over === "size" ? Qt.SizeFDiagCursor
-            : (grab.over === "turn" ? Qt.CrossCursor : Qt.SizeAllCursor)
+            : (grab.over === "turn" ? Qt.CrossCursor : Qt.ArrowCursor)
 
-        // Map every pointer into the same local coordinate system. The desktop
-        // is transformed while editing, so scene coordinates make handles miss.
-        function near(it, mx, my) {
-            var p = it.mapToItem(grab, it.width / 2, it.height / 2);
-            return Math.abs(mx - p.x) < win.handle && Math.abs(my - p.y) < win.handle;
+        readonly property string over: {
+            const point = grab.mapToItem(win, grab.mouseX, grab.mouseY);
+            return win.stageHandleAt(point);
         }
-        readonly property string over: grab.near(spinner, grab.mouseX, grab.mouseY) ? "turn"
-            : (grab.near(grip, grab.mouseX, grab.mouseY) ? "size" : "move")
 
         property string mode: ""
         property real pressX: 0
@@ -306,8 +417,10 @@ Item {
                 win.menuRequested(win.box.x, win.box.y);
                 return;
             }
-            if (win.aura)
+            if (win.aura || grab.over === "") {
+                m.accepted = false;
                 return;
+            }
             grab.mode = grab.over;
             win.gesture = grab.over;
             win.gestureStarted();
@@ -345,11 +458,6 @@ Item {
             }
             var dx = m.x - grab.pressX;
             var dy = m.y - grab.pressY;
-            if (grab.mode === "move") {
-                win.tx = grab.baseX + dx / Math.max(1, win.width);
-                win.ty = grab.baseY + dy / Math.max(1, win.height);
-                return;
-            }
             var out = PlaceMath.resize({ x: grab.baseX, y: grab.baseY, w: grab.baseW, h: grab.baseH },
                                        grab.baseAngle, dx, dy,
                                        { w: win.width, h: win.height }, { w: 0.04, h: 0.03 });

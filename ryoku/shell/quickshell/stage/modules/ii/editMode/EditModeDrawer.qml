@@ -543,23 +543,52 @@ Item {
             || item.id.toLowerCase().includes(q)
             || item.genericName.toLowerCase().includes(q));
     }
+    property string desktopAppsDestination: ""
     // Read the adapter property explicitly: itemsFor() is a function call, and
     // QML otherwise misses the late states.json load that populates this list.
+    readonly property var desktopFolders: {
+        void Persistent.states.desktopShortcutsJson;
+        return DesktopShortcuts.folders(root.screenName);
+    }
+    readonly property string resolvedDesktopAppsDestination: root.desktopFolders
+        .some(folder => folder.id === root.desktopAppsDestination) ? root.desktopAppsDestination : ""
+    readonly property var desktopDestinationOptions: [""]
+        .concat(root.desktopFolders.map(folder => folder.id)).concat(["__new__"])
+    readonly property var desktopDestinationLabels: {
+        const labels = {
+            "": Translation.tr("Desktop"),
+            "__new__": Translation.tr("+ New folder")
+        };
+        for (const folder of root.desktopFolders) {
+            const name = folder.name.length > 22 ? folder.name.slice(0, 21) + "…" : folder.name;
+            labels[folder.id] = folder.count > 0 ? `${name} (${folder.count})` : name;
+        }
+        return labels;
+    }
     readonly property var desktopAppsItems: {
         void Persistent.states.desktopShortcutsJson;
         if (root.section !== "widgets" || root.page !== "desktopApps")
             return [];
         const q = root.needle;
         const all = Array.from(AppSearch.list ?? []).filter(e => e && e.id && !e.noDisplay);
-        const onDesktop = new Set(DesktopShortcuts.itemsFor(root.screenName)
-            .filter(item => item.type === "app").map(item => item.id));
-        const mapped = all.map(entry => ({
-            "id": entry.id,
-            "name": entry.name ?? entry.id,
-            "genericName": entry.genericName ?? "",
-            "comment": entry.comment ?? "",
-            "onScreen": onDesktop.has(entry.id)
-        }));
+        const mapped = all.map(entry => {
+            const location = DesktopShortcuts.locate(root.screenName, entry.id);
+            let placement = "";
+            if (location.where === "desktop")
+                placement = Translation.tr("On the desktop");
+            else if (location.isStack)
+                placement = Translation.tr("In the %1 stack").arg(location.folderName);
+            else if (location.where === "folder")
+                placement = Translation.tr("In %1").arg(location.folderName);
+            return {
+                "id": entry.id,
+                "name": entry.name ?? entry.id,
+                "genericName": entry.genericName ?? "",
+                "comment": entry.comment ?? "",
+                "onScreen": location.where !== "",
+                "placement": placement
+            };
+        });
         if (!q)
             return mapped;
         return mapped.filter(item => item.name.toLowerCase().includes(q)
@@ -568,33 +597,52 @@ Item {
     }
     readonly property int desktopAppCount: {
         void Persistent.states.desktopShortcutsJson;
-        return DesktopShortcuts.itemsFor(root.screenName)
-            .filter(item => item.type === "app").length;
+        return DesktopShortcuts.placedAppIds(root.screenName).length;
+    }
+    readonly property int desktopIconCount: {
+        void Persistent.states.desktopShortcutsJson;
+        return DesktopShortcuts.itemsFor(root.screenName).length;
     }
 
-    // Toggle one application on this output. New icons start in the first
-    // free cell from the configured origin, so repeated adds never overlap.
+    function createDesktopFolder() {
+        const folderId = DesktopShortcuts.newFolder(root.screenName, "");
+        if (folderId) {
+            root.desktopAppsDestination = folderId;
+            if (DesktopShortcuts.hidden)
+                DesktopShortcuts.setHidden(false);
+        }
+        return folderId;
+    }
+    function chooseDesktopDestination(key) {
+        if (key === "__new__")
+            root.createDesktopFolder();
+        else
+            root.desktopAppsDestination = key;
+    }
     function toggleAppOnDesktop(appId) {
         if (!appId || !Persistent.ready || Persistent.blockWrites)
             return;
-        const items = DesktopShortcuts.itemsFor(root.screenName);
-        if (items.some(item => item.type === "app" && item.id === appId)) {
-            DesktopShortcuts.remove(root.screenName, appId);
+        if (DesktopShortcuts.locate(root.screenName, appId).where) {
+            DesktopShortcuts.removeApp(root.screenName, appId);
             return;
         }
         const app = DesktopShortcuts.application(appId);
         if (!app)
             return;
-        const screen = Quickshell.screens.find(s => s.name === root.screenName);
-        const grid = DesktopShortcuts.grid(root.screenName);
-        const cell = DesktopShortcuts.firstFree(grid, DesktopShortcuts.takenCells(grid, items));
-        if (!cell)
-            return;
-        const point = DesktopShortcuts.cellPos(grid, cell.col, cell.row);
-        DesktopShortcuts.add(root.screenName, [app], point.x, point.y, "",
-            screen?.width ?? grid.area.screenWidth, screen?.height ?? grid.area.screenHeight);
-        // Adding an icon to a desktop whose icons are hidden would look like
-        // nothing happened.
+        const destination = root.resolvedDesktopAppsDestination;
+        if (destination) {
+            DesktopShortcuts.addToFolder(root.screenName, destination, [app]);
+        } else {
+            const items = DesktopShortcuts.itemsFor(root.screenName);
+            const screen = Quickshell.screens.find(s => s.name === root.screenName);
+            const grid = DesktopShortcuts.grid(root.screenName);
+            const cell = DesktopShortcuts.firstFree(grid, DesktopShortcuts.takenCells(grid, items));
+            if (!cell)
+                return;
+            const point = DesktopShortcuts.cellPos(grid, cell.col, cell.row);
+            DesktopShortcuts.add(root.screenName, [app], point.x, point.y, "",
+                screen?.width ?? grid.area.screenWidth, screen?.height ?? grid.area.screenHeight);
+        }
         if (DesktopShortcuts.hidden)
             DesktopShortcuts.setHidden(false);
     }
@@ -1135,7 +1183,7 @@ Item {
                         last: true
                         symbol: "add_to_home_screen"
                         title: Translation.tr("Add apps to desktop")
-                        subtitle: Translation.tr("Toggle applications onto the desktop")
+                        subtitle: Translation.tr("Place apps on the desktop or in a folder")
                         valueText: root.desktopAppCount > 0 ? `${root.desktopAppCount}` : ""
                         trailingKind: "chevron"
                         onActivated: root.openPage("desktopApps")
@@ -1151,8 +1199,8 @@ Item {
                         last: true
                         symbol: "grid_view"
                         title: Translation.tr("Desktop icons")
-                        subtitle: Translation.tr("Size, spacing, labels and badges")
-                        valueText: `${Config.options.background.desktopIconScale ?? 1}×`
+                        subtitle: Translation.tr("Arrange icons, folders, labels and marks")
+                        valueText: root.desktopIconCount > 0 ? `${root.desktopIconCount}` : ""
                         trailingKind: "chevron"
                         onActivated: root.openPage("desktopIcons")
                     }
@@ -1176,14 +1224,14 @@ Item {
         }
     }
 
-    // Port of the tablet's appsListPage: same rows, same check/add trailing
-    // state, but the store is DesktopShortcuts — a click toggles the app icon
-    // on this screen's desktop. No pairs or folders: the desktop groups by
-    // dragging icons onto each other, which the layer already speaks.
     Component {
         id: desktopIconsPage
         EditDesktopIconsPage {
             screenName: root.screenName
+            onAddAppsToFolder: folderId => {
+                root.desktopAppsDestination = folderId;
+                root.openPage("desktopApps");
+            }
         }
     }
 
@@ -1191,14 +1239,63 @@ Item {
         id: desktopAppsPage
 
         Item {
+            SettingCard {
+                id: destinationCard
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                title: Translation.tr("DESTINATION")
+                collapsible: false
+
+                SettingRow {
+                    width: parent.width
+                    label: Translation.tr("Add apps to")
+                    desc: Translation.tr("Placed apps can be removed from any location below")
+                    block: true
+                    Chips {
+                        width: parent.width
+                        options: root.desktopDestinationOptions
+                        labels: root.desktopDestinationLabels
+                        current: root.resolvedDesktopAppsDestination
+                        onChose: key => root.chooseDesktopDestination(key)
+                    }
+                }
+                SettingRow {
+                    width: parent.width
+                    visible: Config.options.background.desktopIcons.stacks ?? false
+                    divider: true
+                    label: Translation.tr("New desktop apps join the Apps stack")
+                }
+            }
+
             StyledListView {
                 id: desktopAppList
-                anchors.fill: parent
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: destinationCard.bottom
+                anchors.topMargin: Tokens.s3
+                anchors.bottom: parent.bottom
                 popin: false
                 animateAppearance: false
                 clip: true
                 spacing: Tokens.s1
                 model: root.desktopAppsItems
+
+                // Every toggle rewrites the store, which hands the list a new
+                // model and would throw the reader back to the top.
+                property real heldY: -1
+                function toggle(appId) {
+                    desktopAppList.heldY = desktopAppList.contentY;
+                    root.toggleAppOnDesktop(appId);
+                }
+                onModelChanged: {
+                    if (desktopAppList.heldY < 0)
+                        return;
+                    const y = desktopAppList.heldY;
+                    desktopAppList.heldY = -1;
+                    Qt.callLater(() => desktopAppList.contentY = Math.min(y,
+                        Math.max(0, desktopAppList.contentHeight - desktopAppList.height)));
+                }
 
                 delegate: Rectangle {
                     id: appRow
@@ -1251,7 +1348,8 @@ Item {
                         Text {
                             width: parent.width
                             visible: text.length > 0
-                            text: appRow.modelData.genericName || appRow.modelData.comment || ""
+                            text: appRow.modelData.placement
+                                || appRow.modelData.genericName || appRow.modelData.comment || ""
                             color: appRow.modelData.onScreen ? Tokens.inkOnBoneDim : Tokens.inkMuted
                             font.family: Tokens.ui
                             font.pixelSize: Tokens.fSmall
@@ -1264,7 +1362,7 @@ Item {
                         anchors.right: parent.right
                         anchors.rightMargin: Tokens.s3
                         anchors.verticalCenter: parent.verticalCenter
-                        text: appRow.modelData.onScreen ? I18n.tr("ON") : "+"
+                        text: appRow.modelData.onScreen ? Translation.tr("ON") : "+"
                         color: appRow.modelData.onScreen ? Tokens.inkOnBone : Tokens.inkDim
                         font.family: appRow.modelData.onScreen ? Tokens.mono : Tokens.ui
                         font.pixelSize: appRow.modelData.onScreen ? Tokens.fTiny : Tokens.fBody
@@ -1279,12 +1377,12 @@ Item {
                     TapHandler {
                         id: rowTap
                         enabled: Persistent.ready && !Persistent.blockWrites
-                        onTapped: root.toggleAppOnDesktop(appRow.modelData.id ?? "")
+                        onTapped: desktopAppList.toggle(appRow.modelData.id ?? "")
                     }
                     Keys.onPressed: event => {
                         if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter
                             || event.key === Qt.Key_Space) && !event.isAutoRepeat) {
-                            root.toggleAppOnDesktop(appRow.modelData.id ?? "");
+                            desktopAppList.toggle(appRow.modelData.id ?? "");
                             event.accepted = true;
                         }
                     }
@@ -1294,7 +1392,7 @@ Item {
             Empty {
                 anchors.centerIn: parent
                 visible: desktopAppList.count === 0
-                caption: I18n.tr("No applications match this search.")
+                caption: Translation.tr("No applications match this search.")
             }
         }
     }

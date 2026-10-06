@@ -19,8 +19,6 @@ grep -Fq 'model: Config.count' "$viz" || fail 'render repeater rebuilds on every
 [[ -f $grip ]] || fail 'the Stage Editor grip is missing'
 grep -Fq 'Config.setBox(win.tx, win.ty, win.tw, win.th, win.aspect)' "$grip" \
     || fail 'the grip no longer sizes through the store'
-grep -Fq 'Config.moveBox(win.tx, win.ty, win.aspect)' "$grip" \
-    || fail 'the grip no longer moves through the store'
 grep -Fq 'Viz.VisualizerGrip' "$desktop" || fail 'the desktop never mounts the grip'
 grep -Fq 'function stageVizGestureStart' "$desktop" \
     || fail 'a grip gesture records no walk-back'

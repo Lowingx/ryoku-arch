@@ -239,9 +239,9 @@ FocusScope {
     ColumnLayout {
         id: cards
         x: Math.max(Tokens.s2, Math.min(root.anchorPoint.x / root.counterScale,
-            root.width - width - Tokens.s2)) * root.counterScale
+            root.width / root.counterScale - width - Tokens.s2)) * root.counterScale
         y: Math.max(Tokens.s2, Math.min(root.anchorPoint.y / root.counterScale,
-            root.height - height - Tokens.s2)) * root.counterScale
+            root.height / root.counterScale - height - Tokens.s2)) * root.counterScale
         width: Math.max(0, Math.min(Tokens.railW + Tokens.s6, root.width - Tokens.s4))
         spacing: Tokens.s2
         opacity: root.reveal

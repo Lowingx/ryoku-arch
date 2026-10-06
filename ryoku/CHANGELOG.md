@@ -154,6 +154,28 @@
   `hub/quickshell/schema/DesktopScenePage.js`, `shell/ipc/control.go`).
 
 ### Fixed
+- **Visualizers drag like every other widget in the Stage Editor.** The frame
+  owns the move, so the look follows the pointer one to one, snaps to the same
+  guides, moves in a group, nudges with the arrows, and writes
+  `visualizer.json` once on release instead of easing behind the pointer and
+  rewriting the store every frame. The size grip and turn dot still work
+  (`shell/quickshell/shell/modules/visualizer/`,
+  `shell/quickshell/shell/modules/stage/StageSelection.qml`).
+- **Every Desktop icons setting does something.** Show icons no longer writes
+  the opposite value. Start from, Fill direction, Spacing, Edge margin, and Keep
+  clear of panels re-lay the icons already on the desktop as one undo step,
+  sorting orders folder and stack contents too, and the Auto label style follows
+  the wallpaper's lightness again
+  (`shell/quickshell/stage/modules/ii/editMode/EditDesktopIconsPage.qml`,
+  `shell/quickshell/stage/modules/ii/background/shortcuts/`).
+- **Desktop folders are real folders.** Add apps to desktop highlights an app
+  wherever it is, including inside a folder or the Apps stack, says where it
+  is, and can add straight into a folder or a new one; an app is never placed
+  twice. Folders can be created from the desktop menu or the Desktop icons
+  page, renamed in place, filled from the same app picker, and dissolved, and
+  each app inside has Open, Take out, Move to folder, and Remove
+  (`shell/quickshell/stage/modules/ii/background/shortcuts/`,
+  `shell/quickshell/shell/modules/desktop/DesktopContextMenu.qml`).
 - **Every widget moves in the Stage Editor again.** A press anywhere inside a
   widget's frame selects it and a drag moves it, whatever the widget's own
   buttons are and whichever bar style is on, for built-ins, Shima and Python
