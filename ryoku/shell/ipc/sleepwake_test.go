@@ -54,7 +54,7 @@ func fakeInitiallyHungPowerProvider(t *testing.T, countPath string) {
 	provider := filepath.Join(bin, "ryoku-wm-testwm")
 	script := "#!/usr/bin/env bash\n" +
 		"if [[ \"$1\" == caps ]]; then printf '%s' '{\"name\":\"testwm\",\"supports\":[\"outputPower\"]}'; exit 0; fi\n" +
-		"n=0; [[ -r \"" + countPath + "\" ]] && n=$(<\"" + countPath + "\"); n=$((n+1)); printf '%s' \"$n\" >\"" + countPath + "\"\n" +
+		"n=0; [[ -r \"" + countPath + "\" ]] && n=$(<\"" + countPath + "\"); n=$((n+1)); tmp=\"" + countPath + ".tmp.$$\"; printf '%s' \"$n\" >\"$tmp\"; mv -f \"$tmp\" \"" + countPath + "\"\n" +
 		"if (( n == 1 )); then exec sleep 10; fi\n" +
 		"exit 0\n"
 	if err := os.WriteFile(provider, []byte(script), 0o755); err != nil {
