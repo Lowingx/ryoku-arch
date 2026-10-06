@@ -12,7 +12,7 @@ Names, so the parts are findable:
 
 | Part | Name | Where |
 |---|---|---|
-| The feature and settings page | **Stage** (Desktop Scene in Hub) | `quickshell/shell/modules/stage/`, `ryoku/hub/quickshell/pages/DesktopScenePage.qml` |
+| The feature and editor | **Stage** | `ryoku/shell/quickshell/shell/modules/stage/`, `ryoku/shell/quickshell/stage/` |
 | The cut-out engine helper | **`ryostage`** | `ryoku/shell/scripts/ryostage`, shipped to `/usr/bin` |
 | The daemon module | `stage` topic and verbs | `ryoku/shell/ipc/stage.go` |
 | The settings | `~/.config/ryoku/stage.json` | user-owned, GUI-managed, never materialized |
@@ -32,14 +32,11 @@ widgets. **Parallax** is a switch inside Depth: the same cut, the same look,
 now drifting with the pointer over an inpainted backdrop. Nothing is configured
 twice.
 
-Three places, each with one job:
+Two places, each with one job:
 
 - **The sidebar's Stage section** shows the current wallpaper, scene mode,
-  enabled widgets, and visualizer state. Its buttons open the matching editor
-  or Hub view rather than duplicating their controls.
-- **Ryoku Hub > Desktop Scene** remains the settings view and owns the file
-  picker used to add a layer from a picture. Its Stage Editor hand-offs open
-  the exact catalogue they name.
+  enabled widgets, and visualizer state. Its buttons open the matching Stage
+  Editor catalogue rather than duplicating controls.
 - **The desktop** has one visible way into composition. Right-click bare
   wallpaper and choose **Edit desktop** to open the Stage Editor on that
   monitor. Widget menus remain local to the widget.
@@ -54,8 +51,7 @@ The quick row contains **Wallpaper** and **Search**. The single accent row,
 clicked. Quick controls opens the left sidebar, Settings opens Hub, and Reload
 shell reloads the shell.
 
-Plain, Depth, and Parallax are chosen from the Stage Editor's Depth catalogue
-or Hub's Scene view:
+Plain, Depth, and Parallax are chosen from the Stage Editor's Depth catalogue:
 
 - Plain: `set-effect off`.
 - Depth: `set-effect depth`.
@@ -64,39 +60,19 @@ or Hub's Scene view:
 Depth and Parallax use the same cut-outs. The first enable cuts the current
 wallpaper if necessary; progress and Stop stay visible while the engine runs.
 
-## Hub settings
+## Catalogue routes
 
-Open **Ryoku Hub > Desktop Scene** for the Scene, Visualizer, and Widgets views.
-The page uses two columns when there is room and one on smaller windows, with a
-scrolling viewport beneath the view selector.
+The retired Hub routes remain useful as compatibility entry points.
+`ryoku-shell hub open desktop-scene` and `ryoku-shell hub open stage` open the
+Depth catalogue directly. The `desktop-scene-visualizer` and `visualizer`
+routes open Visualizer; `desktop-scene-widgets` and `widgets` open Widgets. The
+desktop menu's
+**Settings** row opens the Hub normally. The Hub no longer has a scene settings
+section or duplicates the editor's depth, visualizer, and widget controls.
 
-### Scene
-
-- **Preview and mode:** the current wallpaper and Plain, Depth, or Parallax.
-  A running cut shows progress and a Stop button.
-- **Cut and layers:** Draft, Standard, or Fine quality; selecting a different
-  tier offers Download if its model is missing, then Re-cut. Layers can be
-  placed behind or in front of widgets; Parallax adds a drift control.
-  Cut a picture and Add a PNG add layers. Clear cut-outs asks for confirmation.
-- **Look:** edge softness, shadow strength, and shadow direction. Reset look
-  and motion restores those controls and motion settings, not cut quality,
-  widget layer placement, or the editor grid.
-- **Motion** (Parallax): Soft, Cinematic, or Beat presets; Subtle, Normal, or
-  Strong amount; Still, Float, Breathe, or Sway idle motion with an idle-speed
-  slider when moving; music response and pointer controls.
-- **Composition:** the Stage Editor hand-off opens its Depth catalogue. The
-  Depth catalogue's **Add a layer from a picture** row hands back to this Hub
-  page because Hub owns the file picker.
-
-### Visualizer and Widgets
-
-Visualizer opens the Stage Editor on the **Visualizer** catalogue. Widgets
-opens it on **Widgets**. A successful hand-off closes Hub only after the shell
-accepts the request; a failed hand-off leaves the page open with its error.
-
-Hub reads the stores but is not their writer. Typed shell IPC updates the
-canonical stage and visualizer settings; wallpaper effects and layers use the
-daemon's stage commands.
+Each catalogue owns its complete workflow. Depth includes its picture and PNG
+file pickers, Visualizer targets the selected visualizer instance, and Widgets
+opens the selected widget's settings inside the editor.
 
 ## The Stage Editor
 
@@ -104,27 +80,40 @@ Editing the desktop frames one live monitor at a time. The desktop shrinks into
 a rounded card while its live wallpaper is blurred and dimmed around it, with a
 soft shadow lifting the card from the surround. `EditModeCard.qml` supplies
 that treatment and `Desktop.qml` mounts it around the real wallpaper, stage,
-widgets, desktop icons, and editor frames. The chrome follows ryogami's visual
-language: 6 px corners, 1 px outlines, and inverted plates for selected rows.
+widgets, desktop icons, and editor frames. The island's `Appearance.qml` maps
+its paper, ink, spacing, and Space Grotesk, Fraunces, and mono type to Ryoku.Ui
+tokens.
 
-The toolbar is **Desktop** (with the current monitor) | **Widgets** |
-**Wallpaper** | **Style** | **Visualizer** | **Depth**, followed by snap,
-undo, redo, and **Done**. Visualizer and Depth come from
-`StageWidgetProvider.extraSections`; the provider passes them to the island
-`Config.extraSections`, and `StageSheet` hosts `StageVisualizerPage` or
-`StageDepthPage`. There is no lockscreen, bar, or dock editing in this mode.
+The toolbar is **Desktop** | **Widgets** | **Wallpaper** | **Style** |
+**Visualizer** | **Depth**, followed by snap, undo, redo, and **Done**. A chip
+names the display being edited and cycles displays when there is more than one.
+The drawer shows the current catalogue without repeating the toolbar's section
+tabs. Visualizer and Depth come from `StageWidgetProvider.extraSections`; the
+provider passes them to the island's `Config.extraSections`. There is no
+lockscreen, bar, or dock editing in this mode.
 
-Every enabled widget wears a frame with its name, Settings, and Remove. Drag a
-widget to move it and use its corner grip to resize it. Shift-click or
-Ctrl-click builds a selection; dragging a marquee on bare wallpaper can select
-widgets and desktop icons. A selected group moves together. Arrow keys nudge
-one step, or ten steps while Shift is held. Delete removes the selection.
-Ctrl+A selects all, Ctrl+Z undoes, Ctrl+Shift+Z or Ctrl+Y redoes, and Ctrl+F
-focuses catalogue search. An align bar appears for two or more widgets.
+Frames appear on hover or selection. Each has four corner handles, a size badge,
+and an action strip with the widget name, Settings, and Remove. Resizing updates
+the preview locally, then writes the per-display store once on release and adds
+one undo step. Size snaps to 5%; hold Shift for free sizing and double-click a
+handle to reset to 100%. Moves snap to the grid, the card centre, and other
+widgets' edges and centres; hold Alt to move freely.
 
-A widget's editor menu has a **Size** stepper from 50% to 200% and **Reset
-size**. Duplicate is not offered because Ryoku desktop widgets are
-single-instance.
+Shift-click or Ctrl-click builds a selection; dragging a marquee on bare
+wallpaper can select widgets and desktop icons. A selected group moves together.
+Arrow keys nudge one step, or ten steps while Shift is held. Delete removes the
+selection. Ctrl+A selects all, Ctrl+Z undoes, Ctrl+Shift+Z or Ctrl+Y redoes, and
+Ctrl+F focuses catalogue search. With a widget selected, + and - scale it by
+10%, 0 resets it, L locks its position, and Enter opens its settings. An align
+bar appears for two or more widgets.
+
+Double-clicking a widget, choosing Settings, right-clicking it while composing,
+or pressing Enter opens the hidden `widget` drawer section. `StageWidgetPage`
+uses the widget's name as its title and offers Size with Reset, Lock position,
+Depth behind or in front when the wallpaper has a cut, and Remove before the
+full `WidgetInspector` in embedded mode. Back returns to the catalogue that was
+open, and selecting another widget retargets the page. Provider sections use
+the `Config.extraSections` `hidden` and `back` contract for this flow.
 
 There is no Save and no global Reset. The live desktop is the document, and
 each catalogue edit, group move, nudge, alignment, wallpaper framing change,
@@ -138,24 +127,34 @@ selection marquee rather than closing the editor.
 The Wallpaper catalogue shows ryogami's library and thumbnails. A per-screen
 pick goes through `ryoku-stage-wallpaper --screen`, so ryogami remains the
 wallpaper owner. On the card, drag to move the real wallpaper, use the wheel or
-a pinch to zoom, and use the catalogue controls to rotate, mirror, centre, or
-reset it. Framing is stored per monitor and wallpaper path in
+a pinch to zoom, and use the restyled framing dock to rotate, mirror, centre, or
+reset it. A live drag remains authoritative until its committed record can be
+read, so releasing after zoom no longer bounces the picture. Mirror and rotation
+also re-render the visible picture after a reveal transition. While framing,
+widgets, desktop icons, and the visualizer dim to one quarter opacity and stop
+taking input. Framing is stored per monitor and wallpaper path in
 `~/.config/ryoku/stage/stage-editor.json`, so returning to a picture restores
 its framing.
 
 ### Style
 
-Style switches light or dark mode and the colour scheme. It can save the
-current wallpaper, mode, and scheme as a preset, then apply, rename, or delete
-that preset. Presets live in
-`~/.config/ryoku/stage/style-presets.json`.
+Style reads and writes the same live seams as the Hub. Light, Dark, Auto, Sun,
+the wallpaper scheme variant, source colour, and named themes update
+`matugen.json` through `ryoku-hub desktop matugen set {...}` or
+`shell.json` through `ryoku-shell theme <name>`, so the palette changes
+everywhere and the page reflects the real current state. Every change is
+undoable. Saved looks capture and apply the wallpaper, theme, mode, scheme type,
+and source colour. They live in `~/.config/ryoku/stage/style-presets.json`.
 
 ### Desktop icons
 
 The Widgets catalogue includes **Add apps to desktop** and **Desktop icons**.
-Apps and files placed on the desktop are stored per output in
-`~/.local/state/states.json` under `desktopShortcutsJson`. Their work area
-keeps them clear of Ryoku's bar, frame, and dock.
+Shortcuts load as soon as the persistent store is ready. Adding or removing an
+app updates the desktop immediately, and adding an app unhides icons if needed.
+Right-clicking an icon opens its own Open, Rename, Details, Copy, and Remove
+dialog above widgets without lifting the icon layer. Files, folders, and
+`http`, `https`, or `mailto` links can be dropped onto the desktop. The store is
+`$XDG_STATE_HOME/quickshell/states.json`, key `desktopShortcutsJson`.
 
 ### Per-display widgets
 
@@ -189,30 +188,39 @@ face options, and other appearance settings stay global.
 
 The Depth catalogue has five tabs:
 
-- **Cut:** Plain, Depth, or Parallax; Draft, Standard, or Fine; Download the
-  model, Stop cutting, Re-cut, and a confirmed Clear cut-outs.
-- **Layers:** show or hide each layer, put it behind or in front, adjust its
-  distance, or remove added layers.
-- **Look:** edge softness, shadow, shadow direction, and reset.
-- **Parallax:** Use Parallax, amount, idle motion, speed, music, pointer,
-  sensitivity, range, and backdrop drift.
-- **In front:** choose which enabled widgets rise over the front cut-outs.
+- **Scene:** a wallpaper preview and Plain, Depth, or Parallax. A running cut
+  shows progress and Stop; a blocked cut shows its notice and Retry. Draft,
+  Standard, or Fine quality offers Download or Remove for its model and Re-cut.
+- **Layers:** **Cut a layer from a picture** and **Add a PNG** file pickers,
+  per-layer cards, and a confirmed Clear cut-outs action. Each layer can be
+  shown, placed behind or in front, given a Parallax distance, or removed. The
+  subject cannot be removed.
+- **Look:** edge softness, shadow strength and direction, and reset.
+- **Motion:** Soft, Cinematic, or Beat presets, amount, idle motion, music
+  response, and pointer follow.
+- **Front:** choose which enabled widgets and plugins rise over the front
+  cut-outs.
 
-Adding a layer from a picture opens **Ryoku Hub > Desktop Scene**, where the
-file picker lives.
+The picture and PNG pickers live in this catalogue. They do not hand off to the
+Hub.
 
 ## The visualizer in the Stage Editor
 
-Visualizer is a provider catalogue on `StageSheet` with **Look**, **Place**,
-**Colour**, **Playback**, **Shape**, and **Field** tabs. Place exposes width,
-height, across, down, and turn, plus Centre, Square, Full width, Top, Middle,
-and Bottom actions. These controls are undoable like direct gestures.
+The Visualizer catalogue opens with a gallery of every look, followed by
+**Look**, **Place**, **Colour**, **Motion**, **Shape**, and, where applicable,
+**Field** chips. Place exposes width, height, across, down, and turn, plus
+Centre, Square, Full width, Top, Middle, and Bottom actions. These controls are
+undoable like direct gestures.
 
-The live look is a framed widget on the card. Drag it to move, use the corner
-grip or Ctrl+wheel to size it, and use the top handle to turn it. The Field
-look fills the screen and is tuned from the same catalogue. `visualizer place`
-and `Super+Alt+M` turn the visualizer on when necessary and open this catalogue
-with the look selected.
+Every visualizer instance has its own frame and grip with an id such as
+`visualizer:0`. Selecting a frame makes that instance the catalogue's target.
+Remove deletes only that instance and turns the visualizer off only after the
+last instance is gone; undo restores the removed instance at its original index
+with all of its settings. Grips appear only while the Widgets or Visualizer
+catalogue is open. Drag a frame to move it, use a corner to size it, and use the
+top handle to turn it. The Field look fills the screen and is tuned from the
+same catalogue. `visualizer place` and `Super+Alt+M` turn the visualizer on when
+necessary and open this catalogue with its instance selected.
 
 ## Session model
 
@@ -222,6 +230,10 @@ ordered set of selected widget ids and `selected` is its primary, final member;
 `panel` names the open toolbar panel; and `section` is the catalogue path.
 `StageEditorHost.showSection()` splits paths such as `wallpaper/wallpapers`
 into the drawer section and page.
+
+Extra provider sections may be hidden from the toolbar and declare where Back
+returns. The widget settings section uses both properties, so it behaves as a
+temporary detail page rather than another top-level catalogue.
 
 The IPC entry point is:
 
@@ -344,7 +356,7 @@ Global only; anything per-wallpaper is in the registry.
 | `motion.sensitivity` | `1.0` | the pointer's pull (0..2) |
 | `motion.range` | `1.0` | how far a layer may travel (0..2) |
 | `motion.backdrop` | `0` | the inpainted backdrop's own drift (0..1); above 0 a sliver of the base wallpaper shows at the trailing edge |
-| `front` | `[]` | widget ids (built-in, plugin tile, or `visualizer`) drawn above the layers marked "in front"; written by the Depth catalogue's **In front** tab |
+| `front` | `[]` | widget and plugin ids drawn above the layers marked "in front"; written by the Depth catalogue's **Front** tab |
 
 The daemon reads `quality`; the shell reads the rest. On the first start after
 v2 a v1 `stage.json` (one still carrying `feather`, `lift`, `preset` or the
@@ -388,33 +400,33 @@ converge on one registry.
 ## Rendering: `modules/stage/`
 
 One surface, one stack. The desktop surface draws, back to front:
-`StageBackdrop.qml` (Parallax only: the inpainted `background.png`, sized with
-the wallpaper's own fit and drifting with the cursor, so it covers the
-wallpaper's baked subject and can never misalign with ryogami's surface), then
-the layers marked behind the widgets (z 2), then the widgets (z 3), then the
-layers marked in front (`StageLayer.qml`: edge, shadow and angle from the global
-look, drift by the layer's `depth` x the shared motion Amount x Sensitivity x
-Range while Follow mouse is on, idle and music; z 4), then any widget the user
-lifted into `front` (z 5). Depth is the same
-stack with `motionEnabled: false` and no backdrop, so the still cut is
-pixel-locked over the wallpaper's own subject. While the stage is on and the
-visualizer is `On desktop`, the desktop hosts the visualizer inside this stack
-(`InlineVisualizer` at z 1.5: above the backdrop, below every cut-out and
-widget) and the visualizer's own surface is suppressed (cava keeps running);
-`Above windows` keeps that surface outside the editor. There is no second
-subject renderer, and no path that can draw the subject twice.
-While the engine cuts, the subject layer dims and draws its own progress ring.
+`StageBackdrop.qml` (Parallax only: the inpainted `background.png`, framed by
+`WallpaperFramedPlane` with the wallpaper's zoom, offset, rotation, and mirror),
+then the layers marked behind the widgets (z 2), then the widgets (z 3), then
+the layers marked in front (`StageLayer.qml`, also framed by
+`WallpaperFramedPlane`: edge, shadow and angle from the global look, drift by
+the layer's `depth` x the shared motion Amount x Sensitivity x Range while
+Follow mouse is on, idle and music; z 4), then any widget the user lifted into
+`front` (z 5). Taking the same framing keeps the subject and added cut-outs
+registered with the shown picture.
 
-Hub's Desktop Scene page sits beside the stack, not in it. It reads stage.json
-and sends typed `stage-settings` IPC requests to the shell's canonical
-`modules/stage/Singletons/Config.qml`; per-wallpaper changes go through the
-daemon's `StageBackend` contract. Drag updates coalesce before being sent.
-The desktop mounts the widget outlines and lifts to the Top layer for the edit
-session; the chrome itself lives on its own surfaces under
-`shell/modules/stage/`. Each undo step writes a store as one update
-(`setMany`, or one place-tool command): bursts of single-key writes can
-interleave with a watcher's reload of an older version and put an old value
-back.
+Depth is the same stack with `motionEnabled: false` and no backdrop, so the
+still cut is pixel-locked over the wallpaper's own subject. While the stage is
+on and a visualizer is `On desktop`, the desktop hosts it inside this stack
+(`InlineVisualizer` at z 1.5: above the backdrop, below every cut-out and
+widget) and its own surface is suppressed (cava keeps running); `Above windows`
+keeps that surface outside the editor. There is no second subject renderer and
+no path that can draw the subject twice. While the engine cuts, the subject
+layer dims and draws its own progress ring.
+
+The Stage Editor is the only UI writer for composition. Typed stage updates go
+to the shell's canonical `modules/stage/Singletons/Config.qml`; per-wallpaper
+changes go through the daemon's `StageBackend` contract. The desktop mounts the
+widget outlines and lifts to the Top layer for the edit session; the chrome
+itself lives on its own surfaces under `shell/modules/stage/`. Resize previews
+stay local until release, and every committed undo step writes a store as one
+update (`setMany`, or one place-tool command), avoiding reloads of half-written
+gestures.
 
 ## Delivery
 

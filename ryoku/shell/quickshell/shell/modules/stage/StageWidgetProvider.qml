@@ -69,11 +69,31 @@ Scope {
                 return r.enabled ? 1 : 0;
         return 0;
     }
+    readonly property var inspectingRow: {
+        const id = StageCfg.StageSession.inspecting;
+        for (const row of root.rows || [])
+            if (row.id === id)
+                return row;
+        return null;
+    }
+    readonly property string inspectingLabel: root.inspectingRow && root.inspectingRow.label
+        ? root.inspectingRow.label : I18n.tr("Widget")
+    readonly property string inspectingIcon: root.inspectingRow && root.inspectingRow.icon
+        ? root.inspectingRow.icon : "widgets"
 
-    // The editors Ryoku folds into the mode beside Widgets, Wallpaper and
-    // Style: the visualiser's and the depth stage's, each a toolbar chip and a
-    // drawer catalogue (stage Config.extraSections).
+    // Visualizer and Depth are toolbar catalogues. Widget settings uses the
+    // same provider path but stays hidden until a selected frame hands off to it.
     readonly property var extraSections: [
+        {
+            "section": "widget",
+            "label": root.inspectingLabel,
+            "icon": root.inspectingIcon,
+            "tooltip": I18n.tr("Tune the selected widget"),
+            "intro": "",
+            "hidden": true,
+            "back": StageCfg.StageSession.inspectingBack || "widgets",
+            "page": widgetPage
+        },
         {
             "section": "visualizer",
             "label": I18n.tr("Visualizer"),
@@ -91,6 +111,10 @@ Scope {
             "page": depthPage
         }
     ]
+    Component {
+        id: widgetPage
+        StageWidgetPage {}
+    }
     Component {
         id: visualizerPage
         StageVisualizerPage {}
@@ -148,6 +172,28 @@ Scope {
         store.setManyFor(root.monitor, patch);
     }
 
+    function addVisualizer() {
+        const v = VizCfg.Config;
+        if (v.count >= v.maxVisualizers)
+            return -1;
+        const wasEnabled = v.enabled;
+        const index = v.addVisualizer();
+        if (index < 0)
+            return -1;
+        v.setEnabled(true);
+        const id = "visualizer:" + index;
+        const after = root.snapshot(id);
+        GlobalStates.editHistoryPush({
+            "undo": () => {
+                root.restore(id, null);
+                if (!wasEnabled)
+                    v.setEnabled(false);
+            },
+            "redo": () => root.restore(id, after)
+        });
+        return index;
+    }
+
     // The drop point is the widget's top-left in screen px; the visualiser has
     // no top-left to keep (it is a centred box), so the box centre lands there
     // and the store's own clamp keeps it on screen.
@@ -171,11 +217,17 @@ Scope {
         root.restore(instanceId, null);
     }
 
-    // The state a restore needs, or null when the widget is not on the
-    // desktop (the undo of an add is then a plain disable). For a
-    // built-in/face: its placement keys; for a plugin: its whole plugins.json
-    // entry (through Registry's merged placement); for the visualizer, its box,
-    // so a walk-back lands the look where it was and not where it drifted.
+    function visualizerIndex(instanceId) {
+        const text = "" + instanceId;
+        if (text.indexOf("visualizer:") !== 0)
+            return -1;
+        const index = parseInt(text.slice(11));
+        return isNaN(index) ? -1 : index;
+    }
+
+    // An indexed visualizer snapshot is its complete settings object plus the
+    // roster size. The size distinguishes restoring a moved instance from
+    // inserting one that was removed.
     function snapshot(instanceId) {
         const store = WidgetStore.Config;
         if (instanceId.indexOf("plugin:") === 0) {
@@ -185,12 +237,28 @@ Scope {
                 return null;
             return { plugin: pid, entry: JSON.parse(JSON.stringify(e.placement)) };
         }
-        if (instanceId === "visualizer")
-            return VizCfg.Config.enabled
-                ? { viz: true, x: VizCfg.Config.x, y: VizCfg.Config.y,
-                    w: VizCfg.Config.w, h: VizCfg.Config.h, angle: VizCfg.Config.angle,
-                    tiltX: VizCfg.Config.tiltX, tiltY: VizCfg.Config.tiltY }
-                : null;
+        const vi = root.visualizerIndex(instanceId);
+        if (vi >= 0) {
+            if (!VizCfg.Config.enabled || vi >= VizCfg.Config.count)
+                return null;
+            return {
+                viz: true,
+                index: vi,
+                count: VizCfg.Config.count,
+                data: VizCfg.Config.cloneData(VizCfg.Config.dataAt(vi))
+            };
+        }
+        if (instanceId === "visualizer") {
+            const all = [];
+            for (let i = 0; i < VizCfg.Config.count; ++i)
+                all.push(VizCfg.Config.cloneData(VizCfg.Config.dataAt(i)));
+            return {
+                visualizers: true,
+                enabled: VizCfg.Config.enabled,
+                active: VizCfg.Config.active,
+                instances: all
+            };
+        }
         if (store.get(instanceId + "Enabled", root.monitor) !== true)
             return null;
         return { key: instanceId,
@@ -200,7 +268,7 @@ Scope {
     }
 
     // Put a widget back the way a snapshot found it; `null` means it was not
-    // on the desktop, so this is the disable path.
+    // on the desktop, so this is the disable or remove path.
     function restore(instanceId, snap) {
         const store = WidgetStore.Config;
         if (instanceId.indexOf("plugin:") === 0) {
@@ -215,22 +283,27 @@ Scope {
                 root.enqueue([root.placeTool, pid, "enabled", "true"]);
             return;
         }
-        if (instanceId === "visualizer") {
+        const vi = root.visualizerIndex(instanceId);
+        if (vi >= 0) {
             const v = VizCfg.Config;
-            // A re-add restores the box the walk-back found, not wherever the
-            // last session left it; a plain disable leaves the placement alone.
-            // The turn lands first: the box is clamped against its own angle.
-            // The flag goes last, so its immediate write already carries the box.
-            if (snap && snap.x !== undefined) {
-                if (snap.angle !== undefined)
-                    v.rotate(snap.angle);
-                v.setBox(snap.x, snap.y, snap.w, snap.h, root.aspect());
-                if (snap.tiltX !== undefined)
-                    v.setTiltX(snap.tiltX);
-                if (snap.tiltY !== undefined)
-                    v.setTiltY(snap.tiltY);
+            if (snap === null || snap === undefined) {
+                v.setActive(vi);
+                v.removeVisualizer(vi);
+                return;
             }
-            v.setEnabled(snap !== null && snap !== undefined);
+            if (v.count < snap.count)
+                v.insertVisualizer(snap.index, snap.data);
+            else
+                v.replaceVisualizer(snap.index, snap.data);
+            v.setEnabled(true);
+            v.setActive(snap.index);
+            return;
+        }
+        if (instanceId === "visualizer") {
+            if (snap && snap.visualizers)
+                VizCfg.Config.replaceAll(snap.instances, snap.active, snap.enabled);
+            else
+                VizCfg.Config.setEnabled(false);
             return;
         }
         if (snap === null || snap === undefined) {
@@ -245,18 +318,17 @@ Scope {
         store.setManyFor(root.monitor, patch);
     }
 
-    // The visualiser's walk-back, for every way its box changes (the grip's
-    // gestures, the placement knobs): `before` is the snapshot taken when the
-    // change began, and one undo entry lands if the box actually moved.
-    function recordVisualizer(before) {
+    // A visualizer gesture records one complete instance document. Full data,
+    // rather than only placement, also makes a remove undo exact.
+    function recordVisualizer(instanceId, before) {
         if (!before)
             return;
-        const after = root.snapshot("visualizer");
+        const after = root.snapshot(instanceId);
         if (!after || JSON.stringify(before) === JSON.stringify(after))
             return;
         GlobalStates.editHistoryPush({
-            "undo": () => root.restore("visualizer", before),
-            "redo": () => root.restore("visualizer", after)
+            "undo": () => root.restore(instanceId, before),
+            "redo": () => root.restore(instanceId, after)
         });
     }
 

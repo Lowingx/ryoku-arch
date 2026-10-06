@@ -3,12 +3,12 @@ import QtQuick.Layouts
 import stage.modules.common
 import stage.modules.common.widgets
 
-// The Stage toolbar is the same compact masthead slab as Ryogami's FilterBar:
-// paper, one hairline, a six-pixel corner and restrained spacing.
+// The Stage toolbar is a compact Ryoku instrument strip: flat paper, a
+// hairline edge and one shared corner.
 Item {
     id: root
 
-    property bool enableShadow: true
+    property bool enableShadow: false
     property real padding: Appearance.sizes.space2
     property alias colBackground: background.color
     property alias spacing: toolbarLayout.spacing
@@ -31,12 +31,12 @@ Item {
     Rectangle {
         id: background
         anchors.fill: parent
-        color: Appearance.withAlpha(Appearance.m3colors.m3surface, 0.94)
+        color: Appearance.colors.colLayer0
         implicitHeight: Appearance.sizes.toolbarHeight
         implicitWidth: toolbarLayout.implicitWidth + root.padding * 2
         radius: Appearance.rounding.small
         border.width: 1
-        border.color: Appearance.withAlpha(Appearance.m3colors.m3outline, 0.5)
+        border.color: Appearance.colors.colOutline
 
         RowLayout {
             id: toolbarLayout

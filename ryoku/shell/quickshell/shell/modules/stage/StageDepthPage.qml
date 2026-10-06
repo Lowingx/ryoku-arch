@@ -1,24 +1,44 @@
 pragma ComponentBehavior: Bound
+
 import QtQuick
-import Quickshell
-import "../desktop"
+import QtQuick.Controls as QQC
+import Ryoku.Ui
 import Ryoku.Ui.Singletons
 
-// The Stage Editor's Depth catalogue: the depth editor folded into the mode,
-// one section per tab (the cut, its layers, their look, their motion, the
-// widgets in front). Adding a layer from a picture stays in the Hub, which
-// owns the file picker; the row below hands off to it.
-StageSheet {
+Item {
     id: page
 
-    content: Component {
-        StageDepthOptions {}
-    }
+    property string tab: "Scene"
 
-    MenuRow {
-        label: I18n.tr("Add a layer from a picture")
-        value: I18n.tr("Hub")
-        closeOnTrigger: false
-        onTriggered: Quickshell.execDetached(["ryoku-shell", "hub", "open", "desktop-scene"])
+    Flickable {
+        id: scroll
+        anchors.fill: parent
+        contentWidth: width
+        contentHeight: content.implicitHeight + Tokens.s4
+        clip: true
+        boundsBehavior: Flickable.StopAtBounds
+
+        QQC.ScrollBar.vertical: ScrollRail {
+            policy: QQC.ScrollBar.AsNeeded
+        }
+        WheelScroll {}
+
+        Column {
+            id: content
+            width: scroll.width
+            spacing: Tokens.s2
+
+            Chips {
+                width: parent.width
+                options: ["Scene", "Layers", "Look", "Motion", "Front"]
+                current: page.tab === "In front" ? "Front" : page.tab
+                onChose: label => page.tab = label === "Front" ? "In front" : label
+            }
+
+            StageDepthOptions {
+                width: parent.width
+                section: page.tab
+            }
+        }
     }
 }

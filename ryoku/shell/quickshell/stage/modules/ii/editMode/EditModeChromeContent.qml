@@ -19,8 +19,7 @@ import stage.modules.common.functions
  * must not: a Behavior whose target moves every frame restarts every frame
  * and never ticks.
  *
- * The two tabs live on the toolbar itself, so the bottom band holds nothing
- * and reserves only a margin (edit_mode.js's `bandBottom`); the catalogue
+ * The toolbar owns the display target and catalogue controls. The catalogue
  * opens on the right, into room the geometry has already taken out of the
  * desktop's width.
  */
@@ -47,10 +46,12 @@ Item {
         - root.toolbarGap)
     readonly property real toolbarAvailableWidth: Math.max(1,
         root.toolbarRightLimit - root.toolbarLeftLimit)
+    readonly property var visibleExtraSections: Config.extraSections.filter(
+        section => section.hidden !== true)
     // Keep labels at their real size. When the drawer narrows a 1280px screen,
-    // low-priority labels fold to their icon and remain named by tooltips.
+    // low-priority labels fold to icons and stay named by tooltips.
     readonly property bool compactToolbar: root.toolbarAvailableWidth < 1040
-        || Config.extraSections.length > 2
+        || root.visibleExtraSections.length > 2
     readonly property real toolbarScale: toolbar.implicitWidth > 0
         ? Math.min(1, root.toolbarAvailableWidth / toolbar.implicitWidth) : 1
     readonly property real toolbarVisualWidth: toolbar.implicitWidth * root.toolbarScale
@@ -191,70 +192,48 @@ Item {
             transformOrigin: Item.TopLeft
             spacing: Appearance.sizes.space2
 
-            // Desktop | Lockscreen. Indices are the tab list's own order; the
-            // names come back through EditModeLogic so this bar and the state
-            // agree on one spelling.
-            ToolbarTabBar {
-                id: tabBar
-                opacity: root.slotReveal(0)
-                scale: root.slotScale(0)
-                Layout.alignment: Qt.AlignVCenter
-                implicitHeight: Appearance.sizes.controlHeight
-                tabButtonList: [
-                    { "name": Translation.tr("Desktop"), "icon": "desktop_windows" }
-                ]
-                requestOnly: true
-                currentIndex: EditModeLogic.tabIndex(GlobalStates.editTab)
-                delegate: SelectionGroupButton {
-                    required property int index
-                    required property var modelData
-                    toggled: index === tabBar.currentIndex
-                    buttonIcon: modelData.icon
-                    buttonText: modelData.name
-                    maximumLabelWidth: 96
-                    onClicked: tabBar.setCurrentIndex(index)
-                }
-                onIndexSelected: index => root.tabRequested(EditModeLogic.tabAt(index))
-            }
 
-            // Which screen the mode is on, with more than one: a click moves the
-        // mode to the next. Named by the screen's own name - the only name
-        // the user has for it in the compositor's config too.
+            // The output name replaces the old one-item Desktop tab. With
+            // several outputs it cycles the edit target; with one it remains
+            // a stable label for the canvas being framed.
             IconAndTextToolbarButton {
-            id: monitorButton
-            readonly property var screens: Quickshell.screens
-            visible: monitorButton.screens.length > 1
-            opacity: root.slotReveal(1)
-            scale: (monitorButton.down ? 0.94 : 1) * root.slotScale(1)
-            Layout.alignment: Qt.AlignVCenter
-            Layout.leftMargin: Appearance.sizes.space1
-            iconText: "monitor"
-            text: GlobalStates.editModeMonitor
-            compact: root.compactToolbar
-            maximumLabelWidth: 96
-            onClicked: {
-                const names = Array.from(monitorButton.screens).map(screen => screen.name);
-                if (names.length < 2)
-                    return;
-                const at = names.indexOf(GlobalStates.editModeMonitor);
-                GlobalStates.switchEditMonitor(names[(at + 1) % names.length]);
-            }
+                id: monitorButton
+                readonly property var screens: Quickshell.screens
+                opacity: root.slotReveal(0)
+                scale: (monitorButton.down ? 0.96 : 1) * root.slotScale(0)
+                Layout.alignment: Qt.AlignVCenter
+                iconText: "monitor"
+                text: GlobalStates.editModeMonitor !== ""
+                    ? GlobalStates.editModeMonitor
+                    : (monitorButton.screens.length > 0 ? monitorButton.screens[0].name : Translation.tr("Display"))
+                compact: root.compactToolbar && monitorButton.screens.length > 1
+                maximumLabelWidth: 120
+                pointingHandCursor: monitorButton.screens.length > 1
+                onClicked: {
+                    const names = Array.from(monitorButton.screens).map(screen => screen.name);
+                    if (names.length < 2)
+                        return;
+                    const at = names.indexOf(GlobalStates.editModeMonitor);
+                    GlobalStates.switchEditMonitor(names[(at + 1) % names.length]);
+                }
 
-            StyledToolTip {
-                requireOverlay: false
-                text: Translation.tr("Edit the next screen")
+                StyledToolTip {
+                    requireOverlay: false
+                    text: monitorButton.screens.length > 1
+                        ? Translation.tr("Edit the next display")
+                        : Translation.tr("Editing %1").arg(monitorButton.text)
+                }
             }
-        }
 
             Rectangle {
-            opacity: root.slotReveal(1)
-            scale: root.slotScale(1)
+            opacity: root.slotReveal(0)
+            scale: root.slotScale(0)
             Layout.alignment: Qt.AlignVCenter
             Layout.leftMargin: Appearance.sizes.space1
             Layout.rightMargin: Appearance.sizes.space1
             implicitWidth: 1
             implicitHeight: Appearance.sizes.space5
-            color: Appearance.withAlpha(Appearance.m3colors.m3outline, 0.58)
+            color: Appearance.colors.colOutline
         }
 
         // The catalogue choices stay one semantic group. On a constrained
@@ -262,8 +241,8 @@ Item {
         // below the legibility floor; every folded chip remains named on hover.
             Rectangle {
             id: sectionGroup
-            opacity: root.slotReveal(2)
-            scale: root.slotScale(2)
+            opacity: root.slotReveal(1)
+            scale: root.slotScale(1)
             Layout.alignment: Qt.AlignVCenter
             implicitWidth: sectionRow.implicitWidth
             implicitHeight: Appearance.sizes.controlHeight
@@ -307,9 +286,8 @@ Item {
                     tooltip: Translation.tr("Desktop widgets")
                 }
                 // The wallpaper on its own: which picture each screen shows,
-                // which one the colours come from, and - on the Desktop tab -
-                // the card itself turns into the picture, to move, zoom and
-                // turn by hand.
+                // which one the colours come from, and how the desktop card
+                // sits while framing.
                 SectionChip {
                     section: "wallpaper"
                     iconText: "wallpaper"
@@ -326,7 +304,7 @@ Item {
                 }
                 // Whatever the provider folds in beside them (Config.extraSections).
                 Repeater {
-                    model: Config.extraSections
+                    model: root.visibleExtraSections
                     delegate: SectionChip {
                         required property var modelData
                         section: modelData.section
@@ -344,8 +322,8 @@ Item {
         // spend the words.
             IconToolbarButton {
             id: snapButton
-            opacity: root.slotReveal(3)
-            scale: (snapButton.down ? 0.94 : 1) * root.slotScale(3)
+            opacity: root.slotReveal(2)
+            scale: (snapButton.down ? 0.96 : 1) * root.slotScale(2)
             Layout.alignment: Qt.AlignVCenter
             // The guides ARE the feature - the dot lattice and the alignment
             // lines a dragged widget latches onto. The alignment glyph this
@@ -364,14 +342,14 @@ Item {
         }
 
             Rectangle {
-            opacity: root.slotReveal(4)
-            scale: root.slotScale(4)
+            opacity: root.slotReveal(3)
+            scale: root.slotScale(3)
             Layout.alignment: Qt.AlignVCenter
             Layout.leftMargin: Appearance.sizes.space1
             Layout.rightMargin: Appearance.sizes.space1
             implicitWidth: 1
             implicitHeight: Appearance.sizes.space5
-            color: Appearance.withAlpha(Appearance.m3colors.m3outline, 0.58)
+            color: Appearance.colors.colOutline
         }
 
         // The two the keyboard already offers, for a pointer that never
@@ -384,8 +362,8 @@ Item {
             // RippleButton dims a disabled button through this same property,
             // and an outer binding replaces its rule rather than joining it -
             // so the dimming is multiplied back in by hand.
-            opacity: root.slotReveal(5) * (undoButton.enabled ? 1 : 0.4)
-            scale: (undoButton.down ? 0.94 : 1) * root.slotScale(5)
+            opacity: root.slotReveal(4) * (undoButton.enabled ? 1 : 0.4)
+            scale: (undoButton.down ? 0.96 : 1) * root.slotScale(4)
             Layout.alignment: Qt.AlignVCenter
             text: "undo"
             enabled: GlobalStates.editCanUndo
@@ -399,8 +377,8 @@ Item {
 
             IconToolbarButton {
             id: redoButton
-            opacity: root.slotReveal(6) * (redoButton.enabled ? 1 : 0.4)
-            scale: (redoButton.down ? 0.94 : 1) * root.slotScale(6)
+            opacity: root.slotReveal(5) * (redoButton.enabled ? 1 : 0.4)
+            scale: (redoButton.down ? 0.96 : 1) * root.slotScale(5)
             Layout.alignment: Qt.AlignVCenter
             text: "redo"
             enabled: GlobalStates.editCanRedo
@@ -412,21 +390,20 @@ Item {
             }
         }
 
-        // The labelled exit stays the one permanent primary action. Ryogami's
-        // primary control is the inverted surfaceText plate, not an accent fill.
+        // The labelled exit is the permanent primary action.
             IconAndTextToolbarButton {
             id: doneButton
-            opacity: root.slotReveal(7)
-            scale: (doneButton.down ? 0.94 : 1) * root.slotScale(7)
+            opacity: root.slotReveal(6)
+            scale: (doneButton.down ? 0.96 : 1) * root.slotScale(6)
             Layout.alignment: Qt.AlignVCenter
             iconText: "done"
             text: Translation.tr("Done")
-            colBackground: Appearance.m3colors.m3onSurface
-            colBackgroundHover: Appearance.m3colors.m3onSurface
-            colBackgroundActive: Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.9)
-            colRipple: Appearance.withAlpha(Appearance.m3colors.m3surface, 0.16)
-            colText: Appearance.m3colors.m3surface
-            borderColor: Appearance.m3colors.m3onSurface
+            colBackground: Appearance.colors.colSecondary
+            colBackgroundHover: Appearance.colors.colSecondaryHover
+            colBackgroundActive: Appearance.colors.colSecondaryActive
+            colRipple: Appearance.colors.colOnSecondaryContainer
+            colText: Appearance.colors.colOnSecondary
+            borderColor: Appearance.colors.colSecondary
             onClicked: root.doneRequested()
         }
         }
@@ -439,7 +416,7 @@ Item {
         id: guide
         anchors.fill: parent
         z: 150
-        tabsTarget: tabBar
+        tabsTarget: monitorButton
         sectionsTarget: sectionGroup
         historyTarget: undoButton
         doneTarget: doneButton

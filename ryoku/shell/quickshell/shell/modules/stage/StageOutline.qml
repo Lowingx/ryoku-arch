@@ -1,11 +1,9 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import shell.services
-import "../../components"
-import "../desktop/Singletons" as DesktopStyle
+import Ryoku.Ui.Singletons
 
-// The overlay passes body presses through to the live widget; only its two
-// actions take an exclusive press, so restyling the frame cannot break dragging.
+// The body observes presses without stealing drags. Only the action strip and
+// selected corner handles take an exclusive pointer grab.
 Item {
     id: outline
     anchors.fill: parent
@@ -13,59 +11,35 @@ Item {
     property rect box: Qt.rect(0, 0, 0, 0)
     property string title: ""
     property bool selected: false
-    property real radius: 6
+    property bool primary: false
+    property bool inputBlocked: false
+    property real radius: Tokens.radius
+    property real counterScale: 1
+    property var targetItem: null
 
     signal picked()
     signal settings()
     signal remove()
 
     visible: outline.box.width > 1 && outline.box.height > 1
+    enabled: !outline.inputBlocked
 
-    readonly property real headerHeight: 26
-    readonly property real headerGap: 7
-    readonly property real availableNameWidth: Math.max(0,
-        outline.headerRight - outline.headerLeft - buttons.width - outline.headerGap)
-    readonly property real headerWidth: Math.min(outline.box.width,
-        buttons.width + (nameChip.visible ? outline.headerGap + nameChip.width : 0))
-    // The header row's span, clamped to the desktop: a box that reaches past an
-    // edge (the visualiser's full-width or turned footprint) keeps its name and
-    // buttons on screen instead of cut by the card's edge.
-    readonly property real headerLeft: Math.max(0, outline.box.x)
-    readonly property real headerRight: Math.min(outline.width > 0 ? outline.width : outline.box.x + outline.box.width,
-        outline.box.x + outline.box.width)
-
-    // A colliding pair moves into its own frames, where the bounded headers can
-    // no longer cover each other.
-    function headerHasRoom() {
-        if (outline.box.y <= outline.headerHeight + 13 || !outline.parent)
-            return false;
-
-        const candidateY = outline.box.y - outline.headerHeight - outline.headerGap;
-        const siblings = outline.parent.children;
-        for (let i = 0; i < siblings.length; ++i) {
-            const other = siblings[i];
-            if (other === outline || !other.visible
-                    || other.box === undefined || other.headerWidth === undefined)
-                continue;
-
-            const otherY = other.box.y > outline.headerHeight + 13
-                ? other.box.y - outline.headerHeight - outline.headerGap
-                : other.box.y + outline.headerGap;
-            const overlapsY = candidateY < otherY + outline.headerHeight
-                && candidateY + outline.headerHeight > otherY;
-            const otherWidth = Math.min(other.box.width, other.headerWidth);
-            const overlapsX = outline.box.x < other.box.x + otherWidth
-                && outline.box.x + outline.headerWidth > other.box.x;
-            if (overlapsX && overlapsY)
-                return false;
-        }
-        return true;
-    }
-
-    readonly property bool headerInside: !outline.headerHasRoom()
-    readonly property real headerY: outline.headerInside
-        ? outline.box.y + outline.headerGap
-        : outline.box.y - outline.headerHeight - outline.headerGap
+    readonly property bool engaged: outline.selected || frameHover.hovered
+    readonly property real chromeScale: Math.max(0.1, outline.counterScale)
+    readonly property real handleSize: Tokens.s3 * outline.chromeScale
+    readonly property real stripGap: Tokens.s2 * outline.chromeScale
+    readonly property real stripHeight: (Tokens.s6 + Tokens.s1) * outline.chromeScale
+    readonly property real stripWidth: Math.min(outline.width,
+        Math.max(Tokens.s7 * 5 * outline.chromeScale,
+            Math.min(outline.box.width, Tokens.s7 * 8 * outline.chromeScale)))
+    readonly property bool stripBelow: outline.box.y
+        < outline.stripHeight + outline.stripGap
+    readonly property real stripX: Math.max(0, Math.min(
+        outline.box.x, outline.width - outline.stripWidth))
+    readonly property real stripY: outline.stripBelow
+        ? Math.min(outline.height - outline.stripHeight,
+            outline.box.y + outline.box.height + outline.stripGap)
+        : outline.box.y - outline.stripHeight - outline.stripGap
 
     Rectangle {
         id: frame
@@ -75,118 +49,207 @@ Item {
         height: outline.box.height
         radius: outline.radius
         color: "transparent"
-        border.width: outline.selected ? 2 : 1
-        border.color: outline.selected
-            ? Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.95)
-            : hover.hovered ? Qt.rgba(Theme.primary.r, Theme.primary.g, Theme.primary.b, 0.55)
-            : Qt.rgba(DesktopStyle.Theme.ink.r, DesktopStyle.Theme.ink.g,
-                DesktopStyle.Theme.ink.b, 0.55)
-        Behavior on border.color { ColorAnimation { duration: 180 } }
+        border.width: Tokens.border
+        border.color: outline.selected ? Tokens.ink : Tokens.lineStrong
+        opacity: outline.engaged ? 1 : 0
+        Behavior on opacity {
+            NumberAnimation { duration: Tokens.dur(140); easing.type: Easing.OutCubic }
+        }
 
-        HoverHandler { id: hover }
+        HoverHandler { id: frameHover }
 
-        // An exclusive pointer grab here would starve the widget's move grip.
         MouseArea {
             anchors.fill: parent
             acceptedButtons: Qt.LeftButton
-            hoverEnabled: false
             onPressed: mouse => {
                 outline.picked();
                 mouse.accepted = false;
             }
         }
+        TapHandler {
+            acceptedButtons: Qt.LeftButton
+            gesturePolicy: TapHandler.DragThreshold
+            onDoubleTapped: outline.settings()
+        }
+        TapHandler {
+            acceptedButtons: Qt.RightButton
+            gesturePolicy: TapHandler.ReleaseWithinBounds
+            onTapped: outline.settings()
+        }
+    }
+
+    Repeater {
+        model: outline.selected && outline.targetItem
+            && outline.targetItem.locked !== true
+            && typeof outline.targetItem.stageBeginResize === "function"
+                ? ["tl", "tr", "bl", "br"] : []
+        delegate: Rectangle {
+            id: corner
+            required property string modelData
+            readonly property bool leftSide: corner.modelData.indexOf("l") >= 0
+            readonly property bool topSide: corner.modelData.indexOf("t") >= 0
+            x: outline.box.x + (corner.leftSide ? -width / 2
+                : outline.box.width - width / 2)
+            y: outline.box.y + (corner.topSide ? -height / 2
+                : outline.box.height - height / 2)
+            width: outline.handleSize
+            height: outline.handleSize
+            radius: width / 2
+            color: handleArea.containsMouse || (outline.targetItem
+                && outline.targetItem.resizing) ? Tokens.bone : Tokens.paper
+            border.width: Tokens.border
+            border.color: Tokens.ink
+
+            MouseArea {
+                id: handleArea
+                anchors.fill: parent
+                acceptedButtons: Qt.LeftButton
+                hoverEnabled: true
+                preventStealing: true
+                cursorShape: corner.modelData === "tl" || corner.modelData === "br"
+                    ? Qt.SizeFDiagCursor : Qt.SizeBDiagCursor
+                onPressed: mouse => {
+                    outline.picked();
+                    if (!outline.targetItem
+                            || typeof outline.targetItem.stageBeginResize !== "function")
+                        return;
+                    const p = handleArea.mapToItem(outline.targetItem.parent,
+                        mouse.x, mouse.y);
+                    outline.targetItem.stageBeginResize(corner.modelData, p,
+                        mouse.modifiers);
+                }
+                onPositionChanged: mouse => {
+                    if (!outline.targetItem
+                            || typeof outline.targetItem.stageUpdateResize !== "function")
+                        return;
+                    const p = handleArea.mapToItem(outline.targetItem.parent,
+                        mouse.x, mouse.y);
+                    outline.targetItem.stageUpdateResize(p, mouse.modifiers);
+                }
+                onReleased: {
+                    if (outline.targetItem
+                            && typeof outline.targetItem.stageEndResize === "function")
+                        outline.targetItem.stageEndResize();
+                }
+                onCanceled: {
+                    if (outline.targetItem
+                            && typeof outline.targetItem.stageCancelResize === "function")
+                        outline.targetItem.stageCancelResize();
+                }
+                onDoubleClicked: {
+                    if (outline.targetItem
+                            && typeof outline.targetItem.stageResetScale === "function")
+                        outline.targetItem.stageResetScale();
+                }
+            }
+        }
     }
 
     Rectangle {
-        id: nameChip
-        visible: outline.title.length > 0 && outline.availableNameWidth > 0
-        x: Math.round(outline.headerLeft)
-        y: Math.round(outline.headerY)
-        width: Math.min(nameText.implicitWidth + 18, outline.availableNameWidth)
-        height: outline.headerHeight
-        radius: 6
-        color: outline.selected ? DesktopStyle.Theme.bone
-            : Qt.rgba(DesktopStyle.Theme.surface.r, DesktopStyle.Theme.surface.g,
-                DesktopStyle.Theme.surface.b, 0.99)
-        border.width: 1
-        border.color: outline.selected ? DesktopStyle.Theme.bone
-            : Qt.rgba(DesktopStyle.Theme.ink.r, DesktopStyle.Theme.ink.g,
-                DesktopStyle.Theme.ink.b, 0.4)
+        id: actionStrip
+        visible: outline.selected && outline.primary
+        x: outline.stripX
+        y: outline.stripY
+        width: outline.stripWidth
+        height: outline.stripHeight
+        radius: Tokens.radius * outline.chromeScale
+        color: Tokens.paper
+        border.width: Tokens.border
+        border.color: Tokens.line
 
-        Text {
-            id: nameText
+        Row {
+            id: stripRow
             anchors {
                 fill: parent
-                leftMargin: 9
-                rightMargin: 9
+                leftMargin: Tokens.s3 * outline.chromeScale
+                rightMargin: Tokens.s1 * outline.chromeScale
             }
-            verticalAlignment: Text.AlignVCenter
-            text: outline.title
-            color: outline.selected ? DesktopStyle.Theme.inkOnBone : DesktopStyle.Theme.ink
-            elide: Text.ElideRight
-            maximumLineCount: 1
-            font.family: DesktopStyle.Theme.font
-            font.pixelSize: 9
-            font.weight: Font.DemiBold
-            font.letterSpacing: 0.6
+            spacing: Tokens.s2 * outline.chromeScale
+
+            Text {
+                width: Math.max(0, actionStrip.width
+                    - settingsButton.width - removeButton.width
+                    - stripRow.spacing * 2
+                    - (Tokens.s3 + Tokens.s1) * outline.chromeScale)
+                height: actionStrip.height
+                verticalAlignment: Text.AlignVCenter
+                text: outline.title
+                color: Tokens.ink
+                elide: Text.ElideRight
+                maximumLineCount: 1
+                font.family: Tokens.ui
+                font.pixelSize: Tokens.fSmall * outline.chromeScale
+                font.weight: Font.DemiBold
+            }
+
+            StripButton {
+                id: settingsButton
+                label: qsTr("Settings")
+                onAct: outline.settings()
+            }
+            StripButton {
+                id: removeButton
+                label: qsTr("Remove")
+                destructive: true
+                onAct: outline.remove()
+            }
         }
     }
 
-    Row {
-        id: buttons
-        spacing: outline.headerGap
-        x: Math.round(outline.headerRight - width)
-        y: Math.round(outline.headerY)
-        FrameBtn { icon: "tune"; onAct: outline.settings() }
-        FrameBtn { icon: "delete"; danger: true; onAct: outline.remove() }
+    Rectangle {
+        visible: outline.targetItem && outline.targetItem.resizing === true
+        x: Math.max(0, Math.min(outline.width - width,
+            outline.box.x + outline.box.width - width))
+        y: outline.stripBelow
+            ? Math.max(0, outline.box.y - height - outline.stripGap)
+            : Math.min(outline.height - height,
+                outline.box.y + outline.box.height + outline.stripGap)
+        width: sizeText.implicitWidth + Tokens.s3 * 2 * outline.chromeScale
+        height: Tokens.s6 * outline.chromeScale
+        radius: Tokens.radius * outline.chromeScale
+        color: Tokens.bone
+
+        Text {
+            id: sizeText
+            anchors.centerIn: parent
+            text: Math.round((outline.targetItem
+                && outline.targetItem.effectiveScale !== undefined
+                    ? outline.targetItem.effectiveScale : 1) * 100) + "%"
+            color: Tokens.inkOnBone
+            font.family: Tokens.mono
+            font.pixelSize: Tokens.fMicro * outline.chromeScale
+            font.weight: Font.DemiBold
+        }
     }
 
-    component FrameBtn: Rectangle {
-        id: fb
-        property string icon: ""
-        property bool danger: false
+    component StripButton: Rectangle {
+        id: button
+        property string label: ""
+        property bool destructive: false
         signal act()
 
-        width: outline.headerHeight
-        height: outline.headerHeight
-        radius: 6
-        color: fbMa.containsMouse
-            ? (fb.danger ? Qt.rgba(Theme.error.r, Theme.error.g, Theme.error.b, 0.9)
-                : DesktopStyle.Theme.bone)
-            : Qt.rgba(DesktopStyle.Theme.surface.r, DesktopStyle.Theme.surface.g,
-                DesktopStyle.Theme.surface.b, 0.99)
-        border.width: 1
-        border.color: fbMa.containsMouse && !fb.danger
-            ? DesktopStyle.Theme.bone
-            : Qt.rgba(DesktopStyle.Theme.ink.r, DesktopStyle.Theme.ink.g,
-                DesktopStyle.Theme.ink.b, 0.4)
-        scale: fbMa.pressed ? 0.94 : 1
-        Behavior on color { ColorAnimation { duration: 180 } }
-        Behavior on border.color { ColorAnimation { duration: 180 } }
-        Behavior on scale {
-            NumberAnimation {
-                duration: 180
-                easing.type: Easing.OutBack
-                easing.overshoot: 2.2
-            }
-        }
+        width: buttonText.implicitWidth + Tokens.s3 * 2 * outline.chromeScale
+        height: actionStrip.height
+        color: buttonArea.pressed ? Tokens.tint16
+            : buttonArea.containsMouse ? Tokens.tint10 : "transparent"
 
-        MaterialIcon {
+        Text {
+            id: buttonText
             anchors.centerIn: parent
-            text: fb.icon
-            font.pixelSize: 16
-            color: fb.danger && fbMa.containsMouse
-                ? Theme.onError
-                : fbMa.containsMouse ? DesktopStyle.Theme.inkOnBone
-                : DesktopStyle.Theme.ink
+            text: button.label
+            color: button.destructive && buttonArea.containsMouse
+                ? Tokens.alert : Tokens.inkDim
+            font.family: Tokens.ui
+            font.pixelSize: Tokens.fMicro * outline.chromeScale
+            font.weight: Font.DemiBold
         }
 
         MouseArea {
-            id: fbMa
+            id: buttonArea
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: fb.act()
+            onClicked: button.act()
         }
     }
 }

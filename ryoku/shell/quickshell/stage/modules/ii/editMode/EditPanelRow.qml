@@ -39,14 +39,14 @@ MouseArea {
     property bool first: true
     property bool last: true
     // The row is the thing that is on: filled in the primary role.
+    // Selection is the Ryoku inverted plate.
     property bool selected: false
-    // A row whose action takes something away.
     property bool destructive: false
     property bool rowEnabled: true
-    property real rowPadding: Appearance.sizes.space2
-    // A second line that has to be READ rather than glanced at - a choice's
-    // description - wraps and grows the row instead of eliding.
-    property bool subtitleWrap: false
+    property real rowPadding: Appearance.sizes.space4
+    // Descriptions wrap by default. Callers opt out only for rows whose
+    // secondary text is deliberately a one-line status.
+    property bool subtitleWrap: true
     // A drag on this row carries something; the list it sits in must let go of
     // the gesture the moment it wins.
     property bool draggable: false
@@ -72,7 +72,8 @@ MouseArea {
     signal stepUp()
     signal stepDown()
 
-    implicitHeight: Math.max(48, rowLayout.implicitHeight + Appearance.sizes.space3 * 2)
+    implicitHeight: Math.max(Appearance.sizes.minimumTouchTarget,
+        rowLayout.implicitHeight + Appearance.sizes.space3 * 2)
     hoverEnabled: true
     enabled: root.rowEnabled
     cursorShape: Qt.PointingHandCursor
@@ -103,8 +104,8 @@ MouseArea {
     }
 
     readonly property color colOn: root.selected
-        ? Appearance.m3colors.m3surface
-        : root.destructive ? Appearance.m3colors.m3error : Appearance.colors.colOnSurface
+        ? Appearance.colors.colOnSecondary
+        : root.destructive ? Appearance.colors.colError : Appearance.colors.colOnSurface
 
     // ── The gesture ──────────────────────────────────────────────────────────
     property real _pressX: 0
@@ -171,11 +172,11 @@ MouseArea {
         radius: Appearance.rounding.small
         antialiasing: true
         color: root.selected
-            ? Appearance.m3colors.m3onSurface
+            ? Appearance.colors.colSecondary
             : root.pressed
-                ? Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.09)
+                ? Appearance.colors.colLayer1Active
                 : root.containsMouse || root.activeFocus
-                    ? Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.05)
+                    ? Appearance.colors.colLayer1Hover
                     : "transparent"
         Behavior on color {
             enabled: !Appearance.reducedMotion
@@ -187,13 +188,13 @@ MouseArea {
     // pills. The selected plate hides the rule naturally.
     Rectangle {
         anchors.left: parent.left
-        anchors.leftMargin: Appearance.sizes.space2
+        anchors.leftMargin: Appearance.sizes.space4
         anchors.right: parent.right
-        anchors.rightMargin: Appearance.sizes.space2
+        anchors.rightMargin: Appearance.sizes.space4
         anchors.top: parent.top
         height: 1
         visible: !root.selected
-        color: Appearance.withAlpha(Appearance.m3colors.m3outline, 0.58)
+        color: Appearance.colors.colOutlineVariant
     }
 
     RowLayout {
@@ -214,9 +215,9 @@ MouseArea {
             implicitHeight: 30
             radius: Appearance.rounding.small
             color: root.selected
-                ? Appearance.withAlpha(Appearance.m3colors.m3surface, 0.12)
+                ? Appearance.withAlpha(Appearance.colors.colOnSecondary, 0.12)
                 : root.trailingKind === "switch" && root.switchChecked
-                    ? Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.09)
+                    ? Appearance.colors.colLayer1Active
                     : "transparent"
 
             Behavior on color {
@@ -272,8 +273,8 @@ MouseArea {
                 Layout.minimumWidth: 0
                 text: root.title
                 font.family: Appearance.font.family.main
-                font.pixelSize: Appearance.font.pixelSize.small
-                font.weight: Font.Bold
+                font.pixelSize: Appearance.font.pixelSize.large
+                font.weight: Font.Medium
                 color: root.colOn
                 elide: Text.ElideRight
             }
@@ -284,13 +285,13 @@ MouseArea {
                 visible: root.subtitle !== ""
                 text: root.subtitle
                 font.family: Appearance.font.family.main
-                font.pixelSize: Appearance.font.pixelSize.smaller
-                font.weight: Font.Bold
-                color: root.colOn
-                opacity: 0.7
-                elide: Text.ElideRight
+                font.pixelSize: Appearance.font.pixelSize.small
+                font.weight: Font.Normal
+                color: root.selected ? Appearance.colors.colOnSecondary : Appearance.colors.colSubtext
+                opacity: 1
+                elide: root.subtitleWrap ? Text.ElideNone : Text.ElideRight
                 wrapMode: root.subtitleWrap ? Text.Wrap : Text.NoWrap
-                maximumLineCount: root.subtitleWrap ? 2 : 1
+                maximumLineCount: root.subtitleWrap ? 2147483647 : 1
             }
         }
 
@@ -315,8 +316,7 @@ MouseArea {
                 : root.trailingKind === "add" ? "add_circle" : "chevron_right"
             iconSize: root.trailingKind === "chevron" ? 22 : 20
             fill: root.trailingKind === "check" ? 1 : 0
-            color: (root.trailingKind === "check" && !root.selected)
-                ? Appearance.colors.colPrimary : root.colOn
+            color: root.colOn
             opacity: root.trailingKind === "chevron" ? 0.7 : 1
         }
 
@@ -366,12 +366,12 @@ MouseArea {
         height: Appearance.sizes.controlHeight
         radius: Appearance.rounding.small
         color: stepMouse.containsPress
-            ? Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.16)
+            ? Appearance.colors.colLayer1Active
             : stepMouse.containsMouse
-                ? Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.09)
+                ? Appearance.colors.colLayer1Hover
                 : "transparent"
         border.width: 1
-        border.color: Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.18)
+        border.color: Appearance.colors.colOutlineVariant
 
         Behavior on color {
             enabled: !Appearance.reducedMotion

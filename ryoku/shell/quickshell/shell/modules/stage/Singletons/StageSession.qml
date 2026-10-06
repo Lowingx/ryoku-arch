@@ -23,6 +23,10 @@ Singleton {
     // "style", "visualizer", "depth"): a hand-off can open straight on the
     // editor it means, and asking again while open switches catalogue.
     property string section: "widgets"
+    // The widget whose settings occupy the drawer. `inspectingBack` remembers
+    // the catalogue that handed off, so the hidden page returns to its caller.
+    property string inspecting: ""
+    property string inspectingBack: "widgets"
 
     readonly property bool active: root.mode !== ""
     readonly property bool widgets: root.mode === "widgets"
@@ -35,6 +39,8 @@ Singleton {
         root.selection = [];
         root.panel = "";
         root.section = section ? "" + section : "widgets";
+        root.inspecting = "";
+        root.inspectingBack = "widgets";
         root.monitor = "" + (monitor || "");
         root.mode = "widgets";
     }
@@ -47,6 +53,8 @@ Singleton {
         root.mode = "";
         root.selection = [];
         root.panel = "";
+        root.inspecting = "";
+        root.inspectingBack = "widgets";
         root.left();
     }
 
@@ -56,6 +64,8 @@ Singleton {
     function select(id) {
         const value = "" + id;
         root.selection = value === "" ? [] : [value];
+        if (root.inspecting !== "" && value !== "")
+            root.inspecting = value;
     }
     function selectMany(ids, primary) {
         const next = [];
@@ -71,6 +81,8 @@ Singleton {
             next.push(main);
         }
         root.selection = next;
+        if (root.inspecting !== "" && next.length > 0)
+            root.inspecting = next[next.length - 1];
     }
     function deselect() {
         root.selection = [];
@@ -78,6 +90,8 @@ Singleton {
     function remove(id) {
         const value = "" + id;
         root.selection = root.selection.filter(member => member !== value);
+        if (root.inspecting === value)
+            root.inspecting = "";
     }
     function toggleSelect(id) {
         const value = "" + id;
@@ -88,6 +102,8 @@ Singleton {
         else
             next.push(value);
         root.selection = next;
+        if (root.inspecting !== "" && at < 0)
+            root.inspecting = value;
     }
 
     function openPanel(kind) { root.panel = "" + kind; }

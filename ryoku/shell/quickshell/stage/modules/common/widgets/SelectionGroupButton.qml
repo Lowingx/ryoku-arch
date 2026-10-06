@@ -17,8 +17,8 @@ GroupButton {
     property bool leftmost: false
     property bool rightmost: false
 
-    horizontalPadding: 10
-    verticalPadding: 5
+    horizontalPadding: Appearance.sizes.space3
+    verticalPadding: Appearance.sizes.space1
     bounce: false
     clickedWidth: baseWidth
     buttonRadius: Appearance.rounding.small
@@ -28,27 +28,26 @@ GroupButton {
     Layout.fillWidth: false
     Layout.fillHeight: false
     implicitHeight: Appearance.sizes.controlHeight
-    scale: root.isPressed ? 0.94 : 1
+    scale: root.isPressed ? 0.96 : 1
 
     colBackground: "transparent"
-    colBackgroundHover: Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.09)
-    colBackgroundActive: Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.16)
-    colBackgroundToggled: Appearance.m3colors.m3onSurface
-    colBackgroundToggledHover: Appearance.m3colors.m3onSurface
-    colBackgroundToggledActive: Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.9)
+    colBackgroundHover: Appearance.colors.colLayer1Hover
+    colBackgroundActive: Appearance.colors.colLayer1Active
+    colBackgroundToggled: Appearance.colors.colSecondary
+    colBackgroundToggledHover: Appearance.colors.colSecondaryHover
+    colBackgroundToggledActive: Appearance.colors.colSecondaryActive
 
     readonly property color contentColor: root.toggled
-        ? Appearance.m3colors.m3surface
-        : Appearance.withAlpha(Appearance.m3colors.m3onSurface, root.isHovered ? 1 : 0.66)
+        ? Appearance.colors.colOnSecondary
+        : (root.isHovered ? Appearance.colors.colOnSurface : Appearance.colors.colOnSurfaceVariant)
 
     background: Rectangle {
         radius: Appearance.rounding.small
         color: root.color
         border.width: root.activeFocus ? 2 : 1
-        border.color: root.toggled ? Appearance.m3colors.m3onSurface
-            : root.activeFocus ? Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.7)
-            : root.isHovered ? Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.24)
-            : Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.18)
+        border.color: root.toggled ? Appearance.colors.colSecondary
+            : root.activeFocus ? Appearance.colors.colOnSurface
+            : root.isHovered ? Appearance.colors.colOutline : Appearance.colors.colOutlineVariant
         Behavior on color {
             ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
         }
@@ -119,9 +118,9 @@ GroupButton {
             color: root.contentColor
             text: root.buttonText || ""
             elide: Text.ElideRight
-            font.family: Appearance.font.family.expressive
-            font.pixelSize: Appearance.font.pixelSize.small
-            font.weight: root.toggled ? Font.DemiBold : Font.Medium
+            font.family: Appearance.font.family.main
+            font.pixelSize: Appearance.font.pixelSize.smaller
+            font.weight: Font.Medium
         }
     }
 }

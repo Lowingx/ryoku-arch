@@ -530,16 +530,18 @@ and per-monitor visibility from `ShellState`.
   glance (glyph, temperature, city) or the full card (condition, humidity / wind
   / feels, three days); notes is a scratch pad whose text lives in
   `~/.local/state/ryoku/desktop-notes.txt`, not in a config key, and which holds
-  the keyboard only while it has focus. Each sits
-  on auto (the wallpaper's calmest, most tonally even region, re-followed on
-  every wallpaper change), a compass zone, or free pixels; drag to move (grid
-  snap, which turns auto into free), scroll to resize, right click for the
-  widget's own menu. A drag draws a faint grid and centre guides under the
-  widgets, and the release flashes the edges and any centre line it snapped to.
+  keyboard only while it has focus. Each sits on auto (the wallpaper's calmest,
+  most tonally even region, re-followed on every wallpaper change), a compass
+  zone, or free pixels. In the Stage Editor, a widget's frame appears on hover
+  or selection with four corner handles, a size badge, and Settings and Remove.
+  Moves snap to the grid, the card centre, and other widgets' edges and centres;
+  Alt keeps a move free. Resize previews stay local, snap to 5% unless Shift is
+  held, and commit once on release. Double-clicking a handle resets to 100%.
+  Double-clicking the widget or choosing Settings opens its named drawer page
+  with quick size, lock, depth, and remove controls above its full inspector.
   The desktop's own right-click menu has Wallpaper and Search in its quick row.
   Its single accent row, Edit desktop, opens the Stage Editor on that monitor;
-  Settings and Reload shell remain below it. Each widget is configured in place
-  while arranging, or through its own right-click menu.
+  Settings and Reload shell remain below it.
 - **the desktop spectrum** the audio visualiser, described in full below.
 
 ### Summoned
@@ -745,33 +747,36 @@ maps that bound onto the box. The quad then touches all four sides at every lean
 crosses none of them, which `place.test.mjs` pins as an invariant, and the placement
 guides stay honest without the gestures having to invert a projection.
 
-The box is placed by hand rather than by numbers. `Super+Alt+M` or
+Each visualizer instance is placed by hand rather than by numbers.
+`Super+Alt+M` or
 `qs -c shell ipc call desktop editSection visualizer` opens the Stage Editor's
-Visualizer catalogue with the look selected. The box has a corner grip and a
-dot on a stem above its top edge. Dragging anywhere moves it, the grip or
-Ctrl+wheel sizes it, and the dot turns it through a full circle. Each step
-writes to `visualizer.json` as it happens and joins the editor's undo stack.
+Visualizer catalogue with an instance selected. Every instance has its own
+frame and grip (`visualizer:<index>`); selecting one retargets the catalogue.
+Dragging moves it, a corner sizes it, and the top handle turns it. The preview
+stays local during a resize, then one write and one undo step land on release.
+Remove deletes only that instance. The visualizer turns off when the last
+instance is removed, and undo restores a removed instance at its index with all
+of its settings.
 
-The catalogue has Look, Place, Colour, Playback, Shape, and Field tabs. Place
-offers width, height, across, down, and turn, with Centre, Square, Full width,
-Top, Middle, and Bottom actions. A Ryoku visualizer is single-instance, so the
-catalogue does not offer Duplicate. Done leaves the editor; Escape first closes
-the open panel and clears the selection.
+The catalogue leads with a gallery of every look, followed by Look, Place,
+Colour, Motion, Shape, and, where useful, Field chips. Place offers width,
+height, across, down, and turn, with Centre, Square, Full width, Top, Middle,
+and Bottom actions. Done leaves the editor; Escape first closes the open panel
+and clears the selection.
 
-The Stage chrome uses ryogami's visual language: 6 px corners, 1 px outlines,
-and inverted selected plates. A look is tuned where it is visible, on the live
-wallpaper, rather than in a detached placement surface.
+The Stage island maps its paper, ink, spacing, and Space Grotesk, Fraunces, and
+mono type through `modules/common/Appearance.qml` to Ryoku.Ui tokens. A look is
+tuned where it is visible, on the live wallpaper, rather than in a detached
+placement surface.
 
-The sheet is built from the desktop menu's own rows (`MenuRow`, `MenuSlider`,
-`MenuChip`, `MenuInkPicker`) and the Hub's `Gallery` with the Hub's painter
-(`VizStyles`), so what a look looks like is drawn from one catalogue. A knob
-that means nothing for the look in hand hides rather than dims, since the sheet
-slices its tabs by section and a dead tab reads worse than a missing one;
-`Config` owns which those are (`peaksApply`, `mirrorApplies`) and the renderer
-reads the same rule. Every edit settles through the same coalescer as a
-placement gesture: the file is watched, so a write returns as a reload, and the
-look changes the instant the adapter does because the render reads the adapter,
-not the file.
+The catalogue uses the desktop menu's rows (`MenuRow`, `MenuSlider`,
+`MenuChip`, `MenuInkPicker`) and the shared `Gallery` painter (`VizStyles`), so
+what a look looks like is drawn from one catalogue. A knob that means nothing
+for the look in hand hides rather than dims; `Config` owns those rules
+(`peaksApply`, `mirrorApplies`) and the renderer reads the same answer. Every
+committed edit settles through the same coalescer: the file is watched, so a
+write returns as a reload, and the render reads the adapter rather than the
+file.
 
 Every gesture applies the pointer's delta from where it was pressed rather than its
 absolute position, so nothing jumps out from under the cursor, and the box eases
@@ -809,11 +814,10 @@ while composing. Aiming a look that is off turns it on first, since aiming
 nothing places nothing; outside the editor the overlay mode still raises the
 spectrum's own surface over windows.
 
-Whether the spectrum runs at all is the persisted `enabled` key, so the keybind, the
-Hub's switch and the next restart all read one answer; only the layer, desktop or
-overlay, is per-monitor memory. It was in-memory state before, which meant a restart
-started at off with `enabled` still true, and the Hub's switch could not turn a
-running shell's spectrum on.
+Whether the spectrum runs at all is the persisted `enabled` key, so the
+keybind, the catalogue, and the next restart all read one answer; only the
+layer, desktop, or overlay is per-monitor memory. It was in-memory state before,
+which meant a restart started at off with `enabled` still true.
 
 The `curtain` is the one look that reads the rest of the shell: its surface
 honours exclusive zones instead of ignoring them, so it starts where the bar ends

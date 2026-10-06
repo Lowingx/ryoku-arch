@@ -147,7 +147,7 @@ Item {
         Config.setFor(menu.monitor, menu.scope + "Scale", 1);
     }
     function openSettings() {
-        Spawn.run(["ryoku-shell", "hub", "open", "desktop-scene-widgets"]);
+        Spawn.run(["ryoku-shell", "hub", "open"]);
         menu.close();
     }
     function refreshShell() {

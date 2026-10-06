@@ -3,6 +3,7 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io
 import Quickshell.Widgets
+import Ryoku.Ui.Singletons
 import "Singletons"
 import "clock"
 import "calendar"
@@ -86,8 +87,8 @@ Scope {
         && (root.stageComposing
             || (root.stageOn && !(root.stageState && root.stageState.visualizerOverlay)))
     readonly property string monitorName: root.screen ? root.screen.name : ""
-    // Edit widgets on this monitor frees every widget for dragging and lifts
-    // this desktop above open windows; Done restores the per-widget locks.
+    // Edit widgets lifts this desktop above open windows. Per-widget locks stay
+    // authoritative and can be toggled from the canvas.
     readonly property bool stageComposing: StageCfg.StageSession.onMonitor(root.monitorName)
     // The editor grid the bar drives; slots snap to it while composing.
     readonly property real editGridSize: StageCfg.Config.editGridSize
@@ -100,6 +101,15 @@ Scope {
     // carries the matrix.
     readonly property bool stageEditing: Stage.GlobalStates.editModeMonitor === root.monitorName
         && (Stage.GlobalStates.editMode || Stage.GlobalStates.editProgress > 0)
+    readonly property bool stageFramingHere: root.stageEditing
+        && StageServices.WallpaperLayout.liveScreen === root.monitorName
+    property real stageFramingDim: root.stageFramingHere ? 1 : 0
+    Behavior on stageFramingDim {
+        NumberAnimation {
+            duration: Tokens.dur(180)
+            easing.type: Easing.OutCubic
+        }
+    }
     readonly property matrix4x4 stageMatrix: root.stageEditing
         ? StageEdit.EditModeInsets.editMatrixFor(root.monitorName,
             win.width, win.height,
@@ -223,10 +233,14 @@ Scope {
         return null;
     }
     function slotFor(w) {
-        // The visualiser has no WidgetSlot; the placement grip's box item is
-        // the look's footprint, and the frame and inspector dock beside that.
-        if (w === "visualizer")
-            return VizCfg.Config.enabled ? vizGrip.boxItem : null;
+        // Every visualizer instance has its own grip and footprint.
+        const visualizerId = "" + w;
+        if (visualizerId === "visualizer" || visualizerId.indexOf("visualizer:") === 0) {
+            const index = visualizerId === "visualizer"
+                ? VizCfg.Config.active : parseInt(visualizerId.slice(11));
+            const grip = !isNaN(index) ? vizGripRepeater.itemAt(index) : null;
+            return VizCfg.Config.enabled && grip ? grip.boxItem : null;
+        }
         if (String(w).indexOf("plugin:") === 0) {
             const pluginId = String(w).slice(7);
             for (var p = 0; p < pluginRepeater.count; p++) {
@@ -251,15 +265,19 @@ Scope {
     property var pendingDesktopMenu: null
     property var pendingPluginMenu: null
     property var pendingInspector: null
-    // The bare-wallpaper right-click opens the system desktop menu; a widget's
-    // right-click opens its own menu. Two loaders keep the desktop menu the
-    // shared iRiS-structured surface (DesktopContextMenu), never the widget one.
+    // The bare-wallpaper right-click opens the system desktop menu. While this
+    // monitor is being composed, a widget goes straight to the drawer instead
+    // of raising a second editing surface over the canvas.
     function openWidgetMenu(widget, x, y) {
         if (widget === "desktop") {
             root.openDesktopMenu(x, y);
             return;
         }
-        Config.selectMonitor(root.monitorName, root.stageComposing);
+        if (root.stageComposing) {
+            root.stageOpenSettings(widget);
+            return;
+        }
+        Config.selectMonitor(root.monitorName, false);
         if (widgetMenuLoader.item) {
             widgetMenuLoader.item.openFor(widget, x, y, root.wallpaperPath);
             return;
@@ -267,14 +285,16 @@ Scope {
         root.pendingWidgetMenu = [widget, x, y];
         widgetMenuLoader.active = true;
     }
-    // Open the widget inspector (the Customize sheet) docked beside `widget`.
-    // Built like the menus: the first call builds the surface and the pending
-    // request lands once it is ready. The slot is handed over live so the sheet
-    // re-docks as the widget resizes under the edits.
+    // Outside Edit Mode Customize keeps its lightweight floating sheet. Inside
+    // the mode the drawer owns this content and retargets in place.
     function openInspector(widget) {
         if (widget === "desktop")
             return;
-        Config.selectMonitor(root.monitorName, root.stageComposing);
+        if (root.stageComposing) {
+            root.stageOpenSettings(widget);
+            return;
+        }
+        Config.selectMonitor(root.monitorName, false);
         if (inspectorLoader.item) {
             inspectorLoader.item.openFor(widget, root.slotFor(widget));
             return;
@@ -328,12 +348,34 @@ Scope {
             root.openInspector(widget);
         }
     }
-    // A widget frame's Settings button: open that built-in's own menu at the
-    // frame's corner (its design, lock, size, opacity, colour, snap).
+    // A widget frame's Settings action hands the selection to the drawer. The
+    // hidden widget page remembers which catalogue called it; visualizer
+    // instances keep their own gallery and only retarget its active instance.
     function stageOpenSettings(id) {
-        Config.selectMonitor(root.monitorName, root.stageComposing);
-        const s = root.slotFor(id);
-        root.openWidgetMenu(id, s ? s.x : 120, s ? s.y : 120);
+        const value = String(id || "");
+        if (value === "")
+            return;
+        Config.selectMonitor(root.monitorName, true);
+        StageCfg.StageSession.select(value);
+        if (value === "visualizer" || value.indexOf("visualizer:") === 0) {
+            if (value.indexOf("visualizer:") === 0) {
+                const index = parseInt(value.slice(11));
+                if (!isNaN(index))
+                    VizCfg.Config.setActive(index);
+            }
+            StageCfg.StageSession.inspecting = "";
+            StageCfg.StageSession.openSection("visualizer");
+            return;
+        }
+        const current = Stage.GlobalStates.editDrawerSection;
+        if (current !== "widget")
+            StageCfg.StageSession.inspectingBack = current || "widgets";
+        StageCfg.StageSession.inspecting = value;
+        StageCfg.StageSession.openSection("widget");
+        if (widgetMenuLoader.item)
+            widgetMenuLoader.item.close();
+        if (inspectorLoader.item)
+            inspectorLoader.item.close();
     }
     // The provider while the chrome frames this screen, else null: the
     // walk-back of a desktop edit is the provider's to record, since it owns
@@ -347,14 +389,15 @@ Scope {
     function stageRemoveWidget(id) {
         const p = root.stageProvider();
         const before = p ? p.snapshot(id) : null;
-        // The provider owns the per-kind disable: widgets.json for a built-in
-        // or a hosted face, the place tool for a plugin tile, the visualizer's
-        // own store for the look. Writing Config here would land a key no
-        // store reads for the visualizer.
-        if (p)
+        if (p) {
             p.removeWidget(id);
-        else
+        } else if (String(id).indexOf("visualizer:") === 0) {
+            const index = parseInt(String(id).slice(11));
+            if (!isNaN(index))
+                VizCfg.Config.removeVisualizer(index);
+        } else {
             Config.setFor(root.monitorName, id + "Enabled", false);
+        }
         StageCfg.StageSession.remove(id);
         if (before)
             Stage.GlobalStates.editHistoryPush({
@@ -366,7 +409,7 @@ Scope {
     // records the placement a drag or resize started from
     // (WidgetSlot.gestureBefore) and the desktop turns the commit into one
     // undo entry, so Ctrl+Z in the chrome steps a widget back exactly like the
-    // reference's canvas steps its own. The four placement keys are the whole
+    // reference's canvas steps its own. Placement and lock state are the whole
     // document for a built-in or a hosted face; plugin tiles go through the
     // provider's snapshot/restore, since their write is the place tool's.
     function stageRecordGesture(s) {
@@ -377,7 +420,8 @@ Scope {
         s.gestureBefore = null;
         const after = {
             Anchor: root.widgetValue(w, "Anchor"), X: root.widgetValue(w, "X"),
-            Y: root.widgetValue(w, "Y"), Scale: root.widgetValue(w, "Scale")
+            Y: root.widgetValue(w, "Y"), Scale: root.widgetValue(w, "Scale"),
+            Locked: root.widgetValue(w, "Locked")
         };
         if (JSON.stringify(before) === JSON.stringify(after))
             return;
@@ -392,22 +436,29 @@ Scope {
         patch[w + "X"] = p.X;
         patch[w + "Y"] = p.Y;
         patch[w + "Scale"] = p.Scale;
+        if (p.Locked !== undefined)
+            patch[w + "Locked"] = p.Locked;
         Config.setManyFor(root.monitorName, patch);
     }
-    // The visualiser's walk-back is the provider's vocabulary too: the press
-    // snapshots the box, the eased settle compares it, and a change lands as
-    // one undo entry (the box is the whole placement document).
-    property var vizGestureBefore: null
-    function stageVizGestureStart() {
+    // Each grip snapshots its own complete instance. The map keeps wheel and
+    // easing settle timers independent when two instances are touched quickly.
+    property var vizGestureBefore: ({})
+    function stageVizGestureStart(index) {
         const p = root.stageProvider();
-        root.vizGestureBefore = p ? p.snapshot("visualizer") : null;
+        const id = "visualizer:" + index;
+        const next = Object.assign({}, root.vizGestureBefore);
+        next[id] = p ? p.snapshot(id) : null;
+        root.vizGestureBefore = next;
     }
-    function stageVizGestureFinish() {
+    function stageVizGestureFinish(index) {
         const p = root.stageProvider();
-        const before = root.vizGestureBefore;
-        root.vizGestureBefore = null;
+        const id = "visualizer:" + index;
+        const before = root.vizGestureBefore[id];
+        const next = Object.assign({}, root.vizGestureBefore);
+        delete next[id];
+        root.vizGestureBefore = next;
         if (p)
-            p.recordVisualizer(before);
+            p.recordVisualizer(id, before);
     }
     // A plugin gesture commits through the place tool, which is asynchronous:
     // the Registry still holds the old placement the moment the gesture
@@ -549,15 +600,6 @@ Scope {
             function onPluginsChanged() { win.syncDesktopIds(); }
         }
 
-        // the built-in slot currently being dragged (a single pointer, so at most
-        // one), for the drag guides: their grid step and centre-snap lighting.
-        readonly property var dragSlot: (clockLoader.item && clockLoader.item.dragging) ? clockLoader.item
-            : (calendarLoader.item && calendarLoader.item.dragging) ? calendarLoader.item
-            : (musicLoader.item && musicLoader.item.dragging) ? musicLoader.item
-            : (aioLoader.item && aioLoader.item.dragging) ? aioLoader.item
-            : (statsLoader.item && statsLoader.item.dragging) ? statsLoader.item
-            : (weatherLoader.item && weatherLoader.item.dragging) ? weatherLoader.item
-            : (notesLoader.item && notesLoader.item.dragging) ? notesLoader.item : null
 
         // on release, flash the slot's four edges plus the centre line it snapped
         // to (centre within half a grid step, the window the guides light up).
@@ -633,21 +675,68 @@ Scope {
             z: StageCfg.Config.isFront("visualizer") ? 5 : 1.5
             anchors.fill: parent
             visible: root.hostsVisualizer
+            opacity: 1 - 0.75 * root.stageFramingDim
             Viz.InlineVisualizer { anchors.fill: parent }
         }
 
-        // The Stage Editor's placement grip for the look: the box outline, its
-        // corner and its turn dot, above every widget while the mode frames
-        // this monitor. Its gestures write the visualizer store directly; the
-        // press and the eased settle become one undo entry through the
-        // provider's snapshot/restore, like a plugin tile's do.
-        Viz.VisualizerGrip {
-            id: vizGrip
-            z: 5.6
-            composing: root.stageComposing
-            onGestureStarted: root.stageVizGestureStart()
-            onGestureFinished: root.stageVizGestureFinish()
-            onMenuRequested: (x, y) => root.openWidgetMenu("visualizer", x, y)
+        // One grip and one frame per rendered instance. Selecting either makes
+        // that instance the catalogue target before any gesture writes.
+        Repeater {
+            id: vizGripRepeater
+            model: VizCfg.Config.enabled ? VizCfg.Config.count : 0
+            delegate: Viz.VisualizerGrip {
+                required property int index
+                z: 5.6
+                instanceIndex: index
+                composing: root.stageComposing
+                    && (Stage.GlobalStates.editDrawerSection === "widgets"
+                        || Stage.GlobalStates.editDrawerSection === "visualizer")
+                enabled: !root.stageFramingHere
+                opacity: 1 - 0.75 * root.stageFramingDim
+                onActivated: {
+                    VizCfg.Config.setActive(index);
+                    StageCfg.StageSession.select("visualizer:" + index);
+                }
+                onGestureStarted: root.stageVizGestureStart(index)
+                onGestureFinished: root.stageVizGestureFinish(index)
+                onMenuRequested: root.stageOpenSettings("visualizer:" + index)
+            }
+        }
+
+        Repeater {
+            model: VizCfg.Config.enabled ? VizCfg.Config.count : 0
+            delegate: StageOutline {
+                required property int index
+                readonly property string instanceId: "visualizer:" + index
+                // Both repeaters follow the same model, in no guaranteed order:
+                // re-resolve when the grips' count changes, not once at creation.
+                readonly property var gripItem: vizGripRepeater.count > index
+                    ? vizGripRepeater.itemAt(index) : null
+                readonly property var slotItem: gripItem ? gripItem.boxItem : null
+                z: 60
+                opacity: 1 - 0.75 * root.stageFramingDim
+                visible: root.stageComposing && slotItem !== null
+                    && (Stage.GlobalStates.editDrawerSection === "widgets"
+                        || Stage.GlobalStates.editDrawerSection === "visualizer")
+                box: slotItem ? Qt.rect(slotItem.x, slotItem.y,
+                    slotItem.width, slotItem.height) : Qt.rect(0, 0, 0, 0)
+                title: I18n.tr("Visualizer") + " " + (index + 1)
+                selected: StageCfg.StageSession.contains(instanceId)
+                primary: StageCfg.StageSession.selected === instanceId
+                targetItem: gripItem
+                inputBlocked: root.stageFramingHere
+                counterScale: 1 / Math.max(0.05,
+                    StageEdit.EditModeInsets.cardRectFor(root.monitorName,
+                        win.width, win.height,
+                        Stage.GlobalStates.editProgress,
+                        Stage.GlobalStates.editDrawerProgress).width / Math.max(1, win.width))
+                onPicked: {
+                    VizCfg.Config.setActive(index);
+                    stageSelection.pick(instanceId);
+                }
+                onSettings: root.stageOpenSettings(instanceId)
+                onRemove: root.stageRemoveWidget(instanceId)
+            }
         }
 
         // Mirror of the same image for glass widgets: Qt cannot sample another
@@ -664,12 +753,12 @@ Scope {
             // An invisible Image still decodes while its source is set: hold the
             // url back until a glass widget actually samples it, or this mirror
             // costs a full-screen decode on every box that has a wallpaper.
-            source: win.glassWanted ? root.wallpaperUrl : ""
+            source: desktopContent.glassWanted ? root.wallpaperUrl : ""
             cache: false
             asynchronous: true
             sourceSize.width: Math.ceil(width * backdrop.screenDpr)
             sourceSize.height: Math.ceil(height * backdrop.screenDpr)
-            visible: win.glassWanted
+            visible: desktopContent.glassWanted
             fillMode: {
                 switch (root.wallpaperFit) {
                 case "Contain": return Image.PreserveAspectFit;
@@ -687,13 +776,21 @@ Scope {
             anchors.fill: parent
             active: root.stageComposing
             keyboardEnabled: win.stageKeyboardWanted
+            framingDim: root.stageFramingDim
+            inputBlocked: root.stageFramingHere
             monitor: root.monitorName
             gridSize: root.editGridSize
-            widgetIds: root.addItems.filter(row => row.enabled).map(row => row.id)
+            snapEnabled: root.editGridSnap
+            widgetIds: root.addItems.filter(row => row.enabled
+                && row.id !== "visualizer").map(row => row.id).concat(
+                    VizCfg.Config.enabled
+                        ? Array.from({ length: VizCfg.Config.count },
+                            (_, i) => "visualizer:" + i) : [])
             itemFor: id => root.slotFor(id)
             provider: StageIsland.Config.widgetProvider
             onRemoveRequested: id => root.stageRemoveWidget(id)
             onDropped: box => win.flashDrop(box)
+            onSettingsRequested: id => root.stageOpenSettings(id)
         }
 
 
@@ -704,14 +801,19 @@ Scope {
         MouseArea {
             anchors.fill: parent
             acceptedButtons: Qt.RightButton
-            onPressed: (mouse) => root.openWidgetMenu("desktop", mouse.x, mouse.y)
+            onPressed: mouse => {
+                if (desktopIcons.item
+                    && desktopIcons.item.openContextAt(mouse.x, mouse.y))
+                    return;
+                root.openWidgetMenu("desktop", mouse.x, mouse.y);
+            }
         }
         // A settled band replaces both selections; Shift/Ctrl preserves their
         // existing members. A zero-size plain band is the click-away deselect.
         MouseArea {
             id: widgetMarquee
             anchors.fill: parent
-            enabled: stageSelection.selectionEnabled
+            enabled: stageSelection.selectionEnabled && !root.stageFramingHere
             acceptedButtons: Qt.LeftButton
             onPressed: mouse => {
                 if (stageSelection.widgetPressActive) {
@@ -745,10 +847,11 @@ Scope {
         DesktopGuides {
             id: guides
             anchors.fill: parent
-            active: win.dragSlot !== null
-            gridSize: win.dragSlot ? win.dragSlot.gridSize : 32
-            dragCentreX: win.dragSlot ? win.dragSlot.x + win.dragSlot.width / 2 : 0
-            dragCentreY: win.dragSlot ? win.dragSlot.y + win.dragSlot.height / 2 : 0
+            active: stageSelection.dragging && !root.stageFramingHere
+            showGrid: root.editGridSnap
+            gridSize: root.editGridSize
+            verticals: stageSelection.guideVerticals
+            horizontals: stageSelection.guideHorizontals
         }
 
         Loader {
@@ -768,7 +871,7 @@ Scope {
                 anchor: root.widgetValue("clock", "Anchor")
                 freeX: root.widgetValue("clock", "X")
                 freeY: root.widgetValue("clock", "Y")
-                locked: root.stageComposing ? false : root.widgetValue("clock", "Locked")
+                locked: root.widgetValue("clock", "Locked")
                 composing: root.stageComposing
                 stageController: stageSelection
                 gridSize: root.editGridSize
@@ -804,7 +907,7 @@ Scope {
                 anchor: root.widgetValue("calendar", "Anchor")
                 freeX: root.widgetValue("calendar", "X")
                 freeY: root.widgetValue("calendar", "Y")
-                locked: root.stageComposing ? false : root.widgetValue("calendar", "Locked")
+                locked: root.widgetValue("calendar", "Locked")
                 composing: root.stageComposing
                 stageController: stageSelection
                 gridSize: root.editGridSize
@@ -847,7 +950,7 @@ Scope {
                 anchor: root.widgetValue("music", "Anchor")
                 freeX: root.widgetValue("music", "X")
                 freeY: root.widgetValue("music", "Y")
-                locked: root.stageComposing ? false : root.widgetValue("music", "Locked")
+                locked: root.widgetValue("music", "Locked")
                 composing: root.stageComposing
                 stageController: stageSelection
                 gridSize: root.editGridSize
@@ -893,7 +996,7 @@ Scope {
                 anchor: root.widgetValue("aio", "Anchor")
                 freeX: root.widgetValue("aio", "X")
                 freeY: root.widgetValue("aio", "Y")
-                locked: root.stageComposing ? false : root.widgetValue("aio", "Locked")
+                locked: root.widgetValue("aio", "Locked")
                 composing: root.stageComposing
                 stageController: stageSelection
                 gridSize: root.editGridSize
@@ -930,7 +1033,7 @@ Scope {
                 anchor: root.widgetValue("stats", "Anchor")
                 freeX: root.widgetValue("stats", "X")
                 freeY: root.widgetValue("stats", "Y")
-                locked: root.stageComposing ? false : root.widgetValue("stats", "Locked")
+                locked: root.widgetValue("stats", "Locked")
                 composing: root.stageComposing
                 stageController: stageSelection
                 gridSize: root.editGridSize
@@ -966,7 +1069,7 @@ Scope {
                 anchor: root.widgetValue("weather", "Anchor")
                 freeX: root.widgetValue("weather", "X")
                 freeY: root.widgetValue("weather", "Y")
-                locked: root.stageComposing ? false : root.widgetValue("weather", "Locked")
+                locked: root.widgetValue("weather", "Locked")
                 composing: root.stageComposing
                 stageController: stageSelection
                 gridSize: root.editGridSize
@@ -1003,7 +1106,7 @@ Scope {
                 anchor: root.widgetValue("notes", "Anchor")
                 freeX: root.widgetValue("notes", "X")
                 freeY: root.widgetValue("notes", "Y")
-                locked: root.stageComposing ? false : root.widgetValue("notes", "Locked")
+                locked: root.widgetValue("notes", "Locked")
                 composing: root.stageComposing
                 stageController: stageSelection
                 gridSize: root.editGridSize
@@ -1046,7 +1149,7 @@ Scope {
                 anchor: root.widgetValue("dayprogress", "Anchor")
                 freeX: root.widgetValue("dayprogress", "X")
                 freeY: root.widgetValue("dayprogress", "Y")
-                locked: root.stageComposing ? false : root.widgetValue("dayprogress", "Locked")
+                locked: root.widgetValue("dayprogress", "Locked")
                 composing: root.stageComposing
                 stageController: stageSelection
                 gridSize: root.editGridSize
@@ -1081,7 +1184,7 @@ Scope {
                 anchor: root.widgetValue("shape", "Anchor")
                 freeX: root.widgetValue("shape", "X")
                 freeY: root.widgetValue("shape", "Y")
-                locked: root.stageComposing ? false : root.widgetValue("shape", "Locked")
+                locked: root.widgetValue("shape", "Locked")
                 composing: root.stageComposing
                 stageController: stageSelection
                 gridSize: root.editGridSize
@@ -1125,8 +1228,7 @@ Scope {
                             anchor: root.widgetValue(irisLoader.modelData.prefix, "Anchor")
                             freeX: root.widgetValue(irisLoader.modelData.prefix, "X")
                             freeY: root.widgetValue(irisLoader.modelData.prefix, "Y")
-                            locked: root.stageComposing ? false
-                                : root.widgetValue(irisLoader.modelData.prefix, "Locked")
+                            locked: root.widgetValue(irisLoader.modelData.prefix, "Locked")
                             composing: root.stageComposing
                             stageController: stageSelection
                             gridSize: root.editGridSize
@@ -1186,8 +1288,7 @@ Scope {
                             anchor: root.widgetValue(pythonLoader.modelData.prefix, "Anchor")
                             freeX: root.widgetValue(pythonLoader.modelData.prefix, "X")
                             freeY: root.widgetValue(pythonLoader.modelData.prefix, "Y")
-                            locked: root.stageComposing ? false
-                                : root.widgetValue(pythonLoader.modelData.prefix, "Locked")
+                            locked: root.widgetValue(pythonLoader.modelData.prefix, "Locked")
                             composing: root.stageComposing
                             stageController: stageSelection
                             gridSize: root.editGridSize
@@ -1263,8 +1364,9 @@ Scope {
 
                 pluginId: slot.pid
                 visible: root.reloadReady
-                locked: root.stageComposing ? false : (slot.dw.locked === true)
+                locked: slot.dw.locked === true
                 composing: root.stageComposing
+                stageController: stageSelection
                 gridSize: root.editGridSnap ? root.editGridSize : 1
                 scaleCfg: slot.dw.scale || 0.85
                 opacityCfg: slot.dw.opacity !== undefined ? slot.dw.opacity : 1
@@ -1286,10 +1388,13 @@ Scope {
                 onDraggingChanged: {
                     if (!root.stageComposing)
                         return;
-                    if (slot.dragging)
+                    if (slot.dragging) {
+                        if (!StageCfg.StageSession.contains(slot.stageId))
+                            stageSelection.pick(slot.stageId);
                         stageSelection.widgetDragStarted(slot.stageId);
-                    else
+                    } else {
                         stageSelection.widgetDragCancelled(slot.stageId);
+                    }
                 }
                 function syncStageGroupDrag() {
                     if (!root.stageComposing || !slot.dragging)
@@ -1304,11 +1409,22 @@ Scope {
                 onXChanged: slot.syncStageGroupDrag()
                 onYChanged: slot.syncStageGroupDrag()
                 onResized: (sc) => {
-                    const x = (slot.dw.x !== undefined) ? slot.dw.x : Math.round(slot.x);
-                    const y = (slot.dw.y !== undefined) ? slot.dw.y : Math.round(slot.y);
-                    const lk = (slot.dw.locked === true);
+                    const x = slot.resizing ? Math.round(slot.dragX)
+                        : (slot.dw.x !== undefined) ? slot.dw.x : Math.round(slot.x);
+                    const y = slot.resizing ? Math.round(slot.dragY)
+                        : (slot.dw.y !== undefined) ? slot.dw.y : Math.round(slot.y);
+                    const lk = slot.dw.locked === true;
                     const cmd = [root.placeTool, slot.pid, "desktopWidget",
                         "" + x, "" + y, "" + sc, "" + lk];
+                    root.stageRecordPluginGesture(slot.pid, cmd);
+                    persist.command = cmd;
+                    persist.running = true;
+                }
+                onLockRequested: (locked) => {
+                    const x = slot.dw.x !== undefined ? slot.dw.x : Math.round(slot.x);
+                    const y = slot.dw.y !== undefined ? slot.dw.y : Math.round(slot.y);
+                    const cmd = [root.placeTool, slot.pid, "desktopWidget",
+                        "" + x, "" + y, "" + slot.effectiveScale, "" + locked];
                     root.stageRecordPluginGesture(slot.pid, cmd);
                     persist.command = cmd;
                     persist.running = true;
@@ -1318,6 +1434,7 @@ Scope {
                         slot.entry ? slot.entry.manifest : null,
                         slot.entry ? slot.entry.placement : null);
                 }
+                onSettingsRequested: root.stageOpenSettings(slot.stageId)
 
                 // when the content exposes `editing` (a focused text field),
                 // the wallpaper layer grabs the keyboard for as long as it
@@ -1394,10 +1511,21 @@ Scope {
                     parent: composeOverlay
                     visible: root.stageComposing
                     box: Qt.rect(slot.x, slot.y, slot.width, slot.height)
-                    title: (slot.entry && slot.entry.manifest && slot.entry.manifest.name) ? slot.entry.manifest.name : slot.pid
+                    title: (slot.entry && slot.entry.manifest
+                        && slot.entry.manifest.name)
+                        ? slot.entry.manifest.name : slot.pid
                     selected: StageCfg.StageSession.contains(slot.stageId)
+                    primary: StageCfg.StageSession.selected === slot.stageId
+                    targetItem: slot
+                    inputBlocked: root.stageFramingHere
+                    counterScale: 1 / Math.max(0.05,
+                        StageEdit.EditModeInsets.cardRectFor(root.monitorName,
+                            win.width, win.height,
+                            Stage.GlobalStates.editProgress,
+                            Stage.GlobalStates.editDrawerProgress).width
+                                / Math.max(1, win.width))
                     onPicked: stageSelection.pick(slot.stageId)
-                    onSettings: root.openPluginMenu(slot.pid, slot.dw.locked === true, slot.x, slot.y, slot.entry ? slot.entry.manifest : null, slot.entry ? slot.entry.placement : null)
+                    onSettings: root.stageOpenSettings(slot.stageId)
                     onRemove: root.stageRemoveWidget(slot.stageId)
                 }
             }
@@ -1412,6 +1540,7 @@ Scope {
             delegate: StageLayer {
                 required property int index
                 layerIndex: index + 1
+                screenName: root.monitorName
                 wallPath: root.wallpaperPath
                 url: StageCfg.StageBackend.layerUrlFor(root.wallpaperPath, index)
                 fit: root.wallpaperFit
@@ -1436,8 +1565,13 @@ Scope {
         Loader {
             id: desktopIcons
             anchors.fill: parent
-            z: desktopIcons.item?.dialogOpen ? 1000 : (root.stageOn ? 2.5 : -1)
-            active: StageShortcuts.DesktopShortcuts.itemsFor(root.monitorName).length > 0
+            // Keep the layer alive after the persistent adapter loads. Gating
+            // the Loader on an initial empty itemsFor() result left it dormant
+            // when states.json populated a moment later.
+            active: StageIsland.Persistent.ready
+            z: root.stageOn ? 2.5 : -1
+            opacity: 1 - 0.75 * root.stageFramingDim
+            enabled: !root.stageFramingHere
             readonly property bool keyboardNeeded: !!item && (item.hasSelection || item.dialogOpen)
             onKeyboardNeededChanged: {
                 win.kbWanted += keyboardNeeded ? 1 : -1;
@@ -1446,33 +1580,52 @@ Scope {
             }
             Component.onDestruction: if (keyboardNeeded) win.kbWanted -= 1
             sourceComponent: StageShortcuts.DesktopShortcutsLayer {
+                anchors.fill: parent
                 screenName: root.monitorName
                 surfaceScale: StageEdit.EditModeInsets.cardRectFor(root.monitorName,
                     win.width, win.height,
                     Stage.GlobalStates.editProgress,
                     Stage.GlobalStates.editDrawerProgress).width / Math.max(1, win.width)
                 canvas: stageSelection
+                overlayParent: desktopIconsOverlay
             }
         }
+        // Modal shortcut cards rise independently; lifting the Loader would
+        // also lift every tile over the desktop widgets.
+        Item {
+            id: desktopIconsOverlay
+            anchors.fill: parent
+            z: 1000
+            visible: !!desktopIcons.item && desktopIcons.item.dialogOpen
+            enabled: visible && !root.stageFramingHere
+            opacity: 1 - 0.75 * root.stageFramingDim
+        }
+
 
         StageShortcuts.DesktopShortcutDropArea {
             anchors.fill: parent
             z: root.stageOn ? 2.5 : -1
             screenName: root.monitorName
             iconsLayer: desktopIcons.item
+            available: StageIsland.Persistent.ready && !root.stageFramingHere
         }
 
         // ── Edit widgets overlay (docs/stage.md, "Edit widgets") ──────
-        // A frame on every enabled widget while composing: its outline, name and
-        // Settings/Remove buttons. The frames are input-transparent (a passive
-        // tap selects, presses fall through), so the widget's own grip still
-        // drags underneath; the ribbon draws the subject and layer outlines on
-        // its own surface, never here.
+        // Hover and selection frames observe presses without stealing a drag;
+        // only their action strip and corner handles take the pointer.
         Item {
             id: composeOverlay
             anchors.fill: parent
             z: 60
             visible: root.stageComposing
+            enabled: !root.stageFramingHere
+            opacity: 1 - 0.75 * root.stageFramingDim
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Tokens.dur(180)
+                    easing.type: Easing.OutCubic
+                }
+            }
 
             Rectangle {
                 x: Math.min(stageSelection.marqueeAnchorX, stageSelection.marqueeX)
@@ -1480,30 +1633,50 @@ Scope {
                 width: Math.abs(stageSelection.marqueeX - stageSelection.marqueeAnchorX)
                 height: Math.abs(stageSelection.marqueeY - stageSelection.marqueeAnchorY)
                 visible: stageSelection.marqueeActive && (width > 3 || height > 3)
-                color: Qt.alpha(StageIsland.Appearance.colors.colPrimary, 0.08)
-                border.color: StageIsland.Appearance.colors.colPrimary
-                border.width: 1
+                color: Qt.alpha(Tokens.sun, 0.08)
+                border.color: Tokens.sun
+                border.width: Tokens.border
             }
             component WidgetFrame: StageOutline {
                 id: wf
-                // The live WidgetSlot, resolved through the loaders: the slot's
-                // own rect is the widget's rect. (A frame pointed at the loader
-                // would box the whole screen; the slot is the child it hosts.)
                 property string wid: ""
-                property var slotItem: root.slotFor(wf.wid)
+                property var slotItem: null
+                property int resolveAttempts: 0
                 visible: wf.slotItem !== null
-                box: wf.slotItem ? Qt.rect(wf.slotItem.x, wf.slotItem.y, wf.slotItem.width, wf.slotItem.height) : Qt.rect(0, 0, 0, 0)
+                box: wf.slotItem ? Qt.rect(wf.slotItem.x, wf.slotItem.y,
+                    wf.slotItem.width, wf.slotItem.height)
+                    : Qt.rect(0, 0, 0, 0)
                 title: root.widgetTitle(wf.wid)
                 selected: StageCfg.StageSession.contains(wf.wid)
+                primary: StageCfg.StageSession.selected === wf.wid
+                targetItem: wf.slotItem
+                inputBlocked: root.stageFramingHere
+                counterScale: 1 / Math.max(0.05,
+                    StageEdit.EditModeInsets.cardRectFor(root.monitorName,
+                        win.width, win.height,
+                        Stage.GlobalStates.editProgress,
+                        Stage.GlobalStates.editDrawerProgress).width
+                            / Math.max(1, win.width))
+                Timer {
+                    interval: 16
+                    repeat: true
+                    triggeredOnStart: true
+                    running: root.reloadReady && wf.slotItem === null
+                        && wf.resolveAttempts < 60
+                    onTriggered: {
+                        wf.resolveAttempts++;
+                        wf.slotItem = root.slotFor(wf.wid);
+                    }
+                }
                 onPicked: stageSelection.pick(wf.wid)
                 onSettings: root.stageOpenSettings(wf.wid)
                 onRemove: root.stageRemoveWidget(wf.wid)
             }
             Repeater {
-                model: ["clock", "calendar", "music", "aio", "stats", "weather",
-                    "notes", "dayprogress", "shape", "visualizer"]
-                    .concat(IrisRoster.faces.map(f => f.prefix))
-                    .concat(PythonRoster.faces.map(f => f.prefix))
+                model: root.addItems.filter(row => row.enabled
+                    && row.id !== "visualizer"
+                    && String(row.id).indexOf("plugin:") !== 0)
+                    .map(row => row.id)
                 delegate: WidgetFrame {
                     required property string modelData
                     wid: modelData
@@ -1513,15 +1686,16 @@ Scope {
             Loader {
                 id: alignBar
                 z: 200
-                active: StageCfg.StageSession.selection.length >= 2
-                    && !stageSelection.dragging
+                active: StageCfg.StageSession.selection.filter(id =>
+                    String(id).indexOf("visualizer") !== 0).length >= 2
+                    && !stageSelection.dragging && !root.stageFramingHere
                 readonly property real counterScale: 1 / Math.max(0.05,
                     StageEdit.EditModeInsets.cardRectFor(root.monitorName,
                         win.width, win.height,
                         Stage.GlobalStates.editProgress,
                         Stage.GlobalStates.editDrawerProgress).width / Math.max(1, win.width))
                 readonly property rect selection: stageSelection.selectionRect
-                readonly property real gap: 12 * alignBar.counterScale
+                readonly property real gap: Tokens.s3 * alignBar.counterScale
                 readonly property real barHeight: alignBar.item
                     ? alignBar.item.implicitHeight : 0
                 readonly property bool below: alignBar.selection.y - alignBar.gap
@@ -1533,7 +1707,8 @@ Scope {
                 transformOrigin: alignBar.below ? Item.Top : Item.Bottom
                 scale: alignBar.counterScale
                 sourceComponent: StageEdit.EditAlignBar {
-                    count: StageCfg.StageSession.selection.length
+                    count: StageCfg.StageSession.selection.filter(id =>
+                        String(id).indexOf("visualizer") !== 0).length
                     onRequested: mode => stageSelection.alignSelection(mode)
                 }
             }
@@ -1833,6 +2008,20 @@ Scope {
             sourceComponent: Component {
                 WidgetInspector {}
             }
+        }
+    }
+
+    Connections {
+        target: root
+        function onStageComposingChanged() {
+            if (!root.stageComposing)
+                return;
+            root.pendingWidgetMenu = null;
+            root.pendingInspector = null;
+            if (widgetMenuLoader.item)
+                widgetMenuLoader.item.close();
+            if (inspectorLoader.item)
+                inspectorLoader.item.close();
         }
     }
 

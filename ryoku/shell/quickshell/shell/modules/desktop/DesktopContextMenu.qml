@@ -57,14 +57,14 @@ Item {
             st.launcherOpen = true;
         menu.close();
     }
-    // Quick controls opens the left sidebar; Settings opens the desktop scene
-    // page in Ryoku Settings.
+    // Quick controls opens the left sidebar; Settings opens Ryoku Settings on
+    // its normal page, while Edit desktop above owns the Stage Editor entry.
     function quickControls() {
         Services.ShellState.requestSurfaceActive("sidebar-left", undefined);
         menu.close();
     }
     function openSettings() {
-        Spawn.run(["ryoku-shell", "hub", "open", "desktop-scene-widgets"]);
+        Spawn.run(["ryoku-shell", "hub", "open"]);
         menu.close();
     }
     function refreshShell() {

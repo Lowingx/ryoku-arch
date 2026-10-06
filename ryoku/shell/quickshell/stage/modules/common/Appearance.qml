@@ -1,6 +1,5 @@
-// Stage keeps the shell's compatibility token names, but resolves their visual
-// values through Ryoku's live palette and the same quiet paper-and-ink language
-// as Ryogami. Existing pages inherit the look without owning a second theme.
+// Stage keeps the island's compatibility names, but every value resolves
+// through Ryoku's shared paper-and-ink token system.
 pragma Singleton
 pragma ComponentBehavior: Bound
 import QtQuick
@@ -8,7 +7,6 @@ import Quickshell
 import Quickshell.Io
 import stage.modules.common.functions
 import stage.services
-import shell.services as RTheme
 import Ryoku.Ui.Singletons
 
 
@@ -52,168 +50,154 @@ Singleton {
     property real backgroundTransparency: Config?.options.appearance.transparency.enable ? Config?.options.appearance.transparency.automatic ? autoBackgroundTransparency : Config?.options.appearance.transparency.backgroundTransparency : 0
     property real contentTransparency: Config?.options.appearance.transparency.enable ? (Config?.options.appearance.transparency.automatic ? autoContentTransparency : Config?.options.appearance.transparency.contentTransparency) : 0
 
-    // The Material 3 role palette, sourced from Ryoku's live theme (the same
-    // three-layer chain the rest of the desktop paints with: named scheme, then
-    // the wallpaper, then the compiled base). The colour derivation below is the
-    // reference's verbatim; only this source is Ryoku's, so the editor wears the
-    // desktop's palette rather than a second one.
+    // The island expects Material role names. They are compatibility aliases,
+    // not a second palette: each one points at the closest Ryoku token.
     m3colors: QtObject {
-        property bool darkmode: RTheme.Theme.surface.lightness < 0.5
+        property bool darkmode: !Tokens.light
         property bool transparent: false
-        property color m3background: RTheme.Theme.surface
-        property color m3onBackground: RTheme.Theme.onSurface
-        property color m3surface: RTheme.Theme.surface
-        property color m3surfaceDim: Qt.darker(RTheme.Theme.surface, 1.1)
-        property color m3surfaceBright: Qt.lighter(RTheme.Theme.surface, 1.3)
-        property color m3surfaceContainerLowest: RTheme.Theme.surfaceContainerLowest
-        property color m3surfaceContainerLow: RTheme.Theme.surfaceContainerLow
-        property color m3surfaceContainer: RTheme.Theme.surfaceContainer
-        property color m3surfaceContainerHigh: RTheme.Theme.surfaceContainerHigh
-        property color m3surfaceContainerHighest: RTheme.Theme.surfaceContainerHighest
-        property color m3onSurface: RTheme.Theme.onSurface
-        property color m3surfaceVariant: RTheme.Theme.surfaceVariant
-        property color m3onSurfaceVariant: RTheme.Theme.onSurfaceVariant
-        property color m3inverseSurface: RTheme.Theme.inverseSurface
-        property color m3inverseOnSurface: RTheme.Theme.inverseOnSurface
-        property color m3outline: RTheme.Theme.outline
-        property color m3outlineVariant: RTheme.Theme.outlineVariant
-        property color m3shadow: RTheme.Theme.shadow
-        property color m3scrim: RTheme.Theme.scrim
-        property color m3surfaceTint: RTheme.Theme.surfaceTint
-        property color m3primary: RTheme.Theme.primary
-        property color m3onPrimary: RTheme.Theme.onPrimary
-        property color m3primaryContainer: RTheme.Theme.primaryContainer
-        property color m3onPrimaryContainer: RTheme.Theme.onPrimaryContainer
-        property color m3inversePrimary: RTheme.Theme.primary
-        property color m3secondary: RTheme.Theme.secondary
-        property color m3onSecondary: RTheme.Theme.onSecondary
-        property color m3secondaryContainer: RTheme.Theme.secondaryContainer
-        property color m3onSecondaryContainer: RTheme.Theme.onSecondaryContainer
-        property color m3tertiary: RTheme.Theme.tertiary
-        property color m3onTertiary: RTheme.Theme.onTertiary
-        property color m3tertiaryContainer: RTheme.Theme.tertiaryContainer
-        property color m3onTertiaryContainer: RTheme.Theme.onTertiaryContainer
-        property color m3error: RTheme.Theme.error
-        property color m3onError: RTheme.Theme.onError
-        property color m3errorContainer: RTheme.Theme.errorContainer
-        property color m3onErrorContainer: RTheme.Theme.onErrorContainer
-        property color m3primaryFixed: RTheme.Theme.primaryContainer
-        property color m3primaryFixedDim: RTheme.Theme.primary
-        property color m3onPrimaryFixed: RTheme.Theme.onPrimaryContainer
-        property color m3onPrimaryFixedVariant: RTheme.Theme.onPrimaryContainer
-        property color m3secondaryFixed: RTheme.Theme.secondaryContainer
-        property color m3secondaryFixedDim: RTheme.Theme.secondary
-        property color m3onSecondaryFixed: RTheme.Theme.onSecondaryContainer
-        property color m3onSecondaryFixedVariant: RTheme.Theme.onSecondaryContainer
-        property color m3tertiaryFixed: RTheme.Theme.tertiaryContainer
-        property color m3tertiaryFixedDim: RTheme.Theme.tertiary
-        property color m3onTertiaryFixed: RTheme.Theme.onTertiaryContainer
-        property color m3onTertiaryFixedVariant: RTheme.Theme.onTertiaryContainer
-        property color m3success: "#B5CCBA"
-        property color m3onSuccess: "#213528"
-        property color m3successContainer: "#374B3E"
-        property color m3onSuccessContainer: "#D1E9D6"
+        property color m3background: Tokens.paper
+        property color m3onBackground: Tokens.ink
+        property color m3surface: Tokens.paper
+        property color m3surfaceDim: Tokens.paper
+        property color m3surfaceBright: Tokens.paperLift
+        property color m3surfaceContainerLowest: Tokens.paper
+        property color m3surfaceContainerLow: Tokens.paperLift
+        property color m3surfaceContainer: Tokens.paperLift
+        property color m3surfaceContainerHigh: Tokens.paperLift
+        property color m3surfaceContainerHighest: Tokens.tint10
+        property color m3onSurface: Tokens.ink
+        property color m3surfaceVariant: Tokens.paperLift
+        property color m3onSurfaceVariant: Tokens.inkDim
+        property color m3inverseSurface: Tokens.bone
+        property color m3inverseOnSurface: Tokens.inkOnBone
+        property color m3outline: Tokens.inkMuted
+        property color m3outlineVariant: Tokens.inkFaint
+        property color m3shadow: Tokens.paper
+        property color m3scrim: Tokens.ink
+        property color m3surfaceTint: Tokens.ink
+        property color m3primary: Tokens.sun
+        property color m3onPrimary: Tokens.paper
+        property color m3primaryContainer: Tokens.tint16
+        property color m3onPrimaryContainer: Tokens.ink
+        property color m3inversePrimary: Tokens.sun
+        property color m3secondary: Tokens.bone
+        property color m3onSecondary: Tokens.inkOnBone
+        property color m3secondaryContainer: Tokens.bone
+        property color m3onSecondaryContainer: Tokens.inkOnBone
+        property color m3tertiary: Tokens.inkDim
+        property color m3onTertiary: Tokens.paper
+        property color m3tertiaryContainer: Tokens.tint16
+        property color m3onTertiaryContainer: Tokens.ink
+        property color m3error: Tokens.alert
+        property color m3onError: Tokens.paper
+        property color m3errorContainer: Tokens.tint16
+        property color m3onErrorContainer: Tokens.ink
+        property color m3primaryFixed: Tokens.bone
+        property color m3primaryFixedDim: Tokens.inkDim
+        property color m3onPrimaryFixed: Tokens.inkOnBone
+        property color m3onPrimaryFixedVariant: Tokens.inkOnBoneDim
+        property color m3secondaryFixed: Tokens.bone
+        property color m3secondaryFixedDim: Tokens.inkDim
+        property color m3onSecondaryFixed: Tokens.inkOnBone
+        property color m3onSecondaryFixedVariant: Tokens.inkOnBoneDim
+        property color m3tertiaryFixed: Tokens.bone
+        property color m3tertiaryFixedDim: Tokens.inkDim
+        property color m3onTertiaryFixed: Tokens.inkOnBone
+        property color m3onTertiaryFixedVariant: Tokens.inkOnBoneDim
+        property color m3success: Tokens.ink
+        property color m3onSuccess: Tokens.paper
+        property color m3successContainer: Tokens.tint16
+        property color m3onSuccessContainer: Tokens.ink
     }
 
-    // The two border/blur/gap tokens the reference's compositor writers read are
-    // kept as plain values (no compositor write): Ryoku owns the compositor's
-    // look through its own config, and the editor only needs the numbers.
+    // Compositor-facing compatibility values stay inert inside the editor.
     property bool borderless: false
     property int borderWidth: 2
 
     colors: QtObject {
-        // Ryogami's paper and ink roles. The numbered layer names remain as
-        // compatibility aliases for the imported Stage pages.
-        property color colSubtext: root.withAlpha(m3colors.m3onSurface, 0.66)
-        property color colLayer0Base: m3colors.m3surface
-        property color colLayer0: root.withAlpha(m3colors.m3surface, 0.99)
-        property color colOnLayer0: m3colors.m3onSurface
-        property color colLayer0Hover: root.withAlpha(m3colors.m3onSurface, 0.05)
-        property color colLayer0Active: root.withAlpha(m3colors.m3onSurface, 0.09)
-        property color colLayer0Border: root.withAlpha(m3colors.m3outline, 0.55)
-        property color colLayer1Base: m3colors.m3surface
-        property color colLayer1: root.withAlpha(m3colors.m3surface, 0.965)
-        property color colOnLayer1: m3colors.m3onSurface
-        property color colOnLayer1Inactive: root.withAlpha(m3colors.m3onSurface, 0.58)
-        property color colLayer1Hover: root.withAlpha(m3colors.m3onSurface, 0.05)
-        property color colLayer1Active: root.withAlpha(m3colors.m3onSurface, 0.09)
-        property color colLayer2Base: m3colors.m3surfaceContainer
-        property color colLayer2: root.withAlpha(m3colors.m3surfaceContainer, 0.99)
-        property color colLayer2Hover: root.withAlpha(m3colors.m3onSurface, 0.05)
-        property color colLayer2Active: root.withAlpha(m3colors.m3onSurface, 0.09)
-        property color colLayer2Disabled: root.withAlpha(m3colors.m3surfaceContainer, 0.4)
-        property color colOnLayer2: m3colors.m3onSurface
-        property color colOnLayer2Disabled: root.withAlpha(m3colors.m3onSurface, 0.35)
-        // Raised controls use one surface-container role instead of inventing
-        // additional elevations from Material's larger container ladder.
-        property color colLayer3Base: m3colors.m3surfaceContainer
-        property color colLayer3: root.withAlpha(m3colors.m3surfaceContainer, 0.99)
-        property color colLayer3Hover: root.withAlpha(m3colors.m3onSurface, 0.05)
-        property color colLayer3Active: root.withAlpha(m3colors.m3onSurface, 0.09)
-        property color colOnLayer3: m3colors.m3onSurface
-        property color colLayer4Base: m3colors.m3surfaceContainer
-        property color colLayer4: root.withAlpha(m3colors.m3surfaceContainer, 0.99)
-        property color colLayer4Hover: root.withAlpha(m3colors.m3onSurface, 0.05)
-        property color colLayer4Active: root.withAlpha(m3colors.m3onSurface, 0.09)
-        property color colOnLayer4: m3colors.m3onSurface
-        // Accent is reserved for emphasis and desktop guides; selected controls
-        // use the inverted surfaceText plate instead.
-        property color colPrimary: m3colors.m3primary
-        property color colOnPrimary: m3colors.m3onPrimary
-        property color colPrimaryHover: ColorUtils.mix(m3colors.m3primary, m3colors.m3onPrimary, 0.91)
-        property color colPrimaryActive: ColorUtils.mix(m3colors.m3primary, m3colors.m3onPrimary, 0.82)
-        property color colPrimaryContainer: root.withAlpha(m3colors.m3primary, 0.16)
-        property color colPrimaryContainerHover: root.withAlpha(m3colors.m3primary, 0.22)
-        property color colPrimaryContainerActive: root.withAlpha(m3colors.m3primary, 0.3)
-        property color colOnPrimaryContainer: m3colors.m3onSurface
-        // Legacy secondary tokens are the Ryogami inverted control pair.
-        property color colSecondary: m3colors.m3onSurface
-        property color colSecondaryHover: m3colors.m3onSurface
-        property color colSecondaryActive: root.withAlpha(m3colors.m3onSurface, 0.9)
-        property color colOnSecondary: m3colors.m3surface
-        property color colSecondaryContainer: m3colors.m3onSurface
-        property color colSecondaryContainerHover: m3colors.m3onSurface
-        property color colSecondaryContainerActive: root.withAlpha(m3colors.m3onSurface, 0.9)
-        property color colOnSecondaryContainer: m3colors.m3surface
-        property color colTertiary: m3colors.m3tertiary
-        property color colTertiaryHover: ColorUtils.mix(m3colors.m3tertiary, m3colors.m3onTertiary, 0.91)
-        property color colTertiaryActive: ColorUtils.mix(m3colors.m3tertiary, m3colors.m3onTertiary, 0.82)
-        property color colTertiaryContainer: root.withAlpha(m3colors.m3tertiary, 0.16)
-        property color colTertiaryContainerHover: root.withAlpha(m3colors.m3tertiary, 0.22)
-        property color colTertiaryContainerActive: root.withAlpha(m3colors.m3tertiary, 0.3)
-        property color colOnTertiary: m3colors.m3onTertiary
-        property color colOnTertiaryContainer: m3colors.m3onSurface
-        property color colBackgroundSurfaceContainer: root.withAlpha(m3colors.m3surfaceContainer, 0.99)
-        property color colBackgroundSurfaceContainerAccent: root.withAlpha(m3colors.m3surfaceContainer, 0.99)
-        property color colSurfaceContainerLow: root.withAlpha(m3colors.m3surface, 0.965)
-        property color colSurfaceContainer: root.withAlpha(m3colors.m3surfaceContainer, 0.99)
-        property color colSurfaceContainerHigh: root.withAlpha(m3colors.m3onSurface, 0.05)
-        property color colSurfaceContainerHighest: root.withAlpha(m3colors.m3onSurface, 0.09)
-        property color colSurfaceContainerHighestHover: root.withAlpha(m3colors.m3onSurface, 0.09)
-        property color colSurfaceContainerHighestActive: root.withAlpha(m3colors.m3onSurface, 0.16)
-        property color colOnSurface: m3colors.m3onSurface
-        property color colOnSurfaceVariant: root.withAlpha(m3colors.m3onSurface, 0.74)
-        property color colTooltip: root.withAlpha(m3colors.m3surfaceContainer, 0.99)
-        property color colOnTooltip: m3colors.m3onSurface
-        property color colScrim: root.withAlpha(m3colors.m3scrim, 0.68)
-        property color colShadow: root.withAlpha(m3colors.m3shadow, 0.42)
-        property color colOutline: root.withAlpha(m3colors.m3outline, 0.55)
-        property color colOutlineVariant: root.withAlpha(m3colors.m3outline, 0.4)
-        property color colError: m3colors.m3error
-        property color colErrorHover: ColorUtils.mix(m3colors.m3error, m3colors.m3onError, 0.91)
-        property color colErrorActive: ColorUtils.mix(m3colors.m3error, m3colors.m3onError, 0.82)
-        property color colOnError: m3colors.m3onError
-        property color colErrorContainer: root.withAlpha(m3colors.m3error, 0.16)
-        property color colErrorContainerHover: root.withAlpha(m3colors.m3error, 0.22)
-        property color colErrorContainerActive: root.withAlpha(m3colors.m3error, 0.3)
-        property color colOnErrorContainer: m3colors.m3onSurface
+        property color colSubtext: Tokens.inkMuted
+        property color colLayer0Base: Tokens.paper
+        property color colLayer0: Tokens.paper
+        property color colOnLayer0: Tokens.ink
+        property color colLayer0Hover: Tokens.tint5
+        property color colLayer0Active: Tokens.tint10
+        property color colLayer0Border: Tokens.line
+        property color colLayer1Base: Tokens.paper
+        property color colLayer1: Tokens.paper
+        property color colOnLayer1: Tokens.ink
+        property color colOnLayer1Inactive: Tokens.inkMuted
+        property color colLayer1Hover: Tokens.tint5
+        property color colLayer1Active: Tokens.tint16
+        property color colLayer2Base: Tokens.paperLift
+        property color colLayer2: Tokens.paperLift
+        property color colLayer2Hover: Tokens.tint5
+        property color colLayer2Active: Tokens.tint16
+        property color colLayer2Disabled: Tokens.tint5
+        property color colOnLayer2: Tokens.ink
+        property color colOnLayer2Disabled: Tokens.inkFaint
+        property color colLayer3Base: Tokens.paperLift
+        property color colLayer3: Tokens.paperLift
+        property color colLayer3Hover: Tokens.tint5
+        property color colLayer3Active: Tokens.tint16
+        property color colOnLayer3: Tokens.ink
+        property color colLayer4Base: Tokens.paperLift
+        property color colLayer4: Tokens.paperLift
+        property color colLayer4Hover: Tokens.tint5
+        property color colLayer4Active: Tokens.tint16
+        property color colOnLayer4: Tokens.ink
+        property color colPrimary: Tokens.sun
+        property color colOnPrimary: Tokens.paper
+        property color colPrimaryHover: root.withAlpha(Tokens.sun, 0.9)
+        property color colPrimaryActive: root.withAlpha(Tokens.sun, 0.82)
+        property color colPrimaryContainer: Tokens.tint10
+        property color colPrimaryContainerHover: Tokens.tint16
+        property color colPrimaryContainerActive: Tokens.tint16
+        property color colOnPrimaryContainer: Tokens.ink
+        property color colSecondary: Tokens.bone
+        property color colSecondaryHover: Tokens.bone
+        property color colSecondaryActive: root.withAlpha(Tokens.bone, 0.9)
+        property color colOnSecondary: Tokens.inkOnBone
+        property color colSecondaryContainer: Tokens.bone
+        property color colSecondaryContainerHover: Tokens.bone
+        property color colSecondaryContainerActive: root.withAlpha(Tokens.bone, 0.9)
+        property color colOnSecondaryContainer: Tokens.inkOnBone
+        property color colTertiary: Tokens.inkDim
+        property color colTertiaryHover: Tokens.ink
+        property color colTertiaryActive: Tokens.ink
+        property color colTertiaryContainer: Tokens.tint10
+        property color colTertiaryContainerHover: Tokens.tint16
+        property color colTertiaryContainerActive: Tokens.tint16
+        property color colOnTertiary: Tokens.paper
+        property color colOnTertiaryContainer: Tokens.ink
+        property color colBackgroundSurfaceContainer: Tokens.paper
+        property color colBackgroundSurfaceContainerAccent: Tokens.paper
+        property color colSurfaceContainerLow: Tokens.paperLift
+        property color colSurfaceContainer: Tokens.paperLift
+        property color colSurfaceContainerHigh: Tokens.tint5
+        property color colSurfaceContainerHighest: Tokens.tint10
+        property color colSurfaceContainerHighestHover: Tokens.tint10
+        property color colSurfaceContainerHighestActive: Tokens.tint16
+        property color colOnSurface: Tokens.ink
+        property color colOnSurfaceVariant: Tokens.inkDim
+        property color colTooltip: Tokens.paperLift
+        property color colOnTooltip: Tokens.ink
+        property color colScrim: root.withAlpha(Tokens.paper, 0.72)
+        property color colShadow: root.withAlpha(Tokens.paper, 0.42)
+        property color colOutline: Tokens.line
+        property color colOutlineVariant: Tokens.lineSoft
+        property color colError: Tokens.alert
+        property color colErrorHover: Tokens.alert
+        property color colErrorActive: root.withAlpha(Tokens.alert, 0.82)
+        property color colOnError: Tokens.paper
+        property color colErrorContainer: Tokens.tint10
+        property color colErrorContainerHover: Tokens.tint16
+        property color colErrorContainerActive: Tokens.tint16
+        property color colOnErrorContainer: Tokens.ink
     }
 
     rounding: QtObject {
-        // Sharp mode remains a user preference; otherwise every Stage surface
-        // uses Ryogami's single six-pixel corner.
         property real scale: Config.options.appearance.sharpMode ? 0 : 1
-        readonly property int standard: scale === 0 ? 0 : 6
+        readonly property int standard: scale === 0 ? 0 : Tokens.radius
         property int unsharpen: standard
         property int unsharpenmore: standard
         property int verysmall: standard
@@ -228,66 +212,65 @@ Singleton {
 
     font: QtObject {
         property QtObject family: QtObject {
-            property string main: "Roboto Condensed"
-            property string numbers: "Fraunces"
-            property string title: "Fraunces"
+            property string main: Tokens.ui
+            property string numbers: Tokens.mono
+            property string title: Tokens.display
             property string iconMaterial: "Material Symbols Rounded"
             property string iconNerd: "Symbols Nerd Font"
-            property string monospace: "SpaceMono Nerd Font"
-            property string reading: "Roboto Condensed"
-            property string expressive: "Space Grotesk"
-            property string jp: "Noto Sans CJK JP"
+            property string monospace: Tokens.mono
+            property string reading: Tokens.ui
+            property string expressive: Tokens.ui
+            property string jp: Tokens.jp
         }
         property QtObject variableAxes: QtObject {
-            property var main: ({ "wght": 700 })
-            property var numbers: ({ "wght": 600 })
+            property var main: ({ "wght": 500 })
+            property var numbers: ({ "wght": 500 })
             property var title: ({ "wght": 600 })
-            property var rounded: ({ "wght": 700 })
+            property var rounded: ({ "wght": 500 })
             property var titleRounded: ({ "wght": 600 })
         }
         property QtObject pixelSize: QtObject {
-            property real smallest: 8
-            property real smaller: 11
-            property real smallie: 12
-            property real small: 13
-            property real normal: 14
-            property real large: 16
-            property real larger: 20
-            property real huge: 22
-            property real hugeass: 31
-            property real title: 20
+            property real smallest: Tokens.fTiny
+            property real smaller: Tokens.fMicro
+            property real smallie: Tokens.fSmall
+            property real small: Tokens.fSmall
+            property real normal: Tokens.fBody
+            property real large: Tokens.fRow
+            property real larger: Tokens.fValue
+            property real huge: Tokens.fValue
+            property real hugeass: Tokens.fTitle
+            property real title: Tokens.fValue
         }
+        property real trackLabel: Tokens.trackLabel
+        property real trackMark: Tokens.trackMark
     }
 
-    // Global animation speed multiplier — driven by Config.options.appearance.animationMultiplier
-    readonly property real animMultiplier: Config.options?.appearance?.animationMultiplier ?? 1.0
-    // Below this the shell skips animations outright rather than running them absurdly fast (the
-    // sidebars' own convention); Edit Mode reads it as one flag instead of repeating the test.
-    readonly property bool reducedMotion: root.animMultiplier <= 0.25
+    readonly property real animMultiplier: Tokens.reduceMotion ? 0 : Tokens.motionScale
+    readonly property bool reducedMotion: Tokens.reduceMotion
 
     animationCurves: QtObject {
-        readonly property list<real> expressiveFastSpatial: [0.42, 1.67, 0.21, 0.90, 1, 1] // Default, 350ms
-        readonly property list<real> expressiveDefaultSpatial: [0.38, 1.21, 0.22, 1.00, 1, 1] // Default, 500ms
-        readonly property list<real> expressiveSlowSpatial: [0.39, 1.29, 0.35, 0.98, 1, 1] // Default, 650ms
-        readonly property list<real> expressiveEffects: [0.34, 0.80, 0.34, 1.00, 1, 1] // Default, 200ms
-        readonly property list<real> emphasized: [0.05, 0, 2 / 15, 0.06, 1 / 6, 0.4, 5 / 24, 0.82, 0.25, 1, 1, 1]
+        readonly property list<real> expressiveFastSpatial: Tokens.curveFastSpatial
+        readonly property list<real> expressiveDefaultSpatial: Tokens.curveDefaultSpatial
+        readonly property list<real> expressiveSlowSpatial: Tokens.curveSlowSpatial
+        readonly property list<real> expressiveEffects: Tokens.curveDefaultEffects
+        readonly property list<real> emphasized: Tokens.curveEmphasized
         readonly property list<real> emphasizedFirstHalf: [0.05, 0, 2 / 15, 0.06, 1 / 6, 0.4, 5 / 24, 0.82]
         readonly property list<real> emphasizedLastHalf: [5 / 24, 0.82, 0.25, 1, 1, 1]
         readonly property list<real> emphasizedAccel: [0.3, 0, 0.8, 0.15, 1, 1]
         readonly property list<real> emphasizedDecel: [0.05, 0.7, 0.1, 1, 1, 1]
-        readonly property list<real> standard: [0.2, 0, 0, 1, 1, 1]
+        readonly property list<real> standard: Tokens.curveStandard
         readonly property list<real> standardAccel: [0.3, 0, 1, 1, 1, 1]
         readonly property list<real> standardDecel: [0, 0, 0, 1, 1, 1]
-        readonly property real expressiveFastSpatialDuration: 350
-        readonly property real expressiveDefaultSpatialDuration: 500
-        readonly property real expressiveSlowSpatialDuration: 650
-        readonly property real expressiveEffectsDuration: 200
+        readonly property real expressiveFastSpatialDuration: Tokens.durFastSpatial
+        readonly property real expressiveDefaultSpatialDuration: Tokens.durDefaultSpatial
+        readonly property real expressiveSlowSpatialDuration: Tokens.durSlowSpatial
+        readonly property real expressiveEffectsDuration: Tokens.durDefaultEffects
     }
 
     animation: QtObject {
         property QtObject elementMove: QtObject {
-            property int duration: Math.round(250 * root.animMultiplier)
-            property int type: Easing.InOutQuad
+            property int duration: Tokens.swap
+            property int type: Tokens.ease
             property list<real> bezierCurve: animationCurves.standard
             property int velocity: 650
             property Component numberAnimation: Component {
@@ -300,8 +283,8 @@ Singleton {
         }
 
         property QtObject elementMoveSmall: QtObject {
-            property int duration: Math.round(180 * root.animMultiplier)
-            property int type: Easing.InOutQuad
+            property int duration: Tokens.move
+            property int type: Tokens.ease
             property list<real> bezierCurve: animationCurves.standard
             property int velocity: 650
             property Component numberAnimation: Component {
@@ -314,7 +297,7 @@ Singleton {
         }
 
         property QtObject elementMoveEnter: QtObject {
-            property int duration: Math.round(400 * root.animMultiplier)
+            property int duration: Tokens.durNormal
             property int type: Easing.BezierSpline
             property list<real> bezierCurve: animationCurves.emphasizedDecel
             property int velocity: 650
@@ -329,7 +312,7 @@ Singleton {
         }
 
         property QtObject elementMoveExit: QtObject {
-            property int duration: Math.round(200 * root.animMultiplier)
+            property int duration: Tokens.durSmall
             property int type: Easing.BezierSpline
             property list<real> bezierCurve: animationCurves.emphasizedAccel
             property int velocity: 650
@@ -359,16 +342,16 @@ Singleton {
         // easing, so there is no curve to hand out. Kept short: 640 ms read
         // well once, then made a menu opened many times a day feel stuck.
         property QtObject popupEnter: QtObject {
-            property int duration: Math.round(280 * root.animMultiplier)
+            property int duration: Tokens.swap
         }
 
         property QtObject popupExit: QtObject {
-            property int duration: Math.round(150 * root.animMultiplier)
+            property int duration: Tokens.move
         }
 
         property QtObject elementMoveSlow: QtObject {
-            property int duration: Math.round(450 * root.animMultiplier)
-            property int type: Easing.InOutQuad
+            property int duration: Tokens.durNormal
+            property int type: Tokens.ease
             property list<real> bezierCurve: animationCurves.standard
             property int velocity: 850
             property Component colorAnimation: Component {
@@ -389,8 +372,8 @@ Singleton {
         }
 
         property QtObject elementMoveFast: QtObject {
-            property int duration: Math.round(180 * root.animMultiplier)
-            property int type: Easing.InOutQuad
+            property int duration: Tokens.move
+            property int type: Tokens.ease
             property list<real> bezierCurve: animationCurves.standard
             property int velocity: 850
             property Component colorAnimation: Component {
@@ -417,8 +400,8 @@ Singleton {
          * each leg to its end would queue every press behind the last one.
          */
         property QtObject elementMoveSnap: QtObject {
-            property int duration: Math.round(150 * root.animMultiplier)
-            property int type: Easing.BezierSpline
+            property int duration: Tokens.snap
+            property int type: Tokens.easeSnap
             property list<real> bezierCurve: animationCurves.expressiveFastSpatial
             property Component numberAnimation: Component {
                 NumberAnimation {
@@ -430,8 +413,8 @@ Singleton {
         }
 
         property QtObject elementResize: QtObject {
-            property int duration: Math.round(300 * root.animMultiplier)
-            property int type: Easing.BezierSpline
+            property int duration: Tokens.swap
+            property int type: Tokens.ease
             property list<real> bezierCurve: animationCurves.emphasized
             property int velocity: 650
             property Component numberAnimation: Component {
@@ -590,25 +573,14 @@ Singleton {
     }
 
     sizes: QtObject {
-        // A finger needs a bigger target than a cursor. A touch-first family raises the
-        // bar's FLOOR rather than replacing the value: a bar the user configured taller
-        // than this stays taller, and the stored preference is never rewritten.
-        //
-        // This is deliberately here and not a per-window scale. Scaling the bar window was
-        // tried and reverted — every widget inside sizes itself off barHeight, so the window
-        // grew while the content did not, and backgrounds, hit targets and popup anchors all
-        // measured against a bar that was not the one on screen.
-        // Material's minimum touch target, and the Pixel Tablet's status bar height.
-        property real minimumTouchTarget: 48
-        // Ryogami's spacing scale. New Stage chrome reads these names while
-        // older pages keep their established geometry contracts.
-        readonly property real space1: 4
-        readonly property real space2: 7
-        readonly property real space3: 9
-        readonly property real space4: 13
-        readonly property real space5: 20
-        readonly property real space6: 28
-        readonly property real controlHeight: 30
+        property real minimumTouchTarget: Tokens.rowH
+        readonly property real space1: Tokens.s1
+        readonly property real space2: Tokens.s2
+        readonly property real space3: Tokens.s3
+        readonly property real space4: Tokens.s4
+        readonly property real space5: Tokens.s5
+        readonly property real space6: Tokens.s6
+        readonly property real controlHeight: Tokens.ctlH
 
 
         // Snap step for desktop widgets and icons on the wallpaper canvas.
@@ -647,15 +619,13 @@ Singleton {
         property real barCenterSideModuleWidthHellaShortened: 190
         property real barShortenScreenWidthThreshold: 1200 // Shorten if screen width is at most this value
         property real barHellaShortenScreenWidthThreshold: 1000 // Shorten even more...
-        property real elevationMargin: 10
-        // The Stage toolbar adopts Ryogami's 58px FilterBar masthead.
-        property real toolbarHeight: 58
-        // Edit Mode's viewport: the gap between the shrunk desktop and what surrounds it, the
-        // tighter gap between the chrome and the usable area's edge, and the width the widget
-        // drawer opens into (reserved from the first frame so the desktop never resizes mid-edit).
-        property real editModeMargin: 24
-        property real editModeEdgeMargin: 12
-        property real editModeDrawerWidth: 380
+        property real elevationMargin: Tokens.s3
+        property real toolbarHeight: Tokens.rowH
+        // The drawer is the Hub's settings measure compressed into desktop
+        // chrome. One owner keeps every provider page on the same width.
+        property real editModeMargin: Tokens.s5
+        property real editModeEdgeMargin: Tokens.s3
+        property real editModeDrawerWidth: Tokens.railW + Tokens.s7 * 3
         property real fabShadowRadius: 5
         property real fabHoveredShadowRadius: 7
         property real hyprlandGapsOut: 5

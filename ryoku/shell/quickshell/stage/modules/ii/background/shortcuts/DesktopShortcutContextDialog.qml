@@ -3,6 +3,9 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Ryoku.Ui
+import Ryoku.Ui.Singletons
+import stage.services
 import stage.modules.common
 import stage.modules.common.widgets
 import stage.modules.ii.editMode
@@ -28,9 +31,11 @@ ItemContextDialog {
 
     title: entry.name || entry.id || ""
     subtitle: root.selectionCount > 1 ? Translation.tr("%1 items selected").arg(String(root.selectionCount))
-        : entry.path || (entry.type === "group" ? Translation.tr("App group") : Translation.tr("Application"))
+        : entry.path || (entry.type === "group" ? Translation.tr("App group")
+            : entry.type === "url" ? Translation.tr("Web link") : Translation.tr("Application"))
     iconSource: Quickshell.iconPath(entry.icon || (entry.type === "group" ? "folder-applications"
-        : entry.type === "directory" ? "folder" : "text-x-generic"), "image-missing")
+        : entry.type === "directory" ? "folder"
+        : entry.type === "url" ? "internet-web-browser" : "text-x-generic"), "image-missing")
 
     // Windows-like contextual actions. The source stays untouched: the
     // clipboard receives data via wl-copy with single-quote escaping.
@@ -61,21 +66,24 @@ ItemContextDialog {
         onTriggered: root.dismiss()
     }
 
-    // A paste into a file manager expects an encoded URI list.
+    // File managers expect a URI list; a web shortcut is already a URI.
     function copyItemReference() {
         const target = root.entry.path;
         if (!target)
             return;
-        root.copyText("file://" + encodeURI(target).replace(/#/g, "%23").replace(/\?/g, "%3F"));
+        root.copyText(root.entry.type === "url" ? target
+            : "file://" + encodeURI(target).replace(/#/g, "%23").replace(/\?/g, "%3F"));
     }
     actions: [
         { id: "open", text: entry.type === "group" ? Translation.tr("Open group") : Translation.tr("Open"),
             icon: entry.type === "group" ? "apps" : "open_in_new", submenu: entry.type === "group" },
         { id: "rename", text: Translation.tr("Rename shortcut"), icon: "edit", submenu: true, enabled: root.writable },
         { id: "details", text: Translation.tr("Details"), icon: "info", submenu: true },
-        { id: "reveal", text: Translation.tr("Show in folder"), icon: "folder_open", visible: entry.path !== "" },
+        { id: "reveal", text: Translation.tr("Show in folder"), icon: "folder_open",
+            visible: entry.path !== "" && entry.type !== "url" },
         { id: "copyName", text: Translation.tr("Copy name"), icon: "content_copy", visible: entry.name !== "" },
-        { id: "copyPath", text: Translation.tr("Copy path"), icon: "content_paste", visible: entry.path !== "" },
+        { id: "copyPath", text: entry.type === "url" ? Translation.tr("Copy URL") : Translation.tr("Copy path"),
+            icon: "content_paste", visible: entry.path !== "" },
         { id: "copyItem", text: Translation.tr("Copy"), icon: "file_copy", visible: entry.path !== "" },
         { id: "arrange", text: Translation.tr("Arrange selection"), icon: "align_horizontal_left",
             submenu: true, visible: root.selectionCount > 1, enabled: root.writable },
@@ -123,76 +131,164 @@ ItemContextDialog {
         }
     }
 
-    // Every page opens with the menu's own header: the way back and the
-    // page's title.
-    component PageHeader: EditMenuPageHeader {
-        Layout.bottomMargin: 4
+    component PageHeader: Item {
+        id: header
+        property string title: ""
+        signal backRequested()
+        Layout.fillWidth: true
+        Layout.bottomMargin: Tokens.s1
+        implicitHeight: Tokens.rowH
+
+        IconBtn {
+            id: backButton
+            anchors.left: parent.left
+            anchors.verticalCenter: parent.verticalCenter
+            glyph: "‹"
+            onAct: header.backRequested()
+        }
+        Text {
+            anchors.left: backButton.right
+            anchors.leftMargin: Tokens.s3
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            text: header.title
+            color: Tokens.ink
+            font.family: Tokens.ui
+            font.pixelSize: Tokens.fRow
+            font.weight: Font.Medium
+            elide: Text.ElideRight
+        }
         onBackRequested: root.back()
     }
-    // A text field in the card's idiom: the pill a row would be, holding
-    // the caret instead of a label.
-    component MenuField: Rectangle {
+
+    component MenuField: Field {
         id: field
-        property alias text: fieldInput.text
-        property alias placeholder: fieldPlaceholder.text
-        property alias inputEnabled: fieldInput.enabled
-        signal accepted()
+        property bool inputEnabled: true
         signal textEdited()
         function focusField(selectAll: bool): void {
-            fieldInput.forceActiveFocus();
-            if (selectAll)
-                fieldInput.selectAll();
+            field.grabFocus();
         }
+        enabled: inputEnabled
         Layout.fillWidth: true
-        implicitHeight: 52
-        radius: Math.max(Appearance.rounding.verysmall, Appearance.rounding.windowRounding - 8)
-        color: Appearance.colors.colSurfaceContainerHigh
-        border.width: fieldInput.activeFocus ? 2 : 0
-        border.color: Appearance.m3colors.m3primary
-        StyledTextInput {
-            id: fieldInput
-            anchors.fill: parent
-            anchors.leftMargin: 14
-            anchors.rightMargin: 14
-            verticalAlignment: TextInput.AlignVCenter
-            selectByMouse: true
-            clip: true
-            onAccepted: field.accepted()
-            onTextEdited: field.textEdited()
-        }
-        StyledText {
-            id: fieldPlaceholder
-            anchors.fill: parent
-            anchors.leftMargin: 14
-            anchors.rightMargin: 14
-            verticalAlignment: Text.AlignVCenter
-            visible: fieldInput.text.length === 0
-            color: Appearance.colors.colSubtext
-        }
+        toolbar: true
+        onEdited: field.textEdited()
     }
-    component MenuRow: EditPanelRow {
+
+    component MenuRow: Rectangle {
+        id: menuRow
+        property string symbol: ""
+        property string title: ""
+        property string subtitle: ""
+        property url iconSource: ""
+        property string trailingKind: "none"
+        property bool destructive: false
+        property bool rowEnabled: true
+        property bool first: false
+        property bool last: false
+        signal activated()
         Layout.fillWidth: true
-        hostRadius: Appearance.rounding.windowRounding
-        hostPadding: 8
-        trailingKind: "none"
+        implicitHeight: subtitle === "" ? Tokens.rowH : Tokens.rowH + Tokens.s3
+        radius: Tokens.radius
+        color: rowTap.pressed ? Tokens.tint16 : rowHover.hovered ? Tokens.tint10 : "transparent"
+        border.width: activeFocus ? Tokens.border : 0
+        border.color: Tokens.bone
+        opacity: rowEnabled ? 1 : 0.4
+        activeFocusOnTab: rowEnabled
+        Behavior on color { ColorAnimation { duration: Tokens.snap } }
+
+        Image {
+            id: rowImage
+            anchors.left: parent.left
+            anchors.leftMargin: Tokens.s3
+            anchors.verticalCenter: parent.verticalCenter
+            width: Tokens.s5
+            height: Tokens.s5
+            sourceSize: Qt.size(width, height)
+            source: menuRow.iconSource
+            visible: source.toString().length > 0
+            fillMode: Image.PreserveAspectFit
+        }
+        MaterialSymbol {
+            id: rowSymbol
+            anchors.centerIn: rowImage
+            visible: !rowImage.visible
+            text: menuRow.symbol
+            iconSize: Tokens.s5
+            color: menuRow.destructive ? Tokens.alert : Tokens.inkDim
+        }
+        Column {
+            anchors.left: rowImage.right
+            anchors.leftMargin: Tokens.s3
+            anchors.right: rowTail.left
+            anchors.rightMargin: Tokens.s2
+            anchors.verticalCenter: parent.verticalCenter
+            spacing: Tokens.border
+            Text {
+                width: parent.width
+                text: menuRow.title
+                color: menuRow.destructive ? Tokens.alert : Tokens.ink
+                font.family: Tokens.ui
+                font.pixelSize: Tokens.fBody
+                font.weight: Font.Medium
+                elide: Text.ElideRight
+            }
+            Text {
+                width: parent.width
+                visible: menuRow.subtitle !== ""
+                text: menuRow.subtitle
+                color: Tokens.inkMuted
+                font.family: Tokens.ui
+                font.pixelSize: Tokens.fSmall
+                elide: Text.ElideRight
+            }
+        }
+        Text {
+            id: rowTail
+            anchors.right: parent.right
+            anchors.rightMargin: Tokens.s3
+            anchors.verticalCenter: parent.verticalCenter
+            text: menuRow.trailingKind === "chevron" ? "›"
+                : menuRow.trailingKind === "add" ? "+" : ""
+            color: menuRow.destructive ? Tokens.alert : Tokens.inkMuted
+            font.family: Tokens.ui
+            font.pixelSize: Tokens.fBody
+        }
+        HoverHandler {
+            id: rowHover
+            enabled: menuRow.rowEnabled
+            cursorShape: Qt.PointingHandCursor
+        }
+        TapHandler {
+            id: rowTap
+            enabled: menuRow.rowEnabled
+            onTapped: menuRow.activated()
+        }
+        Keys.onPressed: event => {
+            if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter
+                || event.key === Qt.Key_Space) && !event.isAutoRepeat) {
+                menuRow.activated();
+                event.accepted = true;
+            }
+        }
     }
 
     Component {
         id: renamePage
         ColumnLayout {
-            spacing: 3
+            spacing: Tokens.s1
             PageHeader { title: Translation.tr("Rename shortcut") }
-            StyledText {
+            Text {
                 Layout.fillWidth: true
-                Layout.leftMargin: 6
-                Layout.bottomMargin: 4
+                Layout.leftMargin: Tokens.s2
+                Layout.bottomMargin: Tokens.s1
                 text: Translation.tr("Only the shortcut label changes")
-                font.pixelSize: Appearance.font.pixelSize.smaller
-                color: Appearance.colors.colSubtext
+                font.family: Tokens.ui
+                font.pixelSize: Tokens.fSmall
+                color: Tokens.inkMuted
             }
             MenuField {
                 id: renameField
-                Layout.bottomMargin: 3
+                Layout.bottomMargin: Tokens.s1
                 text: root.entry.name || ""
                 inputEnabled: root.writable
                 onAccepted: saveName.activated()
@@ -216,7 +312,7 @@ ItemContextDialog {
         id: membersPage
         ColumnLayout {
             id: membersColumn
-            spacing: 3
+            spacing: Tokens.s1
             readonly property var apps: root.entry.apps ?? []
             PageHeader { title: root.entry.name || Translation.tr("App group") }
             MenuRow {
@@ -242,12 +338,14 @@ ItemContextDialog {
                     onActivated: { root.memberId = modelData.id; root.page = "member"; }
                 }
             }
-            StyledText {
+            Text {
                 Layout.fillWidth: true
-                Layout.margins: 12
+                Layout.margins: Tokens.s3
                 visible: membersColumn.apps.length === 0
                 text: Translation.tr("No applications in this group")
-                color: Appearance.colors.colSubtext
+                color: Tokens.inkMuted
+                font.family: Tokens.ui
+                font.pixelSize: Tokens.fSmall
                 wrapMode: Text.Wrap
             }
         }
@@ -255,7 +353,7 @@ ItemContextDialog {
     Component {
         id: memberPage
         ColumnLayout {
-            spacing: 3
+            spacing: Tokens.s1
             PageHeader { title: root.member?.name ?? "" }
             MenuRow {
                 first: true
@@ -283,7 +381,7 @@ ItemContextDialog {
         id: addPage
         ColumnLayout {
             id: picker
-            spacing: 3
+            spacing: Tokens.s1
             property string query: ""
             readonly property var applications: {
                 const search = query.trim().toLowerCase();
@@ -294,7 +392,7 @@ ItemContextDialog {
             PageHeader { title: Translation.tr("Add application") }
             MenuField {
                 id: searchField
-                Layout.bottomMargin: 3
+                Layout.bottomMargin: Tokens.s1
                 placeholder: Translation.tr("Search applications")
                 onTextEdited: picker.query = searchField.text
                 Component.onCompleted: searchField.focusField(false)
@@ -302,21 +400,19 @@ ItemContextDialog {
             ListView {
                 id: appList
                 Layout.fillWidth: true
-                Layout.preferredHeight: Math.min(300, contentHeight)
+                Layout.preferredHeight: Math.min(Tokens.railW + Tokens.s6, contentHeight)
                 clip: true
                 reuseItems: true
-                spacing: 3
+                spacing: Tokens.s1
                 model: picker.applications
 
                 TouchpadScrollHandler {
                     flickable: appList
                 }
-                delegate: EditPanelRow {
+                delegate: MenuRow {
                     required property var modelData
                     required property int index
                     width: ListView.view.width
-                    hostRadius: Appearance.rounding.windowRounding
-                    hostPadding: 8
                     first: index === 0
                     last: index === appList.count - 1
                     title: modelData.name
@@ -332,12 +428,14 @@ ItemContextDialog {
                     }
                 }
             }
-            StyledText {
+            Text {
                 Layout.fillWidth: true
-                Layout.margins: 12
+                Layout.margins: Tokens.s3
                 visible: picker.applications.length === 0
                 text: Translation.tr("No applications found")
-                color: Appearance.colors.colSubtext
+                color: Tokens.inkMuted
+                font.family: Tokens.ui
+                font.pixelSize: Tokens.fSmall
                 wrapMode: Text.Wrap
             }
         }
@@ -345,33 +443,34 @@ ItemContextDialog {
     Component {
         id: detailsPage
         ColumnLayout {
-            spacing: 3
+            spacing: Tokens.s1
             PageHeader { title: Translation.tr("Details") }
             // The item's identity as a static pill of the row's geometry
             // (circle + two lines), a whole run on its own.
             Rectangle {
                 Layout.fillWidth: true
-                implicitHeight: Math.max(58, detailsLayout.implicitHeight + 16)
-                radius: Math.max(Appearance.rounding.verysmall, Appearance.rounding.windowRounding - 8)
-                color: Appearance.colors.colSurfaceContainerHigh
+                implicitHeight: Math.max(Tokens.rowH, detailsLayout.implicitHeight + Tokens.s4 * 2)
+                radius: Tokens.radius
+                color: Tokens.paperLift
+                border.width: Tokens.border
+                border.color: Tokens.line
                 RowLayout {
                     id: detailsLayout
                     anchors.fill: parent
-                    anchors.leftMargin: 14
-                    anchors.rightMargin: 14
-                    anchors.topMargin: 8
-                    anchors.bottomMargin: 8
-                    spacing: 12
+                    anchors.margins: Tokens.s4
+                    spacing: Tokens.s3
                     Rectangle {
-                        implicitWidth: 38
-                        implicitHeight: 38
-                        radius: width / 2
-                        color: Appearance.colors.colSurfaceContainerHighest
+                        implicitWidth: Tokens.s7
+                        implicitHeight: Tokens.s7
+                        radius: Tokens.radius
+                        color: Tokens.tint5
+                        border.width: Tokens.border
+                        border.color: Tokens.lineSoft
                         Image {
                             anchors.centerIn: parent
-                            width: 26
-                            height: 26
-                            sourceSize: Qt.size(26, 26)
+                            width: Tokens.s6
+                            height: Tokens.s6
+                            sourceSize: Qt.size(width, height)
                             source: root.iconSource
                             visible: source.toString().length > 0
                             fillMode: Image.PreserveAspectFit
@@ -380,27 +479,32 @@ ItemContextDialog {
                             anchors.centerIn: parent
                             visible: root.iconSource.toString().length === 0
                             text: root.entry.type === "directory" ? "folder"
-                                : root.entry.type === "file" ? "description" : "apps"
-                            iconSize: 22
-                            color: Appearance.m3colors.m3onSurface
+                                : root.entry.type === "file" ? "description"
+                                : root.entry.type === "url" ? "language" : "apps"
+                            iconSize: Tokens.s5
+                            color: Tokens.ink
                         }
                     }
                     ColumnLayout {
                         Layout.fillWidth: true
-                        spacing: 2
-                        StyledText {
+                        spacing: Tokens.s1
+                        Text {
                             Layout.fillWidth: true
                             text: root.entry.type === "group" ? Translation.tr("App group")
                                 : root.entry.type === "directory" ? Translation.tr("Folder")
-                                : root.entry.type === "file" ? Translation.tr("File") : Translation.tr("Application")
-                            font.pixelSize: Appearance.font.pixelSize.small
+                                : root.entry.type === "file" ? Translation.tr("File")
+                                : root.entry.type === "url" ? Translation.tr("Web link") : Translation.tr("Application")
+                            font.family: Tokens.ui
+                            font.pixelSize: Tokens.fSmall
                             font.weight: Font.Medium
+                            color: Tokens.ink
                         }
-                        StyledText {
+                        Text {
                             Layout.fillWidth: true
                             text: root.entry.path || root.entry.id || ""
-                            font.pixelSize: Appearance.font.pixelSize.smaller
-                            color: Appearance.colors.colSubtext
+                            font.family: Tokens.mono
+                            font.pixelSize: Tokens.fTiny
+                            color: Tokens.inkMuted
                             wrapMode: Text.WrapAnywhere
                         }
                     }
@@ -416,58 +520,54 @@ ItemContextDialog {
         property string tip: ""
         signal clicked()
         Layout.fillWidth: true
-        implicitHeight: 48
-        radius: Math.max(Appearance.rounding.verysmall, Appearance.rounding.windowRounding - 12)
-        color: toolMouse.pressed ? Appearance.colors.colSurfaceContainerHighestActive
-            : toolMouse.containsMouse ? Appearance.colors.colSurfaceContainerHighestHover
-            : Appearance.colors.colSurfaceContainerHigh
-        Behavior on color {
-            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(tool)
-        }
+        implicitHeight: Tokens.rowH
+        radius: Tokens.radius
+        color: toolTap.pressed ? Tokens.tint16 : toolHover.hovered ? Tokens.tint10 : Tokens.tint5
+        border.width: Tokens.border
+        border.color: toolHover.hovered ? Tokens.lineStrong : Tokens.line
+        Behavior on color { ColorAnimation { duration: Tokens.snap } }
         MaterialSymbol {
             id: toolGlyph
             anchors.centerIn: parent
             text: tool.symbol
-            iconSize: 22
-            color: Appearance.m3colors.m3onSurface
-            scale: toolMouse.pressed ? 0.85 : 1
+            iconSize: Tokens.s5
+            color: Tokens.ink
+            scale: toolTap.pressed ? 0.9 : 1
             Behavior on scale {
-                NumberAnimation { duration: 160; easing.type: Easing.OutBack; easing.overshoot: 2.4 }
+                NumberAnimation { duration: Tokens.snap; easing.type: Tokens.ease }
             }
         }
-        MouseArea {
-            id: toolMouse
-            anchors.fill: parent
-            hoverEnabled: true
+        HoverHandler {
+            id: toolHover
             cursorShape: Qt.PointingHandCursor
-            onClicked: tool.clicked()
         }
-        StyledToolTip {
-            extraVisibleCondition: toolMouse.containsMouse && tool.tip !== ""
-            text: tool.tip
+        TapHandler {
+            id: toolTap
+            onTapped: tool.clicked()
         }
     }
 
     Component {
         id: arrangePage
         ColumnLayout {
-            spacing: 3
+            spacing: Tokens.s1
             readonly property var ids: root.selectedIds
             PageHeader { title: Translation.tr("Arrange %1 items").arg(String(root.selectionCount)) }
-            StyledText {
+            Text {
                 Layout.fillWidth: true
-                Layout.leftMargin: 6
-                Layout.topMargin: 2
+                Layout.leftMargin: Tokens.s2
+                Layout.topMargin: Tokens.border * 2
                 text: Translation.tr("Align")
-                font.pixelSize: Appearance.font.pixelSize.smaller
-                color: Appearance.colors.colSubtext
+                font.family: Tokens.ui
+                font.pixelSize: Tokens.fSmall
+                color: Tokens.inkMuted
             }
             GridLayout {
                 Layout.fillWidth: true
-                Layout.bottomMargin: 6
+                Layout.bottomMargin: Tokens.s2
                 columns: 3
-                rowSpacing: 3
-                columnSpacing: 3
+                rowSpacing: Tokens.s1
+                columnSpacing: Tokens.s1
                 Repeater {
                     model: [
                         { mode: "left", symbol: "align_horizontal_left", tip: Translation.tr("Align left") },
@@ -530,7 +630,7 @@ ItemContextDialog {
     Component {
         id: screenPage
         ColumnLayout {
-            spacing: 3
+            spacing: Tokens.s1
             PageHeader { title: Translation.tr("Move to screen") }
             Repeater {
                 model: root.otherScreens

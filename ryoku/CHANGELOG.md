@@ -4,28 +4,38 @@
 
 ### Added
 - **The Stage Editor is the desktop's edit mode.** Its toolbar frames one
-  monitor at a time (Desktop | Widgets | Wallpaper | Style | Visualizer |
-  Depth, snap, undo, redo, Done), and the drawer lists Ryoku's real catalogue:
-  built-ins, Shima and Python faces, and installed plugin sets. Every edit, from
-  a catalogue add or wallpaper frame to a style preset, widget drag, resize, or
-  scale, lands in one undo stack. The desktop is the document and undo is the
-  walk-back. Bar, dock, and lock editing stay in the Hub
-  (`ryoku/shell/quickshell/stage/`, `shell/modules/stage/`, docs/stage.md).
-- **The visualizer is edited in the Stage Editor.** The look is a framed widget
-  like the rest. `Super+Alt+M` and the Hub hand-off open the Visualizer
-  catalogue with the look selected, where a drag moves it, the corner sizes it,
-  the top handle turns it, and Ctrl+wheel scales it. Each gesture joins the
-  chrome's undo stack, and the Look, Place, Colour, Playback, Shape, and Field
-  tabs carry its controls (`shell/modules/visualizer/`,
-  `shell/modules/desktop/`).
-- **The finished Stage Editor brings every desktop tool into one composition
-  surface.** The desktop menu now has Wallpaper and Search in its quick row and
-  one Edit desktop action. The toolbar adds Visualizer and Depth catalogues
-  beside Widgets, Wallpaper, and Style, with snap, multi-select, group moves,
-  keyboard nudging, alignment, undo and redo. It also edits ryogami's
-  per-screen wallpaper and framing, style presets, desktop icons, and
-  per-output widget layouts on the live rounded desktop card
-  (`shell/modules/stage/`, `quickshell/stage/modules/ii/editMode/`).
+  monitor at a time, names the edited display and cycles displays from its chip,
+  while the drawer keeps the active catalogue instead of repeating those tabs.
+  Widget frames appear on hover or selection with four resize handles, a size
+  badge, snapping guides, and Settings and Remove actions. Settings opens a
+  hidden drawer page with quick size, lock, depth, and remove controls above the
+  full widget inspector. Every committed edit joins one undo stack
+  (`shell/quickshell/shell/modules/stage/`,
+  `shell/quickshell/stage/modules/ii/editMode/`).
+- **The live desktop is the editor's document.** Its drawer lists Ryoku's real
+  built-ins, Shima and Python faces, and installed plugin sets. Multi-select,
+  group moves, keyboard nudging, alignment, ryogami's per-screen wallpaper and
+  framing, style presets, desktop icons, and per-output widget layouts all work
+  on the rounded live card. The desktop menu has Wallpaper and Search in its
+  quick row and one Edit desktop action; bar, dock, and lockscreen editing stay
+  in the Hub (`shell/quickshell/shell/modules/desktop/`,
+  `shell/quickshell/stage/modules/ii/editMode/`).
+- **The visualizer is edited instance by instance in the Stage Editor.** The
+  catalogue leads with a gallery of every look, then Look, Place, Colour,
+  Motion, Shape, and Field controls. Each `visualizer:<index>` has its own frame
+  and grip; selecting it retargets the catalogue. `Super+Alt+M` opens the
+  catalogue with an instance selected
+  (`shell/quickshell/shell/modules/visualizer/`,
+  `shell/quickshell/shell/modules/stage/StageVisualizerPage.qml`,
+  `shell/quickshell/shell/modules/stage/StageWidgetProvider.qml`).
+- **Depth has its complete scene workflow in the Stage Editor.** Scene, Layers,
+  Look, Motion, and Front tabs cover Plain, Depth, Parallax, cut progress and
+  recovery, model quality and removal, per-layer placement, look and motion
+  controls, and which widgets rise over the subject. Picture and PNG pickers,
+  confirmed cut-out clearing, and a live preview stay in the catalogue
+  (`shell/quickshell/shell/modules/stage/StageDepthPage.qml`,
+  `shell/quickshell/shell/modules/stage/StageDepthOptions.qml`,
+  `shell/quickshell/shell/modules/stage/StageDepthHero.qml`).
 - **Rashin splits into a Ryoku lane and a Chat lane.** The Ryoku lane is the
   machine agent: the Needle with the vault, the `ryoku` skill, the wiki, prowl
   over the Ryoku source and the approval modes, on the Alt+Space bar, in the
@@ -134,7 +144,53 @@
   physical pixels instead of guessing from the reported height
   (`ui/Singletons/Wm.qml`).
 
+### Removed
+- **Desktop composition no longer has a second settings page in the Hub.**
+  Depth, visualizer, and widget editing live only in the Stage Editor. The
+  retired `desktop-scene`, `desktop-scene-visualizer`,
+  `desktop-scene-widgets`, `stage`, `visualizer`, and `widgets` links open the
+  matching editor catalogue, while the desktop menu's Settings row opens the
+  Hub normally (`hub/quickshell/pages/DesktopScenePage.qml`,
+  `hub/quickshell/schema/DesktopScenePage.js`, `shell/ipc/control.go`).
+
 ### Fixed
+- **Wallpaper framing stays where it was released and every layer follows it.**
+  Dragging after a zoom no longer bounces when the committed record reloads,
+  and mirror or rotation redraws the shown picture after a reveal transition.
+  Cut-outs and the Parallax backdrop now share the wallpaper's zoom, offset,
+  rotation, and mirror. Widgets, icons, and the visualizer dim and stop taking
+  input during framing (`shell/quickshell/stage/services/WallpaperLayout.qml`,
+  `shell/quickshell/shell/modules/wallpaper/Backdrop.qml`,
+  `shell/quickshell/shell/modules/wallpaper/WallpaperFramedPlane.qml`,
+  `shell/quickshell/shell/modules/stage/StageLayer.qml`,
+  `shell/quickshell/shell/modules/stage/StageBackdrop.qml`).
+- **Desktop icons appear and respond as soon as their store is ready.** A late
+  store load no longer leaves them hidden; adding and removing apps updates the
+  desktop at once, and adding an app unhides the layer. Right-click opens the
+  icon's own Open, Rename, Details, Copy, and Remove dialog, and files, folders,
+  and web or mail links can be dropped onto the desktop
+  (`shell/quickshell/stage/modules/ii/background/shortcuts/`).
+- **Stage Style changes the live palette everywhere.** Mode, wallpaper scheme,
+  source colour, and named themes now use the same `matugen.json` and
+  `shell.json` seams as the Hub, so the page shows the real current state and
+  every change can be undone. Saved looks include the wallpaper, theme, mode,
+  scheme type, and source colour
+  (`shell/quickshell/stage/modules/ii/editMode/EditStylePage.qml`,
+  `shell/quickshell/stage/modules/ii/editMode/EditStylePresets.qml`).
+- **Removing one visualizer no longer removes the rest.** Remove targets only
+  the selected instance, turns the visualizer off only after the last one is
+  gone, and undo restores the instance at its original index with all settings
+  (`shell/quickshell/shell/modules/visualizer/Singletons/Config.qml`,
+  `shell/quickshell/shell/modules/stage/StageWidgetProvider.qml`).
+- **Canvas resizing writes once instead of on every pointer move.** The frame
+  previews size locally, commits the per-display store on release, and creates
+  one undo entry, keeping resize smooth and store reloads out of the gesture
+  (`shell/quickshell/shell/modules/desktop/WidgetSlot.qml`,
+  `shell/quickshell/shell/modules/desktop/PluginDesktopSlot.qml`,
+  `shell/quickshell/shell/modules/stage/StageOutline.qml`).
+- **Setting rows reserve the full requested control width.** `controlWidth` is
+  no longer truncated to an integer, so buttons such as Choose keep their label
+  instead of eliding it (`ui/SettingRow.qml`).
 - **The keypad choice reaches the login greeter.** Both compositor providers
   now publish the session's effective numlock state to
   `/var/lib/ryoku/greeter-numlock` on every apply (the same hand-off shape as

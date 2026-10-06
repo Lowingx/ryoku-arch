@@ -4,7 +4,6 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
-import Ryoku.Ui.Singletons
 import stage.services
 import stage.modules.common
 import stage.modules.ii.editMode
@@ -12,8 +11,10 @@ import stage.modules.ii.editMode
 Singleton {
     id: root
 
-    // Decode only when persisted state changes, not on pointer movement or per icon.
+    // Persistent.ready is an explicit dependency because JsonAdapter initially
+    // exposes the "{}" default before replacing it with states.json.
     readonly property var screens: {
+        void Persistent.ready;
         try {
             const value = JSON.parse(Persistent.states.desktopShortcutsJson);
             return value && typeof value === "object" && !Array.isArray(value) ? value : {};
@@ -173,7 +174,7 @@ Singleton {
     }
 
     // ── Order ──────────────────────────────────────────────────────────────
-    readonly property var typeRank: ({ "app": 0, "group": 1, "directory": 2, "file": 3 })
+    readonly property var typeRank: ({ "app": 0, "group": 1, "directory": 2, "file": 3, "url": 4 })
     function useCount(item) {
         if (item.type === "group")
             return (item.apps ?? []).reduce((sum, app) => sum + (app.launchCount ?? 0), item.launchCount ?? 0);
@@ -256,7 +257,8 @@ Singleton {
         for (const item of items) {
             if (item.type === "group")
                 continue;
-            const kind = item.type === "directory" || item.type === "file" ? item.type : "app";
+            const kind = item.type === "directory" ? "directory"
+                : item.type === "file" || item.type === "url" ? "file" : "app";
             let stack = stacks.get(kind);
             if (!stack) {
                 stack = { id: "stack:" + kind, type: "group", stack: kind, name: root.stackName(kind),
@@ -794,9 +796,9 @@ Singleton {
     }
 
     function launch(entry) {
-        // Folders and plain files go to the default handler; only .desktop
-        // paths are launchable through gio directly.
-        if ((entry.type === "directory" || entry.type === "file") && entry.path)
+        // Files, folders and URLs go through the desktop's default handler.
+        // Only dropped .desktop files use Gio's desktop-entry launcher.
+        if ((entry.type === "directory" || entry.type === "file" || entry.type === "url") && entry.path)
             Quickshell.execDetached(["xdg-open", entry.path]);
         else if (entry.path)
             Quickshell.execDetached(["gio", "launch", entry.path]);
@@ -831,12 +833,10 @@ Singleton {
             root.writeAll(next);
     }
 
-    // Only apps and groups fold into a group: a folder or a file on the
-    // desktop is its own thing, never merge fuel, and a stack takes its
-    // members from the stacks rule alone. The layer's targetAt and the
-    // guards above share this one rule.
+    // Only apps and app groups fold together. Files, folders and URLs retain
+    // their own launch semantics; automatic stacks can still collect them.
     function isGroupable(item) {
-        return item.type !== "directory" && item.type !== "file" && !item.stack;
+        return (item.type === "app" || item.type === "group") && !item.stack;
     }
 
     // ── Badges ─────────────────────────────────────────────────────────────

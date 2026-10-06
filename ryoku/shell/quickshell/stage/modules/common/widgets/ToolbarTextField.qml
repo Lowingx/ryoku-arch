@@ -12,22 +12,22 @@ TextField {
     Layout.fillHeight: false
     implicitWidth: 200
     implicitHeight: 36
-    padding: Appearance.sizes.space3
+    padding: Appearance.sizes.space2
 
     // The built-in placeholder cannot elide, so a bounded copy is painted
     // below while the public placeholderText API remains unchanged.
     placeholderTextColor: "transparent"
-    color: Appearance.colors.colOnLayer1
+    color: Appearance.colors.colOnSurface
     font {
         family: Appearance.font.family.main
         pixelSize: Appearance.font.pixelSize.smallie
-        weight: Font.Bold
+        weight: Font.Normal
         hintingPreference: Font.PreferFullHinting
         variableAxes: Appearance.font.variableAxes.main
     }
     renderType: Text.NativeRendering
-    selectedTextColor: Appearance.m3colors.m3surface
-    selectionColor: Appearance.m3colors.m3onSurface
+    selectedTextColor: Appearance.colors.colOnSecondary
+    selectionColor: Appearance.colors.colSecondary
 
     // Set this to the item that should receive focus (and key events)
     // when Ctrl is held, e.g. cheatsheetBackground for tab switching.
@@ -47,10 +47,10 @@ TextField {
         radius: Appearance.rounding.small
         border.width: filterField.activeFocus ? 2 : 1
         border.color: filterField.activeFocus
-            ? Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.7)
+            ? Appearance.colors.colOnSurface
             : fieldMouse.containsMouse
-                ? Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.4)
-                : Appearance.withAlpha(Appearance.m3colors.m3outline, 0.4)
+                ? Appearance.colors.colOutline
+                : Appearance.colors.colOutlineVariant
         Behavior on border.color {
             ColorAnimation { duration: Appearance.animation.elementMoveFast.duration }
         }

@@ -2,33 +2,30 @@ import stage.modules.common
 import QtQuick
 import QtQuick.Controls
 
-// The Stage control follows Ryogami's compact bone-and-ink switch rather than
-// Qt's Material palette. The public colour properties stay available for the
-// few callers that need to tune a disabled or destructive state.
+// The compatibility switch follows Ryoku.Ui Sw while preserving the island's
+// checked property and caller-facing colour overrides.
 Switch {
     id: root
     hoverEnabled: true
 
     property real sizeScale: 1
-    implicitWidth: 44 * root.sizeScale
+    implicitWidth: 54 * root.sizeScale
     implicitHeight: 24 * root.sizeScale
 
-    property color activeColor: Appearance.m3colors.m3onSurface
-    property color inactiveColor: Appearance.withAlpha(Appearance.m3colors.m3onSurface,
-        root.hovered ? 0.12 : 0.05)
-    property color activeThumbColor: Appearance.m3colors.m3surface
-    property color inactiveThumbColor: Appearance.withAlpha(
-        Appearance.m3colors.m3onSurface, 0.7)
+    property color activeColor: Appearance.colors.colLayer1Active
+    property color inactiveColor: Appearance.colors.colLayer1Hover
+    property color activeThumbColor: Appearance.colors.colOnSurface
+    property color inactiveThumbColor: Appearance.colors.colOnSurfaceVariant
 
     readonly property real inset: 3 * root.sizeScale
-    readonly property real knobSize: root.height - root.inset * 2
+    readonly property real knobSize: 17 * root.sizeScale
     readonly property bool isPressed: root.pressed || root.down
 
-    scale: root.isPressed && root.enabled ? 0.95 : 1
+    scale: root.isPressed && root.enabled ? 0.96 : 1
     Behavior on scale {
         NumberAnimation {
-            duration: Appearance.animation.elementMoveFast.duration
-            easing.type: Easing.OutQuad
+            duration: Appearance.animation.elementMoveSnap.duration
+            easing.type: Appearance.animation.elementMoveSnap.type
         }
     }
 
@@ -37,11 +34,11 @@ Switch {
     background: Rectangle {
         width: root.width
         height: root.height
-        radius: height / 2
+        radius: Appearance.rounding.small
         color: root.checked ? root.activeColor : root.inactiveColor
-        border.width: 1
-        border.color: root.checked ? "transparent"
-            : Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.3)
+        border.width: root.activeFocus ? 2 : 1
+        border.color: root.activeFocus ? Appearance.colors.colOnSurface
+            : root.hovered ? Appearance.colors.colOutline : Appearance.colors.colOutlineVariant
 
         Behavior on color {
             animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
@@ -51,16 +48,15 @@ Switch {
     indicator: Rectangle {
         width: root.knobSize
         height: root.knobSize
-        radius: height / 2
+        radius: Appearance.rounding.small
         y: root.inset
         x: root.checked ? root.width - width - root.inset : root.inset
         color: root.checked ? root.activeThumbColor : root.inactiveThumbColor
 
         Behavior on x {
             NumberAnimation {
-                duration: Appearance.animation.elementMove.duration
-                easing.type: Easing.OutBack
-                easing.overshoot: 2
+                duration: Appearance.animation.elementMoveSnap.duration
+                easing.type: Appearance.animation.elementMoveSnap.type
             }
         }
         Behavior on color {

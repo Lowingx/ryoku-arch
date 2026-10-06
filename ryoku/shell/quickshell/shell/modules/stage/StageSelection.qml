@@ -14,6 +14,16 @@ Item {
     property bool active: false
     property bool keyboardEnabled: false
     readonly property bool selectionEnabled: root.active
+    property real framingDim: 0
+    property bool inputBlocked: false
+    property bool snapEnabled: true
+    property real snapThreshold: 8
+    property real guideVertical: -1
+    property real guideHorizontal: -1
+    readonly property var guideVerticals: root.guideVertical >= 0
+        ? [root.guideVertical] : []
+    readonly property var guideHorizontals: root.guideHorizontal >= 0
+        ? [root.guideHorizontal] : []
     property bool marqueeActive: false
     property bool widgetPressActive: false
     property real marqueeAnchorX: 0
@@ -36,6 +46,7 @@ Item {
     signal removeRequested(string id)
     signal dropped(rect box)
     signal marqueeFinished(rect band)
+    signal settingsRequested(string id)
 
     visible: root.active
     focus: root.active && root.keyboardEnabled
@@ -47,7 +58,7 @@ Item {
         let maxY = -Infinity;
         for (const id of StageCfg.StageSession.selection) {
             const item = root._item(id);
-            if (!item || item.visible === false)
+            if (!root._movable(id, item) || item.visible === false)
                 continue;
             minX = Math.min(minX, item.x);
             minY = Math.min(minY, item.y);
@@ -94,7 +105,8 @@ Item {
     }
 
     function _movable(id, item) {
-        return id !== "visualizer" && item !== null && item !== undefined;
+        return String(id).indexOf("visualizer") !== 0
+            && item !== null && item !== undefined;
     }
 
     function _bounds(item) {
@@ -338,6 +350,72 @@ Item {
             root.removeRequested(id);
         GlobalStates.editHistoryEndBatch();
     }
+    function _snapTargets() {
+        const xs = [root.width / 2];
+        const ys = [root.height / 2];
+        const selected = StageCfg.StageSession.selection;
+        for (const otherId of root.widgetIds || []) {
+            if (selected.indexOf(otherId) >= 0
+                    || String(otherId).indexOf("visualizer") === 0)
+                continue;
+            const other = root._item(otherId);
+            if (!other || other.visible === false)
+                continue;
+            xs.push(other.x, other.x + other.width / 2,
+                other.x + other.width);
+            ys.push(other.y, other.y + other.height / 2,
+                other.y + other.height);
+        }
+        return { x: xs, y: ys };
+    }
+
+    function _snapAxis(position, size, targets, grid) {
+        let best = position;
+        let guide = -1;
+        let distance = root.snapThreshold + 1;
+        const points = [
+            { at: position, offset: 0 },
+            { at: position + size / 2, offset: size / 2 },
+            { at: position + size, offset: size }
+        ];
+        for (const point of points) {
+            for (const target of targets) {
+                const d = Math.abs(point.at - target);
+                if (d < distance) {
+                    distance = d;
+                    best = target - point.offset;
+                    guide = target;
+                }
+            }
+        }
+        if (grid > 0) {
+            const target = Math.round(position / grid) * grid;
+            const d = Math.abs(position - target);
+            if (d < distance) {
+                best = target;
+                guide = target;
+            }
+        }
+        return { position: best, guide: guide };
+    }
+
+    function _snapPoint(id, x, y, modifiers) {
+        const drag = root._drag;
+        const item = drag ? drag.leaderItem : null;
+        if (!drag || !item || !root.snapEnabled
+                || Boolean(modifiers & Qt.AltModifier)) {
+            root.guideVertical = -1;
+            root.guideHorizontal = -1;
+            return Qt.point(x, y);
+        }
+        const sx = root._snapAxis(x, item.width, drag.snapTargets.x,
+            Math.max(1, root.gridSize));
+        const sy = root._snapAxis(y, item.height, drag.snapTargets.y,
+            Math.max(1, root.gridSize));
+        root.guideVertical = sx.guide;
+        root.guideHorizontal = sy.guide;
+        return Qt.point(sx.position, sy.position);
+    }
 
     function widgetDragStarted(id) {
         root.flushNudge();
@@ -374,6 +452,7 @@ Item {
         }
         root._drag = {
             leader: id,
+            leaderItem: leader.item,
             startX: leader.x,
             startY: leader.y,
             members: members,
@@ -381,7 +460,8 @@ Item {
             deltaMinX: deltaMinX,
             deltaMaxX: deltaMaxX,
             deltaMinY: deltaMinY,
-            deltaMaxY: deltaMaxY
+            deltaMaxY: deltaMaxY,
+            snapTargets: root._snapTargets()
         };
         return {
             minX: leader.x + deltaMinX,
@@ -391,24 +471,29 @@ Item {
         };
     }
 
-    function widgetDragMoved(id, x, y) {
+    function widgetDragMoved(id, x, y, modifiers) {
         const drag = root._drag;
         if (!drag || drag.leader !== id)
             return Qt.point(x, y);
-        const dx = Math.max(drag.deltaMinX, Math.min(drag.deltaMaxX, x - drag.startX));
-        const dy = Math.max(drag.deltaMinY, Math.min(drag.deltaMaxY, y - drag.startY));
+        const snapped = root._snapPoint(id, x, y,
+            modifiers === undefined ? root.heldModifiers : modifiers);
+        const dx = Math.max(drag.deltaMinX,
+            Math.min(drag.deltaMaxX, snapped.x - drag.startX));
+        const dy = Math.max(drag.deltaMinY,
+            Math.min(drag.deltaMaxY, snapped.y - drag.startY));
         for (const member of drag.members) {
             if (member.id !== id)
-                root._setPreview(member.id, member.item, member.x + dx, member.y + dy);
+                root._setPreview(member.id, member.item,
+                    member.x + dx, member.y + dy);
         }
         return Qt.point(drag.startX + dx, drag.startY + dy);
     }
 
-    function widgetDragEnded(id, x, y) {
+    function widgetDragEnded(id, x, y, modifiers) {
         const drag = root._drag;
         if (!drag || drag.leader !== id)
             return false;
-        const point = root.widgetDragMoved(id, x, y);
+        const point = root.widgetDragMoved(id, x, y, modifiers);
         const dx = point.x - drag.startX;
         const dy = point.y - drag.startY;
         const positions = drag.members.map(member => ({
@@ -421,6 +506,8 @@ Item {
                 root._setPreview(position.id, root._item(position.id),
                     position.x, position.y);
         root._drag = null;
+        root.guideVertical = -1;
+        root.guideHorizontal = -1;
         root._commitPositions(positions, drag.before);
         const leader = root._item(id);
         if (leader)
@@ -433,6 +520,8 @@ Item {
         if (!drag || (id !== "" && drag.leader !== id))
             return;
         root._drag = null;
+        root.guideVertical = -1;
+        root.guideHorizontal = -1;
         for (const member of drag.members)
             root._endPreview(member.id, member.item);
         root._pluginPreview = ({});
@@ -537,6 +626,40 @@ Item {
         }
         root._commitPositions(positions, before);
     }
+    function scaleSelection(delta, reset) {
+        root.flushNudge();
+        const ids = StageCfg.StageSession.selection.slice();
+        if (ids.length === 0)
+            return;
+        GlobalStates.editHistoryBeginBatch();
+        for (const id of ids) {
+            if (String(id).indexOf("visualizer") === 0)
+                continue;
+            const item = root._item(id);
+            if (!item || typeof item.stageSetScale !== "function")
+                continue;
+            const current = item.effectiveScale !== undefined
+                ? item.effectiveScale : 1;
+            item.stageSetScale(reset ? 1 : current + delta);
+        }
+        GlobalStates.editHistoryEndBatch();
+    }
+
+    function toggleLockSelection() {
+        root.flushNudge();
+        const ids = StageCfg.StageSession.selection.slice();
+        if (ids.length === 0)
+            return;
+        GlobalStates.editHistoryBeginBatch();
+        for (const id of ids) {
+            if (String(id).indexOf("visualizer") === 0)
+                continue;
+            const item = root._item(id);
+            if (item && typeof item.stageToggleLock === "function")
+                item.stageToggleLock();
+        }
+        GlobalStates.editHistoryEndBatch();
+    }
 
     readonly property var arrowKeys: ({
         left: Qt.Key_Left,
@@ -576,6 +699,26 @@ Item {
                 GlobalStates.editRedo();
             else
                 GlobalStates.editUndo();
+            return;
+        }
+        if (StageCfg.StageSession.selection.length > 0 && !control
+                && (event.key === Qt.Key_Plus || event.key === Qt.Key_Equal
+                    || event.key === Qt.Key_Minus || event.key === Qt.Key_0
+                    || event.key === Qt.Key_L || event.key === Qt.Key_Return
+                    || event.key === Qt.Key_Enter)) {
+            event.accepted = true;
+            if (event.isAutoRepeat)
+                return;
+            if (event.key === Qt.Key_Plus || event.key === Qt.Key_Equal)
+                root.scaleSelection(0.1, false);
+            else if (event.key === Qt.Key_Minus)
+                root.scaleSelection(-0.1, false);
+            else if (event.key === Qt.Key_0)
+                root.scaleSelection(0, true);
+            else if (event.key === Qt.Key_L)
+                root.toggleLockSelection();
+            else
+                root.settingsRequested(StageCfg.StageSession.selected);
             return;
         }
         if ((event.key === Qt.Key_Delete || event.key === Qt.Key_Backspace)

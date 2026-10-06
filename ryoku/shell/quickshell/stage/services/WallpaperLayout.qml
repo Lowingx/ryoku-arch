@@ -257,6 +257,15 @@ Singleton {
     // A gesture owns the live values: a config change arriving meanwhile (the
     // release's own write) must not animate them out from under the pointer.
     property bool interacting: false
+    // A local write may pass through an empty adapter snapshot before the
+    // replacement list is readable. Keep painting the live record until the
+    // store publishes the exact record that was committed.
+    property var pendingWrite: null
+    Timer {
+        id: pendingWriteTimer
+        interval: 900
+        onTriggered: root.pendingWrite = null
+    }
 
     readonly property var liveFraming: ({
         "zoom": root.liveZoom,
@@ -274,6 +283,8 @@ Singleton {
         target: GlobalStates
         function onEditHistoryWillReplay() {
             root.flushGesture();
+            pendingWriteTimer.stop();
+            root.pendingWrite = null;
         }
     }
 
@@ -372,9 +383,23 @@ Singleton {
     Connections {
         target: Config.ready ? Config.options.background : null
         function onMonitorWallpapersChanged() {
-            if (root.liveScreen === "" || root.interacting)
-                return;
-            root.animateLiveTo(root.savedFramingFor(root.liveScreen, root.livePath), false);
+            // JsonAdapter can publish an empty intermediate list while replacing
+            // it. A local commit already has the authoritative pixels on screen;
+            // ignore store echoes until that exact record becomes readable.
+            Qt.callLater(() => {
+                if (root.liveScreen === "" || root.interacting)
+                    return;
+                const saved = root.savedFramingFor(root.liveScreen, root.livePath);
+                const pending = root.pendingWrite;
+                if (pending && pending.screen === root.liveScreen && pending.path === root.livePath) {
+                    if (WallpaperFraming.equal(saved, pending.framing)) {
+                        pendingWriteTimer.stop();
+                        root.pendingWrite = null;
+                    }
+                    return;
+                }
+                root.animateLiveTo(saved, false);
+            });
         }
     }
 
@@ -448,16 +473,21 @@ Singleton {
     }
 
     // ── Gestures (the overlay) ───────────────────────────────────────────────
-    // Stops a landing animation where it was heading. The angle goes to the
-    // turn's destination, not the nearest quarter: a turn caught less than
-    // half-way would otherwise snap back, and the gesture's release would
-    // write the old orientation over the one the button just stored.
+    // Finish at the destination, not at the in-between frame where the next
+    // pointer gesture happened to interrupt the landing animation.
     function settleLive() {
         if (!liveAnimation.running)
             return;
-        const angle = angleAnim.to;
+        const target = WallpaperFraming.normalize({
+            "zoom": zoomAnim.to,
+            "x": xAnim.to,
+            "y": yAnim.to,
+            "rotation": angleAnim.to,
+            "flipH": root.liveFlipH,
+            "flipV": root.liveFlipV
+        });
         liveAnimation.stop();
-        root.liveAngle = WallpaperFraming.snapRotation(angle);
+        root.setLive(target, target.rotation);
     }
 
     function beginGesture() {
@@ -629,9 +659,23 @@ Singleton {
         const clean = root.cleanPath(path);
         if (!root.available || !name || clean === "")
             return;
+        const next = WallpaperFraming.normalize(framing);
+        const live = root.isLive(name, clean);
+        // Button actions update the mounted painter synchronously. Gesture
+        // releases are already at `next`; neither waits for the watched store.
+        if (live && !root.interacting && !WallpaperFraming.equal(root.gestureTarget(), next))
+            root.animateLiveTo(next, false);
+        if (live)
+            root.pendingWrite = { "screen": name, "path": clean, "framing": next };
         const list = root.listCopy();
-        root.setFramingIn(root.entryIn(list, name), clean, framing);
-        root.writeList(list);
+        root.setFramingIn(root.entryIn(list, name), clean, next);
+        const wrote = root.writeList(list);
+        if (live) {
+            if (wrote)
+                pendingWriteTimer.restart();
+            else
+                root.pendingWrite = null;
+        }
     }
 
     // The framing a button starts from: the gesture's destination while one

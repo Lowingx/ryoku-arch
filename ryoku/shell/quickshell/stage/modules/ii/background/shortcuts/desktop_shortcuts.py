@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Resolve explicitly dropped local files, folders and desktop entries; never execute them."""
+"""Resolve dropped local items and web links without executing them."""
 import json
 import os
 from pathlib import Path
@@ -31,9 +31,20 @@ def icon_string(icon, fallback):
 
 def resolve(value):
     uri = urlsplit(value)
+    if uri.scheme and uri.scheme != "file":
+        if uri.scheme not in ("http", "https", "mailto"):
+            raise ValueError("Unsupported URL scheme")
+        label = uri.hostname or uri.path or value
+        return {
+            "id": "url:" + value,
+            "type": "url",
+            "path": value,
+            "name": label,
+            "icon": "internet-web-browser",
+        }
     if uri.scheme:
-        if uri.scheme != "file" or uri.netloc not in ("", "localhost"):
-            raise ValueError("Only local files and folders are supported")
+        if uri.netloc not in ("", "localhost"):
+            raise ValueError("Remote file URLs are not supported")
         path = Path(unquote(uri.path))
     else:
         path = Path(value)

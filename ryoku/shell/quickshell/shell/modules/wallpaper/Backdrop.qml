@@ -459,13 +459,30 @@ Item {
         }
     }
 
+    // Frame bindings settle after the framing object changes. Coalesce capture
+    // to the next event turn so mirrors and quarter-turns never recapture the
+    // pre-transform texture.
+    Timer {
+        id: frameARefresh
+        interval: 0
+        onTriggered: srcA.scheduleUpdate()
+    }
+    Timer {
+        id: frameBRefresh
+        interval: 0
+        onTriggered: srcB.scheduleUpdate()
+    }
     Connections {
         target: frameA
-        function onFrameChanged() { srcA.scheduleUpdate() }
+        function onFrameChanged() { frameARefresh.restart() }
+        function onFramingChanged() { frameARefresh.restart() }
+        function onFramingAngleChanged() { frameARefresh.restart() }
     }
     Connections {
         target: frameB
-        function onFrameChanged() { srcB.scheduleUpdate() }
+        function onFrameChanged() { frameBRefresh.restart() }
+        function onFramingChanged() { frameBRefresh.restart() }
+        function onFramingAngleChanged() { frameBRefresh.restart() }
     }
 
     // live:false + an explicit scheduleUpdate() on load or framing movement:

@@ -19,6 +19,7 @@ import Ryoku.PluginKit.Singletons
 // laid under it never sees a press the plugin's own MouseArea already took.
 Item {
     id: slot
+    enabled: !slot.stageInputBlocked
 
     property string pluginId: ""
     property real freeX: 80
@@ -34,10 +35,17 @@ Item {
     // frame overlay above intercepts hover, so a hover-only bracket would never
     // reveal (see WidgetSlot).
     property bool composing: false
+    property var stageController: null
+    readonly property bool stageInputBlocked: !!(slot.stageController
+        && slot.stageController.inputBlocked)
+    readonly property real stageFramingDim: slot.stageController
+        ? slot.stageController.framingDim : 0
 
     signal moved(real x, real y)
     signal resized(real scale)
+    signal lockRequested(bool locked)
     signal menuRequested(real x, real y, string id)
+    signal settingsRequested(string id)
 
     // build the plugin widget directly as a child of `holder` (via
     // createComponent, which renders Image correctly where Loader doesn't),
@@ -95,8 +103,12 @@ Item {
     property real dragX: 0
     property real dragY: 0
     property bool resizing: false
-    property real resizeOX: 0
-    property real resizeOY: 0
+    property bool resizeMoved: false
+    property string resizeCorner: "br"
+    property real resizeOppX: 0
+    property real resizeOppY: 0
+    property real resizeStartWidth: 1
+    property real resizeStartHeight: 1
     property real resizeStartScale: 1
     property real resizeStartDiag: 1
     readonly property bool holding: slot.dragging || slot.resizing || guard.running
@@ -115,6 +127,77 @@ Item {
     function clampX(v) { return Math.max(0, Math.min(v, (slot.parent ? slot.parent.width : v + slot.width) - slot.width)); }
     function clampY(v) { return Math.max(0, Math.min(v, (slot.parent ? slot.parent.height : v + slot.height) - slot.height)); }
     function snap(v) { return Math.round(v / slot.gridSize) * slot.gridSize; }
+    function _quantiseScale(value, modifiers) {
+        const bounded = Math.max(0.5, Math.min(2.5, value));
+        if (Boolean(modifiers & Qt.ShiftModifier))
+            return Math.round(bounded * 100) / 100;
+        if (Math.abs(bounded - 1) < 0.03)
+            return 1;
+        return Math.round(bounded / 0.05) * 0.05;
+    }
+    function stageSetScale(value) {
+        if (slot.locked)
+            return;
+        slot.liveScale = slot._quantiseScale(value, Qt.NoModifier);
+        slot.resized(slot.liveScale);
+        guard.restart();
+    }
+    function stageToggleLock() {
+        slot.lockRequested(!slot.locked);
+    }
+    function stageBeginResize(corner, point, modifiers) {
+        if (slot.locked || slot.stageInputBlocked)
+            return;
+        slot.resizeCorner = corner;
+        slot.resizeStartScale = slot.effectiveScale;
+        slot.resizeStartWidth = slot.width;
+        slot.resizeStartHeight = slot.height;
+        slot.resizeOppX = corner.indexOf("l") >= 0 ? slot.x + slot.width : slot.x;
+        slot.resizeOppY = corner.indexOf("t") >= 0 ? slot.y + slot.height : slot.y;
+        slot.resizeStartDiag = Math.max(1,
+            Math.hypot(point.x - slot.resizeOppX, point.y - slot.resizeOppY));
+        slot.dragX = slot.x;
+        slot.dragY = slot.y;
+        slot.resizeMoved = false;
+        slot.resizing = true;
+    }
+    function stageUpdateResize(point, modifiers) {
+        if (!slot.resizing)
+            return;
+        slot.resizeMoved = true;
+        const distance = Math.max(1,
+            Math.hypot(point.x - slot.resizeOppX, point.y - slot.resizeOppY));
+        slot.liveScale = slot._quantiseScale(
+            slot.resizeStartScale * distance / slot.resizeStartDiag, modifiers);
+        const factor = slot.liveScale / Math.max(0.001, slot.resizeStartScale);
+        const nextW = slot.resizeStartWidth * factor;
+        const nextH = slot.resizeStartHeight * factor;
+        slot.dragX = slot.resizeCorner.indexOf("l") >= 0
+            ? slot.resizeOppX - nextW : slot.resizeOppX;
+        slot.dragY = slot.resizeCorner.indexOf("t") >= 0
+            ? slot.resizeOppY - nextH : slot.resizeOppY;
+    }
+    function stageEndResize() {
+        if (!slot.resizing)
+            return;
+        if (!slot.resizeMoved) {
+            slot.resizing = false;
+            return;
+        }
+        slot.dragX = slot.clampX(slot.dragX);
+        slot.dragY = slot.clampY(slot.dragY);
+        slot.resized(slot.liveScale);
+        slot.resizing = false;
+        guard.restart();
+    }
+    function stageCancelResize() {
+        slot.resizing = false;
+        slot.liveScale = slot.scaleCfg;
+    }
+    function stageResetScale() {
+        if (!slot.locked)
+            slot.stageSetScale(1);
+    }
 
     // A press that begins inside the plugin's own scroll area (a ListView or any
     // Flickable) has to scroll that list, not drag the tile: the DragHandler
@@ -148,14 +231,12 @@ Item {
     Behavior on x { enabled: !slot.holding; NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
     Behavior on y { enabled: !slot.holding; NumberAnimation { duration: 240; easing.type: Easing.OutCubic } }
 
-    // press bump: small lift while dragging, so it feels picked up.
-    scale: slot.dragging ? 1.03 : 1.0
-    transformOrigin: Item.Center
-    Behavior on scale { NumberAnimation { duration: 140; easing.type: Easing.OutExpo } }
 
     // per-tile opacity (the menu and Ryoku Settings write desktopWidget.opacity),
     // clamped so a tile can fade back but never vanish or lose its clicks.
     opacity: Math.max(0.2, Math.min(1, slot.opacityCfg))
+        * (1 - 0.75 * slot.stageFramingDim)
+    Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
 
     Timer { id: guard; interval: 90 }
 
@@ -163,7 +244,7 @@ Item {
     MultiEffect {
         source: backing
         anchors.fill: backing
-        visible: slot.bg !== "none"
+        visible: !slot.resizing && slot.bg !== "none"
         shadowEnabled: true
         shadowColor: Qt.rgba(0, 0, 0, 0.5)
         shadowBlur: 1.0
@@ -205,7 +286,7 @@ Item {
     DragHandler {
         id: dragger
         target: null
-        enabled: !slot.locked
+        enabled: !slot.locked && !slot.stageInputBlocked
         acceptedButtons: Qt.LeftButton
         // decline to steal when the press began inside a plugin's own scroll
         // area, so list scrolling stays with the list; steal freely otherwise.
@@ -228,6 +309,10 @@ Item {
                 slot.dragY = slot.y;
                 slot.dragging = true;
             } else if (slot.dragging) {
+                if (!slot.composing) {
+                    slot.dragX = slot.clampX(slot.snap(slot.dragX));
+                    slot.dragY = slot.clampY(slot.snap(slot.dragY));
+                }
                 slot.moved(Math.round(slot.dragX), Math.round(slot.dragY));
                 slot.dragging = false;
                 guard.restart();
@@ -237,8 +322,8 @@ Item {
             if (!slot.dragging || slot.locked)
                 return;
             const p = slot.mapToItem(slot.parent, dragger.centroid.position.x, dragger.centroid.position.y);
-            slot.dragX = slot.clampX(slot.snap(p.x - dragger.grabOX));
-            slot.dragY = slot.clampY(slot.snap(p.y - dragger.grabOY));
+            slot.dragX = slot.clampX(p.x - dragger.grabOX);
+            slot.dragY = slot.clampY(p.y - dragger.grabOY);
         }
     }
 
@@ -248,9 +333,14 @@ Item {
     TapHandler {
         acceptedButtons: Qt.RightButton
         gesturePolicy: TapHandler.ReleaseWithinBounds
+        enabled: !slot.stageInputBlocked
         onTapped: (eventPoint) => {
-            const pr = slot.mapToItem(slot.parent, eventPoint.position.x, eventPoint.position.y);
-            slot.menuRequested(pr.x, pr.y, slot.pluginId);
+            if (slot.composing)
+                slot.settingsRequested(slot.pluginId);
+            else {
+                const pr = slot.mapToItem(slot.parent, eventPoint.position.x, eventPoint.position.y);
+                slot.menuRequested(pr.x, pr.y, slot.pluginId);
+            }
         }
     }
 
@@ -283,11 +373,12 @@ Item {
     // settle timer does the one persisting write, through resized(), once
     // scrolling stops (plugins have no per-frame setLive fast path).
     WheelHandler {
-        enabled: !slot.locked
+        enabled: !slot.locked && !slot.stageInputBlocked
         acceptedModifiers: Qt.ControlModifier
         onWheel: (event) => {
-            const step = event.angleDelta.y > 0 ? 1.06 : 1 / 1.06;
-            slot.liveScale = Math.max(0.5, Math.min(2.5, slot.effectiveScale * step));
+            const step = event.angleDelta.y > 0 ? 0.05 : -0.05;
+            slot.liveScale = slot._quantiseScale(slot.effectiveScale + step,
+                event.modifiers);
             slot.dragX = slot.x;
             slot.dragY = slot.y;
             scalePersist.restart();
@@ -299,16 +390,16 @@ Item {
         onTriggered: { slot.resized(slot.liveScale); guard.restart(); }
     }
 
-    // quick resize: drag the bottom-right bracket to scrub the widget's
-    // scale. top-left is pinned during the resize so it grows toward the
-    // cursor; on release the new scale persists through the host.
+    // Outside the editor the bottom-right grip remains available. StageOutline
+    // supplies all four corners while the editor is composing.
     Item {
         id: handle
         width: 22
         height: 22
         anchors.right: parent.right
         anchors.bottom: parent.bottom
-        opacity: (((slotHover.hovered || slot.composing) && !slot.locked && !slot.dragging) || slot.resizing) ? 1 : 0
+        opacity: (((slotHover.hovered && !slot.composing) && !slot.locked
+            && !slot.dragging) || (slot.resizing && !slot.composing)) ? 1 : 0
         visible: opacity > 0
         Behavior on opacity { NumberAnimation { duration: 120 } }
 
@@ -319,7 +410,6 @@ Item {
             height: 2
             radius: Theme.radius
             color: (hgrip.containsMouse || slot.resizing) ? Theme.accent : Theme.faint
-            Behavior on color { ColorAnimation { duration: 100 } }
         }
         Rectangle {
             anchors.right: parent.right
@@ -328,53 +418,33 @@ Item {
             height: 13
             radius: Theme.radius
             color: (hgrip.containsMouse || slot.resizing) ? Theme.accent : Theme.faint
-            Behavior on color { ColorAnimation { duration: 100 } }
         }
 
         MouseArea {
             id: hgrip
             anchors.fill: parent
-            enabled: !slot.locked
+            enabled: !slot.locked && !slot.stageInputBlocked
             acceptedButtons: Qt.LeftButton
-            // hold the grab so the tile DragHandler can't hijack a corner
-            // resize into a move.
             preventStealing: true
             hoverEnabled: true
             cursorShape: Qt.SizeFDiagCursor
-
-            onPressed: (mouse) => {
-                const ox = slot.x;
-                const oy = slot.y;
-                slot.dragX = ox;
-                slot.dragY = oy;
-                slot.resizeOX = ox;
-                slot.resizeOY = oy;
-                slot.resizeStartScale = slot.effectiveScale;
+            onPressed: mouse => {
                 const p = hgrip.mapToItem(slot.parent, mouse.x, mouse.y);
-                slot.resizeStartDiag = Math.max(1, Math.hypot(p.x - ox, p.y - oy));
-                slot.resizing = true;
+                slot.stageBeginResize("br", p, mouse.modifiers);
             }
-            onPositionChanged: (mouse) => {
-                if (!slot.resizing)
-                    return;
+            onPositionChanged: mouse => {
                 const p = hgrip.mapToItem(slot.parent, mouse.x, mouse.y);
-                const diag = Math.hypot(p.x - slot.resizeOX, p.y - slot.resizeOY);
-                const ns = Math.max(0.5, Math.min(2.5, slot.resizeStartScale * diag / slot.resizeStartDiag));
-                slot.liveScale = ns;
+                slot.stageUpdateResize(p, mouse.modifiers);
             }
-            onReleased: (mouse) => {
-                if (slot.resizing) {
-                    slot.resized(slot.liveScale);
-                    slot.resizing = false;
-                    guard.restart();
-                }
-            }
+            onReleased: slot.stageEndResize()
+            onCanceled: slot.stageCancelResize()
+            onDoubleClicked: slot.stageResetScale()
         }
     }
 
     // live size readout while resizing.
     Rectangle {
-        visible: slot.resizing || scalePersist.running
+        visible: !slot.composing && (slot.resizing || scalePersist.running)
         anchors.right: parent.right
         anchors.bottom: parent.bottom
         anchors.rightMargin: 26

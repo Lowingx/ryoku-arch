@@ -19,9 +19,12 @@ import "Singletons"
 Item {
     id: win
 
+    // The visualizer instance this grip owns.
+    required property int instanceIndex
     // Whether the Stage Editor frames this desktop right now.
     required property bool composing
 
+    signal activated()
     // A gesture's walk-back is the desktop's to record: it started here and it
     // lands here, so the press and the eased settle raise these together.
     signal gestureStarted()
@@ -32,28 +35,37 @@ Item {
     // Power Saver or silence, so it stays visible to place; released when the
     // editor leaves. The hold is the placer's, moved here with the gestures.
     readonly property bool holding: win.composing && Config.enabled
+        && win.instanceIndex < Config.count
     onHoldingChanged: Spectrum.placementHolds += holding ? 1 : -1
     Component.onDestruction: if (holding) Spectrum.placementHolds -= 1
 
     anchors.fill: parent
-    visible: win.composing && Config.enabled
+    visible: win.composing && Config.enabled && win.instanceIndex < Config.count
 
     readonly property real handle: Ui.Tokens.s4
+    readonly property var instance: Config.dataAt(win.instanceIndex) || ({})
+    function value(key, fallback) {
+        const v = win.instance[key];
+        return v === undefined || v === null ? fallback : v;
+    }
+    readonly property bool aura: String(win.value("style", "bars")) === "aura"
+    readonly property real vx: Number(win.value("x", 0))
+    readonly property real vy: Number(win.value("y", 0.58))
+    readonly property real vw: Number(win.value("w", 1))
+    readonly property real vh: Number(win.value("h", 0.42))
+    readonly property real va: Number(win.value("angle", 0))
     // The look's box, in desktop px; the field's box is the screen.
-    readonly property rect box: Config.isAura
+    readonly property rect box: win.aura
         ? Qt.rect(0, 0, win.width, win.height)
-        : Qt.rect(Config.x * win.width, Config.y * win.height,
-                  Config.w * win.width, Config.h * win.height)
-    // Rotation is about the box centre, which is the one point a turn never moves.
+        : Qt.rect(win.vx * win.width, win.vy * win.height,
+                  win.vw * win.width, win.vh * win.height)
     readonly property real cx: win.box.x + win.box.width / 2
     readonly property real cy: win.box.y + win.box.height / 2
     readonly property real aspect: win.height > 0 ? win.width / win.height : 1
 
-    // The guide colour: the look's own pinned colour, else the shell accent,
-    // the way the placer matched its guides to the ramp.
-    readonly property color guide: Config.hasCustomColor ? Config.customColor
-        : (Scheme.accent.r !== Scheme.accent.g || Scheme.accent.g !== Scheme.accent.b
-            ? Scheme.accent : "white")
+    readonly property string customInk: String(win.value("color", ""))
+    readonly property color guide: /^#[0-9a-fA-F]{6}$/.test(win.customInk)
+        ? win.customInk : Ui.Tokens.sun
 
     property string gesture: ""
     property real tx: 0
@@ -61,6 +73,57 @@ Item {
     property real tw: 0
     property real th: 0
     property real tAngle: 0
+
+    // StageOutline's four corner handles scale from the centre. This remains
+    // stable for turned boxes, unlike axis-aligned corner maths that jumps as
+    // soon as a rotated footprint is grabbed.
+    readonly property bool locked: false
+    property bool resizing: false
+    property real resizeStartDistance: 1
+    property real resizeStartW: 1
+    property real resizeStartH: 1
+    property real resizeCentreX: 0.5
+    property real resizeCentreY: 0.5
+    function stageBeginResize(corner, point, modifiers) {
+        if (win.aura || !win.composing)
+            return;
+        Config.setActive(win.instanceIndex);
+        win.activated();
+        win.resizeStartW = win.vw;
+        win.resizeStartH = win.vh;
+        win.resizeCentreX = win.vx + win.vw / 2;
+        win.resizeCentreY = win.vy + win.vh / 2;
+        win.resizeStartDistance = Math.max(1,
+            Math.hypot(point.x - win.cx, point.y - win.cy));
+        win.resizing = true;
+        win.gestureStarted();
+    }
+    function stageUpdateResize(point, modifiers) {
+        if (!win.resizing)
+            return;
+        const distance = Math.max(1,
+            Math.hypot(point.x - win.cx, point.y - win.cy));
+        const factor = distance / win.resizeStartDistance;
+        const nw = win.resizeStartW * factor;
+        const nh = win.resizeStartH * factor;
+        Config.setBox(win.resizeCentreX - nw / 2,
+            win.resizeCentreY - nh / 2, nw, nh, win.aspect);
+    }
+    function stageEndResize() {
+        if (!win.resizing)
+            return;
+        win.resizing = false;
+        win.gestureFinished();
+    }
+    function stageCancelResize() {
+        if (!win.resizing)
+            return;
+        Config.setBox(win.resizeCentreX - win.resizeStartW / 2,
+            win.resizeCentreY - win.resizeStartH / 2,
+            win.resizeStartW, win.resizeStartH, win.aspect);
+        win.resizing = false;
+        win.gestureFinished();
+    }
 
     Timer {
         id: ease
@@ -72,27 +135,27 @@ Item {
             var eps = 0.0006;
             var done = false;
             if (win.gesture === "turn") {
-                var d = PlaceMath.shortestTurn(Config.angle, win.tAngle);
+                var d = PlaceMath.shortestTurn(win.va, win.tAngle);
                 done = Math.abs(d) < 0.05;
-                Config.rotate(done ? win.tAngle : Config.angle + d * k);
+                Config.rotate(done ? win.tAngle : win.va + d * k);
             } else if (win.gesture === "move") {
-                done = Math.abs(win.tx - Config.x) < eps && Math.abs(win.ty - Config.y) < eps;
+                done = Math.abs(win.tx - win.vx) < eps && Math.abs(win.ty - win.vy) < eps;
                 if (done)
                     Config.moveBox(win.tx, win.ty, win.aspect);
                 else
-                    Config.moveBox(Config.x + (win.tx - Config.x) * k,
-                                   Config.y + (win.ty - Config.y) * k,
+                    Config.moveBox(win.vx + (win.tx - win.vx) * k,
+                                   win.vy + (win.ty - win.vy) * k,
                                    win.aspect);
             } else {
-                done = Math.abs(win.tx - Config.x) < eps && Math.abs(win.ty - Config.y) < eps
-                    && Math.abs(win.tw - Config.w) < eps && Math.abs(win.th - Config.h) < eps;
+                done = Math.abs(win.tx - win.vx) < eps && Math.abs(win.ty - win.vy) < eps
+                    && Math.abs(win.tw - win.vw) < eps && Math.abs(win.th - win.vh) < eps;
                 if (done)
                     Config.setBox(win.tx, win.ty, win.tw, win.th, win.aspect);
                 else
-                    Config.setBox(Config.x + (win.tx - Config.x) * k,
-                                  Config.y + (win.ty - Config.y) * k,
-                                  Config.w + (win.tw - Config.w) * k,
-                                  Config.h + (win.th - Config.h) * k,
+                    Config.setBox(win.vx + (win.tx - win.vx) * k,
+                                  win.vy + (win.ty - win.vy) * k,
+                                  win.vw + (win.tw - win.vw) * k,
+                                  win.vh + (win.th - win.vh) * k,
                                   win.aspect);
             }
             // Over only once the hand is off and the box has caught up; the
@@ -104,12 +167,23 @@ Item {
         }
     }
 
+    Connections {
+        target: Config
+        function onActiveChanged() {
+            if (Config.active === win.instanceIndex || win.gesture === "")
+                return;
+            win.gesture = "";
+            grab.mode = "";
+            win.gestureFinished();
+        }
+    }
+
     // The look's turned footprint, axis-aligned: the edit frame (StageOutline)
     // boxes this the way it boxes every other widget, and the inspector docks
     // beside it. Same bounding-box maths the spectrum field uses for its cover
     // rect, so the frame hugs the look at any angle rather than its unturned w/h.
     readonly property rect outer: {
-        var a = Config.angle * Math.PI / 180;
+        var a = win.va * Math.PI / 180;
         var c = Math.abs(Math.cos(a)), s = Math.abs(Math.sin(a));
         var w = win.box.width * c + win.box.height * s;
         var h = win.box.width * s + win.box.height * c;
@@ -134,12 +208,12 @@ Item {
         // The field owns the whole screen and has no box to aim: the edge
         // handles would ring the display with controls that edit nothing (the
         // placer treated it the same way), so the field rides handleless.
-        visible: !Config.isAura
+        visible: !win.aura
         x: win.box.x
         y: win.box.y
         width: win.box.width
         height: win.box.height
-        rotation: Config.angle
+        rotation: win.va
         transformOrigin: Item.Center
 
         // the grip sits on the box's own corner, so it is always beside what it sizes
@@ -147,9 +221,9 @@ Item {
             id: grip
             width: win.handle
             height: win.handle
-            radius: 2
+            radius: Ui.Tokens.radius
             color: (grab.mode === "size" || grab.over === "size") ? win.guide : Qt.alpha(win.guide, 0.45)
-            border.width: 1
+            border.width: Ui.Tokens.border
             border.color: win.guide
             x: parent.width - width / 2
             y: parent.height - height / 2
@@ -158,7 +232,7 @@ Item {
         // the turn handle stands off the top edge on a stem, so it reads as a lever
         // rather than another corner
         Rectangle {
-            width: 1
+            width: Ui.Tokens.border
             height: win.handle * 1.6
             color: Qt.alpha(win.guide, 0.55)
             x: parent.width / 2
@@ -170,7 +244,7 @@ Item {
             height: win.handle
             radius: width / 2
             color: (grab.mode === "turn" || grab.over === "turn") ? win.guide : Qt.alpha(win.guide, 0.45)
-            border.width: 1
+            border.width: Ui.Tokens.border
             border.color: win.guide
             x: parent.width / 2 - width / 2
             y: -win.handle * 1.6 - height / 2
@@ -183,7 +257,7 @@ Item {
     property bool wheelHold: false
     Timer {
         id: wheelSettle
-        interval: 350
+        interval: Ui.Tokens.move * 2
         onTriggered: {
             win.wheelHold = false;
             win.gestureFinished();
@@ -196,7 +270,7 @@ Item {
     MouseArea {
         id: grab
 
-        enabled: !Config.isAura
+        enabled: !win.aura
         x: Math.max(0, win.box.x - win.handle)
         y: Math.max(0, win.box.y - win.handle * 3)
         width: Math.min(win.width, win.box.width + 2 * win.handle)
@@ -206,10 +280,10 @@ Item {
         cursorShape: grab.over === "size" ? Qt.SizeFDiagCursor
             : (grab.over === "turn" ? Qt.CrossCursor : Qt.SizeAllCursor)
 
-        // The handles ride a turned frame, so map their centres rather than compute
-        // them: a mapped centre is right at every angle.
+        // Map every pointer into the same local coordinate system. The desktop
+        // is transformed while editing, so scene coordinates make handles miss.
         function near(it, mx, my) {
-            var p = it.mapToItem(null, it.width / 2, it.height / 2);
+            var p = it.mapToItem(grab, it.width / 2, it.height / 2);
             return Math.abs(mx - p.x) < win.handle && Math.abs(my - p.y) < win.handle;
         }
         readonly property string over: grab.near(spinner, grab.mouseX, grab.mouseY) ? "turn"
@@ -226,40 +300,45 @@ Item {
         property real pressAngle: 0
 
         onPressed: (m) => {
+            Config.setActive(win.instanceIndex);
+            win.activated();
             if (m.button === Qt.RightButton) {
                 win.menuRequested(win.box.x, win.box.y);
                 return;
             }
-            if (Config.isAura)
+            if (win.aura)
                 return;
             grab.mode = grab.over;
             win.gesture = grab.over;
             win.gestureStarted();
             grab.pressX = m.x;
             grab.pressY = m.y;
-            grab.baseX = Config.x;
-            grab.baseY = Config.y;
-            grab.baseW = Config.w;
-            grab.baseH = Config.h;
-            grab.baseAngle = Config.angle;
-            grab.pressAngle = PlaceMath.angleAt(win.cx, win.cy, m.x, m.y);
-            win.tx = Config.x;
-            win.ty = Config.y;
-            win.tw = Config.w;
-            win.th = Config.h;
-            win.tAngle = Config.angle;
+            grab.baseX = win.vx;
+            grab.baseY = win.vy;
+            grab.baseW = win.vw;
+            grab.baseH = win.vh;
+            grab.baseAngle = win.va;
+            const pressPoint = grab.mapToItem(win, m.x, m.y);
+            grab.pressAngle = PlaceMath.angleAt(win.cx, win.cy,
+                pressPoint.x, pressPoint.y);
+            win.tx = win.vx;
+            win.ty = win.vy;
+            win.tw = win.vw;
+            win.th = win.vh;
+            win.tAngle = win.va;
         }
         onReleased: grab.mode = ""
         // Deltas from the press, never absolute positions, so nothing jumps.
         onPositionChanged: (m) => {
-            if (!grab.pressed || grab.mode === "" || Config.isAura)
+            if (!grab.pressed || grab.mode === "" || win.aura)
                 return;
             if (grab.mode === "turn") {
+                const point = grab.mapToItem(win, m.x, m.y);
                 // Near the centre a pixel of travel is a wild swing.
-                if (Math.hypot(m.x - win.cx, m.y - win.cy) < win.handle * 1.5)
+                if (Math.hypot(point.x - win.cx, point.y - win.cy) < win.handle * 1.5)
                     return;
                 var want = grab.baseAngle
-                    + PlaceMath.angleAt(win.cx, win.cy, m.x, m.y) - grab.pressAngle;
+                    + PlaceMath.angleAt(win.cx, win.cy, point.x, point.y) - grab.pressAngle;
                 win.tAngle = PlaceMath.magnet(want, 15, 2.5);
                 return;
             }
@@ -284,12 +363,14 @@ Item {
         WheelHandler {
             acceptedModifiers: Qt.ControlModifier
             onWheel: (w) => {
+                Config.setActive(win.instanceIndex);
+                win.activated();
                 if (!win.wheelHold) {
                     win.wheelHold = true;
                     win.gestureStarted();
                 }
                 var k = w.angleDelta.y > 0 ? 1.06 : 0.94;
-                Config.sizeBox(Config.w * k, Config.h * k, win.aspect);
+                Config.sizeBox(win.vw * k, win.vh * k, win.aspect);
                 wheelSettle.restart();
             }
         }

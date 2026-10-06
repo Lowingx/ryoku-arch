@@ -26,8 +26,6 @@ Column {
     // Set by the inspector loader to the widget scope; unused here (the
     // visualiser keys are fixed) but kept so every options panel shares one API.
     property string widget: ""
-    // The look gallery, expanded inline under the Style rows.
-    property bool galleryOpen: false
 
     readonly property var cfg: VizCfg.Config
     readonly property var inst: VizCfg.Config.instance
@@ -50,13 +48,14 @@ Column {
     // box, the release records one undo entry through the editor's provider
     // (none outside the editor, where there is no undo stack to join).
     property var placeBefore: null
+    readonly property string instanceId: "visualizer:" + opts.cfg.active
     function placeBegin() {
         if (opts.placeBefore === null && opts.provider)
-            opts.placeBefore = opts.provider.snapshot("visualizer");
+            opts.placeBefore = opts.provider.snapshot(opts.instanceId);
     }
     function placeEnd() {
         if (opts.provider)
-            opts.provider.recordVisualizer(opts.placeBefore);
+            opts.provider.recordVisualizer(opts.instanceId, opts.placeBefore);
         opts.placeBefore = null;
     }
     function placeOnce(change) {
@@ -95,21 +94,6 @@ Column {
         onTriggered: opts.cfg.cycleStyle(1)
     }
     MenuRow {
-        label: I18n.tr("Walk back")
-        value: opts.cfg.knownStyles.length > 0
-            ? opts.cap(opts.cfg.knownStyles[(opts.cfg.knownStyles.indexOf(opts.sid)
-                + opts.cfg.knownStyles.length - 1) % opts.cfg.knownStyles.length])
-            : ""
-        closeOnTrigger: false
-        onTriggered: opts.cfg.cycleStyle(-1)
-    }
-    MenuRow {
-        label: I18n.tr("Look gallery")
-        value: opts.galleryOpen ? I18n.tr("Close") : I18n.tr("Open")
-        closeOnTrigger: false
-        onTriggered: opts.galleryOpen = !opts.galleryOpen
-    }
-    MenuRow {
         label: I18n.tr("Instance")
         value: (opts.cfg.active + 1) + " / " + opts.cfg.count
         closeOnTrigger: false
@@ -127,11 +111,9 @@ Column {
         closeOnTrigger: false
         onTriggered: opts.cfg.removeVisualizer(opts.cfg.active)
     }
-    // The gallery expands inline under the rows: the sheet is already its own
-    // surface, and the same silhouette painter the Hub's catalogue uses draws
-    // what the looks look like here and there.
+    // The visual gallery is the first decision in Look. There is no second
+    // "open gallery" state to hunt through.
     Rectangle {
-        visible: opts.galleryOpen
         width: parent.width
         implicitHeight: gal.implicitHeight + Theme.s4
         radius: Theme.radius
@@ -144,7 +126,7 @@ Column {
             })
             painter: VizStyles
             current: opts.sid
-            onChose: key => { opts.cfg.setStyle(key); opts.galleryOpen = false; }
+            onChose: key => opts.cfg.setStyle(key)
         }
     }
     Text {
@@ -282,22 +264,26 @@ Column {
         // The base and gradient stops, plus the field's triad when the field
         // is on: one picker, one surface for every colour the look wears.
         roles: opts.aura ? [
-            { key: "color", label: I18n.tr("Base"), fallback: "" },
-            { key: "color2", label: I18n.tr("Second"), fallback: "" },
-            { key: "aura2", label: I18n.tr("Field 2"), fallback: "#FFFFFF" },
-            { key: "aura3", label: I18n.tr("Field 3"), fallback: "#FFFFFF" }
+            { key: "color", label: I18n.tr("Base"), fallback: opts.hexOf(Theme.accent) },
+            { key: "color2", label: I18n.tr("Second"), fallback: opts.hexOf(Qt.lighter(Theme.accent, 1.5)) },
+            { key: "aura2", label: I18n.tr("Field 2"), fallback: opts.hexOf(Tokens.ink) },
+            { key: "aura3", label: I18n.tr("Field 3"), fallback: opts.hexOf(Tokens.ink) }
         ] : [
-            { key: "color", label: I18n.tr("Base"), fallback: "" },
-            { key: "color2", label: I18n.tr("Second"), fallback: "" }
+            { key: "color", label: I18n.tr("Base"), fallback: opts.hexOf(Theme.accent) },
+            { key: "color2", label: I18n.tr("Second"), fallback: opts.hexOf(Qt.lighter(Theme.accent, 1.5)) }
         ]
         readColor: (key, fb) => {
+            let value = fb;
             if (key === "color")
-                return opts.cfg.hasCustomColor ? opts.cfg.colorHex : fb;
-            if (key === "color2")
-                return opts.cfg.hasColor2 ? opts.cfg.color2Hex : fb;
-            if (key === "aura2")
-                return opts.inst.auraColor2 || fb;
-            return opts.inst.auraColor3 || fb;
+                value = opts.cfg.hasCustomColor ? opts.cfg.colorHex : fb;
+            else if (key === "color2")
+                value = opts.cfg.hasColor2 ? opts.cfg.color2Hex : fb;
+            else if (key === "aura2")
+                value = String(opts.inst.auraColor2 || fb);
+            else
+                value = String(opts.inst.auraColor3 || fb);
+            return /^#[0-9a-fA-F]{6}$/.test(String(value))
+                ? String(value) : opts.hexOf(Tokens.ink);
         }
         writeColor: (key, hex) => {
             if (key === "color")
@@ -355,7 +341,7 @@ Column {
         width: parent.width
         leftPadding: Theme.s3
         text: "~" + opts.cfg.ramEstimateMB + " MB"
-        color: opts.cfg.count >= 3 ? Theme.error : Theme.inkDim
+        color: opts.cfg.count >= 3 ? Tokens.alert : Theme.inkDim
         font.family: Theme.mono
         font.pixelSize: Theme.fSmall
     }

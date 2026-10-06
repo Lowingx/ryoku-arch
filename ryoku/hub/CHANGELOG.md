@@ -9,11 +9,6 @@
   the Settings integration card reports the template it actually manages
   (`../palette-bridge/`, `backend/palettebridge.go`).
 
-- **The Stage scene page reports a blocked cut.** When the daemon cannot cut
-  (the quality tier's model is not installed, or a cut failed), the page now
-  says why and offers Retry instead of showing a wallpaper that never gains
-  layers (`quickshell/pages/DesktopScenePage.qml`).
-
 - **The Profile dossier keeps its composure on short windows.** The live
   telemetry column sat on hard-coded pixels while the dossier foot climbed from
   the bottom, so under ~880px the callouts ran through the small print and the
@@ -40,6 +35,11 @@
   (`quickshell/SchemaPage.qml`, `quickshell/AppPicker.qml`)
 
 ### Removed
+- **Desktop Scene is no longer a Hub page.** Wallpaper depth, visualizers, and
+  desktop widgets now open directly in the shell's Stage Editor. Retired links
+  skip Hub and open the matching catalogue, while direct navigation to an
+  already-open Hub hands off without replacing its current page
+  (`quickshell/Hub.qml`, `../shell/ipc/control.go`).
 - **Sidebar styles and layout customization.** Controls and Today now have one
   compact layout shared by every bar style. The Sidebars page, Classic/Modern
   selector, geometry, pinning, and content-order controls are gone. Sidebar
@@ -55,12 +55,6 @@
   stays up until you dismiss it (`quickshell/pages/UpdatesPage.qml`,
   `quickshell/pages/UpdateRun.qml`, `quickshell/pages/UpdateAuth.qml`,
   `quickshell/pages/UpdateLog.qml`).
-- **Desktop Scene brings the editors together.** Scene, Visualizer, and Widgets
-  have dedicated views. The scene view includes layers, cut quality, shadow
-  direction, motion presets, idle speed, music intensity, and pointer tuning.
-  Visualizer and widget editors open on the desktop and close Hub after a
-  successful hand-off; the shell stays the writer of their settings
-  (`quickshell/pages/DesktopScenePage.qml`).
 - **Bar Studio knows Python.** The style shelf lists the ported serpantinum
   style, and while it is active the page carries a Python card that opens the
   style's own settings guide through the shell IPC, like the Shima and QS Bar

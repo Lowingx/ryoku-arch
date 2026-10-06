@@ -7,6 +7,7 @@ import stage.services
 import stage.modules.common
 import stage.modules.common.widgets
 import stage.modules.common.functions
+import Ryoku.Ui.Singletons
 
 /**
  * The Wallpaper catalogue's root: the picture on the screen being edited, the
@@ -71,8 +72,9 @@ StyledFlickable {
 
     ColumnLayout {
         id: column
-        width: root.width
-        spacing: 3
+        x: Tokens.s2
+        width: Math.max(0, root.width - Tokens.s4)
+        spacing: Tokens.s1
 
         // ── The picture ──────────────────────────────────────────────────────
         EditPanelSectionLabel {
@@ -182,16 +184,19 @@ StyledFlickable {
                 anchors.left: parent.left
                 anchors.bottom: parent.bottom
                 anchors.margins: 10
-                width: Math.min(nameText.implicitWidth + 24, preview.width - changeButton.width - 30)
+                width: Math.max(0, Math.min(nameText.implicitWidth + Tokens.s5,
+                    preview.width - changeButton.width - Tokens.s5))
                 height: preview.pillHeight
-                radius: Appearance.rounding.full
-                color: Appearance.colors.colSurfaceContainerHigh
+                radius: Tokens.radius
+                color: Tokens.paper
+                border.width: Tokens.border
+                border.color: Tokens.lineStrong
 
                 StyledText {
                     id: nameText
                     anchors.fill: parent
-                    anchors.leftMargin: 12
-                    anchors.rightMargin: 12
+                    anchors.leftMargin: Tokens.s3
+                    anchors.rightMargin: Tokens.s3
                     verticalAlignment: Text.AlignVCenter
                     text: preview.showsEngine ? Translation.tr("Wallpaper Engine scene") : root.fileName(root.targetPath)
                     font.pixelSize: Appearance.font.pixelSize.small
@@ -236,7 +241,7 @@ StyledFlickable {
             Layout.topMargin: 6
             first: true
             last: false
-            symbol: "photo_library"
+            symbol: "folder"
             title: Translation.tr("Choose from your folder")
             subtitle: Wallpapers.effectiveDirectory.replace(FileUtils.trimFileProtocol(Directories.home), "~")
             trailingKind: "chevron"
@@ -588,7 +593,7 @@ StyledFlickable {
 
         Item {
             Layout.fillWidth: true
-            implicitHeight: 8
+            implicitHeight: Tokens.s2
         }
     }
 }

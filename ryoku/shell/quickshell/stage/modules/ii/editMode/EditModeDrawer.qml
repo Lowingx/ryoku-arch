@@ -2,6 +2,8 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Widgets
+import Ryoku.Ui
+import Ryoku.Ui.Singletons
 import stage
 import stage.services
 import stage.modules.common
@@ -112,6 +114,16 @@ Item {
     // direction the step was.
     property int navDirection: 1
     readonly property bool atRoot: root.page === "" || root.searching
+    readonly property string backSection: {
+        if (!root.extraSection)
+            return "";
+        const destination = "" + (root.extraSection.back ?? "");
+        if (destination !== "")
+            return destination;
+        return root.extraSection.hidden === true ? "widgets" : "";
+    }
+    readonly property bool canGoBack: !root.searching
+        && (root.page !== "" || root.backSection !== "")
 
     // Milliseconds between one row of a page entering and the next. The panel
     // is 380px wide and a page is a short run of rows, so this is smaller than
@@ -142,16 +154,16 @@ Item {
 
     function goBack() {
         root.navDirection = -1;
-        GlobalStates.editDrawerPage = "";
+        if (root.page !== "") {
+            GlobalStates.editDrawerPage = "";
+            return;
+        }
+        if (root.backSection !== "") {
+            GlobalStates.editDrawerPage = "";
+            GlobalStates.editDrawerSection = root.backSection;
+        }
     }
 
-    function setSection(section) {
-        if (GlobalStates.editDrawerSection === section)
-            return;
-        root.navDirection = 1;
-        GlobalStates.editDrawerPage = "";
-        GlobalStates.editDrawerSection = section;
-    }
 
     // ── The query ────────────────────────────────────────────────────────────
     // The dock's catalogue alone runs to two hundred rows. A query FLATTENS the
@@ -531,10 +543,12 @@ Item {
             || item.id.toLowerCase().includes(q)
             || item.genericName.toLowerCase().includes(q));
     }
-    // The desktop twin of the tablet's home-screen list: same AppSearch rows,
-    // but `onScreen` reads the DesktopShortcuts store, so the check marks the
-    // icon standing on THIS screen's desktop.
+    // Read the adapter property explicitly: itemsFor() is a function call, and
+    // QML otherwise misses the late states.json load that populates this list.
     readonly property var desktopAppsItems: {
+        void Persistent.states.desktopShortcutsJson;
+        if (root.section !== "widgets" || root.page !== "desktopApps")
+            return [];
         const q = root.needle;
         const all = Array.from(AppSearch.list ?? []).filter(e => e && e.id && !e.noDisplay);
         const onDesktop = new Set(DesktopShortcuts.itemsFor(root.screenName)
@@ -552,14 +566,16 @@ Item {
             || item.id.toLowerCase().includes(q)
             || item.genericName.toLowerCase().includes(q));
     }
-    readonly property int desktopAppCount: DesktopShortcuts.itemsFor(root.screenName)
-        .filter(item => item.type === "app").length
+    readonly property int desktopAppCount: {
+        void Persistent.states.desktopShortcutsJson;
+        return DesktopShortcuts.itemsFor(root.screenName)
+            .filter(item => item.type === "app").length;
+    }
 
-    // Click-toggle: an icon on the desktop goes back to the store, a missing
-    // one is placed by the store's own free-space finder, which walks the
-    // grid from the top-left — repeated adds never stack on one cell.
+    // Toggle one application on this output. New icons start in the first
+    // free cell from the configured origin, so repeated adds never overlap.
     function toggleAppOnDesktop(appId) {
-        if (!appId)
+        if (!appId || !Persistent.ready || Persistent.blockWrites)
             return;
         const items = DesktopShortcuts.itemsFor(root.screenName);
         if (items.some(item => item.type === "app" && item.id === appId)) {
@@ -570,8 +586,17 @@ Item {
         if (!app)
             return;
         const screen = Quickshell.screens.find(s => s.name === root.screenName);
-        DesktopShortcuts.add(root.screenName, [app], 20, 80, "",
-            screen?.width ?? 1920, screen?.height ?? 1080);
+        const grid = DesktopShortcuts.grid(root.screenName);
+        const cell = DesktopShortcuts.firstFree(grid, DesktopShortcuts.takenCells(grid, items));
+        if (!cell)
+            return;
+        const point = DesktopShortcuts.cellPos(grid, cell.col, cell.row);
+        DesktopShortcuts.add(root.screenName, [app], point.x, point.y, "",
+            screen?.width ?? grid.area.screenWidth, screen?.height ?? grid.area.screenHeight);
+        // Adding an icon to a desktop whose icons are hidden would look like
+        // nothing happened.
+        if (DesktopShortcuts.hidden)
+            DesktopShortcuts.setHidden(false);
     }
 
     readonly property bool lockTab: GlobalStates.editLockPreview
@@ -734,10 +759,10 @@ Item {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: Appearance.sizes.editModeDrawerWidth
-        color: Appearance.withAlpha(Appearance.m3colors.m3surface, 0.99)
+        color: Appearance.colors.colLayer0
         radius: Appearance.rounding.small
         border.width: 1
-        border.color: Appearance.withAlpha(Appearance.m3colors.m3outline, 0.58)
+        border.color: Appearance.colors.colOutline
         clip: true
 
         // The remove tint: lit while a desktop widget is carried over the panel.
@@ -764,22 +789,22 @@ Item {
                 Layout.fillWidth: true
                 spacing: Appearance.sizes.space3
 
-                // One quiet plate is both the section mark at the root and the
-                // back action deeper in the catalogue.
+                // The section mark becomes a back action on sub-pages and
+                // provider pages with an explicit return destination.
                 Rectangle {
                     Layout.alignment: Qt.AlignVCenter
                     implicitWidth: Appearance.sizes.controlHeight
                     implicitHeight: Appearance.sizes.controlHeight
                     radius: Appearance.rounding.small
-                    color: root.atRoot ? "transparent"
+                    color: !root.canGoBack ? "transparent"
                         : backMouse.containsPress
-                            ? Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.16)
+                            ? Appearance.colors.colLayer1Active
                             : backMouse.containsMouse
-                                ? Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.09)
+                                ? Appearance.colors.colLayer1Hover
                                 : "transparent"
                     border.width: 1
-                    border.color: root.atRoot ? "transparent"
-                        : Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.18)
+                    border.color: root.canGoBack
+                        ? Appearance.colors.colOutlineVariant : "transparent"
 
                     Behavior on color {
                         enabled: !Appearance.reducedMotion
@@ -788,7 +813,7 @@ Item {
 
                     MaterialSymbol {
                         anchors.centerIn: parent
-                        text: root.atRoot ? root.headerSymbol : "arrow_back"
+                        text: root.canGoBack ? "arrow_back" : root.headerSymbol
                         iconSize: 18
                         color: Appearance.colors.colOnSurface
                     }
@@ -796,7 +821,7 @@ Item {
                     MouseArea {
                         id: backMouse
                         anchors.fill: parent
-                        enabled: !root.atRoot
+                        enabled: root.canGoBack
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.goBack()
@@ -817,21 +842,21 @@ Item {
                             implicitWidth: 2
                             implicitHeight: 10
                             radius: 1
-                            color: Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.78)
+                            color: Appearance.colors.colOnSurfaceVariant
                         }
                         StyledText {
                             text: Translation.tr("Stage editor").toUpperCase()
-                            font.family: Appearance.font.family.expressive
-                            font.pixelSize: 9
-                            font.weight: Font.DemiBold
-                            font.letterSpacing: 1.6
-                            color: Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.78)
+                            font.family: Appearance.font.family.monospace
+                            font.pixelSize: Appearance.font.pixelSize.smallest
+                            font.weight: Font.Medium
+                            font.letterSpacing: Appearance.font.trackLabel
+                            color: Appearance.colors.colSubtext
                         }
                         Rectangle {
                             Layout.fillWidth: true
                             Layout.minimumWidth: 0
                             implicitHeight: 1
-                            color: Appearance.withAlpha(Appearance.m3colors.m3outline, 0.4)
+                            color: Appearance.colors.colOutlineVariant
                         }
                     }
 
@@ -840,94 +865,20 @@ Item {
                         Layout.minimumWidth: 0
                         text: root.headerTitle
                         font.family: Appearance.font.family.title
-                        font.pixelSize: Appearance.font.pixelSize.large
-                        font.weight: Font.DemiBold
+                        font.pixelSize: Appearance.font.pixelSize.larger
+                        font.weight: Font.Medium
                         color: Appearance.colors.colOnSurface
                         elide: Text.ElideRight
                     }
                 }
             }
 
-            // ── Catalogue picker ─────────────────────────────────────────────
-            // Labels stay full while they fit. In compact mode inactive tabs
-            // fold to icons and the active label receives only the width left
-            // after every icon target, so translations cannot cross the edge.
-            Item {
-                id: pickerHost
-                Layout.fillWidth: true
-                Layout.leftMargin: Appearance.sizes.space1
-                Layout.rightMargin: Appearance.sizes.space1
-                visible: root.atRoot
-                implicitHeight: catalogueGroup.implicitHeight
-
-                readonly property var tabs: [
-                    { "section": "widgets", "label": Translation.tr("Widgets"), "icon": "widgets", "shown": true },
-                    { "section": "wallpaper", "label": Translation.tr("Wallpaper"), "icon": "wallpaper", "shown": true },
-                    { "section": "style", "label": Translation.tr("Style"), "icon": "palette", "shown": true }
-                ].concat(Config.extraSections.map(s => ({ "section": s.section, "label": s.label, "icon": s.icon, "shown": true })))
-                readonly property var shownTabs: pickerHost.tabs.filter(tab => tab.shown)
-                readonly property real fullWidth: labelMeasure.implicitWidth
-                    + pickerHost.shownTabs.length * 20
-                    + Appearance.sizes.space1 * Math.max(0, pickerHost.shownTabs.length - 1)
-                readonly property bool compact: pickerHost.fullWidth > pickerHost.width
-                readonly property real compactLabelWidth: Math.max(32,
-                    pickerHost.width - (pickerHost.shownTabs.length - 1) * 32
-                    - Appearance.sizes.space1 * Math.max(0, pickerHost.shownTabs.length - 1)
-                    - 36)
-
-                Row {
-                    id: labelMeasure
-                    visible: false
-                    Repeater {
-                        model: pickerHost.shownTabs
-                        delegate: StyledText {
-                            required property var modelData
-                            text: modelData.label
-                        }
-                    }
-                }
-
-                ButtonGroup {
-                    id: catalogueGroup
-                    anchors.horizontalCenter: parent.horizontalCenter
-                    spacing: Appearance.sizes.space1
-                    CatalogueTab {
-                        tab: pickerHost.tabs[0]
-                        compact: pickerHost.compact
-                        availableLabelWidth: pickerHost.compactLabelWidth
-                        leftmost: true
-                    }
-                    CatalogueTab {
-                        tab: pickerHost.tabs[1]
-                        compact: pickerHost.compact
-                        availableLabelWidth: pickerHost.compactLabelWidth
-                    }
-                    CatalogueTab {
-                        tab: pickerHost.tabs[2]
-                        compact: pickerHost.compact
-                        availableLabelWidth: pickerHost.compactLabelWidth
-                        rightmost: Config.extraSections.length === 0
-                    }
-                    Repeater {
-                        visible: false
-                        model: pickerHost.tabs.slice(3)
-                        delegate: CatalogueTab {
-                            required property var modelData
-                            required property int index
-                            tab: modelData
-                            compact: pickerHost.compact
-                            availableLabelWidth: pickerHost.compactLabelWidth
-                            rightmost: index === pickerHost.tabs.length - 4
-                        }
-                    }
-                }
-            }
 
             StyledText {
                 Layout.fillWidth: true
                 Layout.leftMargin: Appearance.sizes.space1
                 Layout.rightMargin: Appearance.sizes.space1
-                visible: root.atRoot && !root.searching
+                visible: root.atRoot && !root.searching && text.length > 0
                 text: root.extraSection ? root.extraSection.intro
                     : root.section === "apps"
                     ? Translation.tr("Add apps, pairs or folders to the home screen, or drag to place them.")
@@ -949,9 +900,9 @@ Item {
                             ? Translation.tr("Configure taskbar appearance and items.")
                             : Translation.tr("Pin apps, and choose how the dock itself is drawn."))
                 font.family: Appearance.font.family.main
-                font.pixelSize: Appearance.font.pixelSize.smaller
-                font.weight: Font.Bold
-                color: Appearance.withAlpha(Appearance.m3colors.m3onSurface, 0.74)
+                font.pixelSize: Appearance.font.pixelSize.small
+                font.weight: Font.Normal
+                color: Appearance.colors.colSubtext
                 wrapMode: Text.Wrap
                 lineHeightMode: Text.ProportionalHeight
                 lineHeight: 1.35
@@ -1246,29 +1197,104 @@ Item {
                 popin: false
                 animateAppearance: false
                 clip: true
-                spacing: 3
+                spacing: Tokens.s1
                 model: root.desktopAppsItems
 
-                delegate: EditPanelRow {
+                delegate: Rectangle {
+                    id: appRow
                     required property var modelData
                     required property int index
                     width: desktopAppList.width
-                    first: index === 0
-                    last: index === root.desktopAppsItems.length - 1
-                    iconSource: Quickshell.iconPath(AppSearch.guessIcon(modelData.id ?? ""), "image-missing")
-                    title: modelData.name ?? modelData.id
-                    subtitle: modelData.genericName || modelData.comment || ""
-                    trailingKind: modelData.onScreen ? "check" : "add"
-                    valueText: modelData.onScreen ? Translation.tr("On desktop") : ""
-                    onActivated: root.toggleAppOnDesktop(modelData.id ?? "")
+                    height: Tokens.rowH + Tokens.s2
+                    radius: Tokens.radius
+                    color: modelData.onScreen ? Tokens.bone
+                        : rowTap.pressed ? Tokens.tint16
+                        : rowHover.hovered ? Tokens.tint5 : "transparent"
+                    border.width: Tokens.border
+                    border.color: modelData.onScreen ? Tokens.bone
+                        : rowHover.hovered ? Tokens.lineStrong : Tokens.line
+                    opacity: Persistent.ready && !Persistent.blockWrites ? 1 : 0.45
+                    activeFocusOnTab: true
+
+                    Behavior on color {
+                        ColorAnimation { duration: Tokens.snap }
+                    }
+
+                    Image {
+                        id: appIcon
+                        anchors.left: parent.left
+                        anchors.leftMargin: Tokens.s3
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: Tokens.s6
+                        height: Tokens.s6
+                        sourceSize: Qt.size(width, height)
+                        source: Quickshell.iconPath(AppSearch.guessIcon(appRow.modelData.id ?? ""), "image-missing")
+                        fillMode: Image.PreserveAspectFit
+                    }
+
+                    Column {
+                        anchors.left: appIcon.right
+                        anchors.leftMargin: Tokens.s3
+                        anchors.right: stateMark.left
+                        anchors.rightMargin: Tokens.s3
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 1
+                        Text {
+                            width: parent.width
+                            text: appRow.modelData.name ?? appRow.modelData.id
+                            color: appRow.modelData.onScreen ? Tokens.inkOnBone : Tokens.ink
+                            font.family: Tokens.ui
+                            font.pixelSize: Tokens.fRow
+                            font.weight: Font.Medium
+                            elide: Text.ElideRight
+                        }
+                        Text {
+                            width: parent.width
+                            visible: text.length > 0
+                            text: appRow.modelData.genericName || appRow.modelData.comment || ""
+                            color: appRow.modelData.onScreen ? Tokens.inkOnBoneDim : Tokens.inkMuted
+                            font.family: Tokens.ui
+                            font.pixelSize: Tokens.fSmall
+                            elide: Text.ElideRight
+                        }
+                    }
+
+                    Text {
+                        id: stateMark
+                        anchors.right: parent.right
+                        anchors.rightMargin: Tokens.s3
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: appRow.modelData.onScreen ? I18n.tr("ON") : "+"
+                        color: appRow.modelData.onScreen ? Tokens.inkOnBone : Tokens.inkDim
+                        font.family: appRow.modelData.onScreen ? Tokens.mono : Tokens.ui
+                        font.pixelSize: appRow.modelData.onScreen ? Tokens.fTiny : Tokens.fBody
+                        font.letterSpacing: appRow.modelData.onScreen ? Tokens.trackLabel : 0
+                    }
+
+                    HoverHandler {
+                        id: rowHover
+                        enabled: Persistent.ready && !Persistent.blockWrites
+                        cursorShape: Qt.PointingHandCursor
+                    }
+                    TapHandler {
+                        id: rowTap
+                        enabled: Persistent.ready && !Persistent.blockWrites
+                        onTapped: root.toggleAppOnDesktop(appRow.modelData.id ?? "")
+                    }
+                    Keys.onPressed: event => {
+                        if ((event.key === Qt.Key_Return || event.key === Qt.Key_Enter
+                            || event.key === Qt.Key_Space) && !event.isAutoRepeat) {
+                            root.toggleAppOnDesktop(appRow.modelData.id ?? "");
+                            event.accepted = true;
+                        }
+                    }
                 }
             }
 
-            StyledText {
+            Empty {
                 anchors.centerIn: parent
                 visible: desktopAppList.count === 0
-                text: Translation.tr("No applications found")
-                color: Appearance.colors.colOnSurfaceVariant
+                caption: I18n.tr("No applications match this search.")
             }
         }
     }
@@ -2127,25 +2153,4 @@ Item {
         }
     }
 
-    // One catalogue in the picker. Folded (`compact`), only the current one
-    // keeps a bounded label; the rest stay icon-only and name themselves on hover.
-    component CatalogueTab: SelectionGroupButton {
-        id: catalogueTab
-        required property var tab
-        property bool compact: false
-        property real availableLabelWidth: 140
-        visible: catalogueTab.tab.shown
-        toggled: root.section === catalogueTab.tab.section
-        horizontalPadding: catalogueTab.compact ? Appearance.sizes.space2 : 10
-        maximumLabelWidth: catalogueTab.compact ? catalogueTab.availableLabelWidth : 140
-        buttonIcon: catalogueTab.compact ? catalogueTab.tab.icon : ""
-        buttonText: !catalogueTab.compact || catalogueTab.toggled ? catalogueTab.tab.label : ""
-        onClicked: root.setSection(catalogueTab.tab.section)
-
-        StyledToolTip {
-            requireOverlay: false
-            extraVisibleCondition: catalogueTab.compact
-            text: catalogueTab.tab.label
-        }
-    }
 }

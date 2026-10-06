@@ -7,6 +7,7 @@ import stage.services
 import stage.modules.common
 import stage.modules.common.widgets
 import stage.modules.common.functions
+import Ryoku.Ui.Singletons
 
 /**
  * The wallpaper folder, as a grid of thumbnails on Edit Mode's panel.
@@ -39,14 +40,13 @@ Item {
         return FileUtils.trimFileProtocol(String(raw ?? ""));
     }
 
-    readonly property int columns: 3
-    readonly property real cellGap: 6
-    // The view's cell carries the gap, so the cell is the width divided by
-    // the columns and the tile is what is left of it: a tile sized first and
-    // a gap added after came to a hair more than the width, and the view
-    // fitted two.
-    readonly property real cellStride: Math.floor(root.width / root.columns)
-    readonly property real cellWidth: root.cellStride - root.cellGap
+    readonly property real cellGap: Tokens.s2
+    readonly property real minimumCellWidth: Tokens.cellH
+    readonly property int columns: Math.max(1, Math.min(3,
+        Math.floor((Math.max(0, grid.width) + root.cellGap) / (root.minimumCellWidth + root.cellGap))))
+    // The gap belongs to the stride, keeping the final column inside the view.
+    readonly property real cellStride: Math.floor(Math.max(0, grid.width) / root.columns)
+    readonly property real cellWidth: Math.max(1, root.cellStride - root.cellGap)
     readonly property real cellHeight: Math.round(root.cellWidth * 10 / 16)
 
     // Ryogami's index is the library of record, including its separate video
@@ -94,6 +94,7 @@ Item {
     GridView {
         id: grid
         anchors.fill: parent
+        anchors.margins: Tokens.s2
         clip: true
         cellWidth: root.cellStride
         cellHeight: root.cellHeight + root.cellGap
@@ -217,9 +218,12 @@ Item {
 
     StyledText {
         anchors.centerIn: parent
+        width: Math.max(0, root.width - Tokens.s5 * 2)
         visible: grid.count === 0
         text: Wallpapers.directoryLoading ? Translation.tr("Loading…") : Translation.tr("No wallpapers in this folder")
         font.pixelSize: Appearance.font.pixelSize.small
         color: Appearance.colors.colOnSurfaceVariant
+        horizontalAlignment: Text.AlignHCenter
+        wrapMode: Text.WordWrap
     }
 }

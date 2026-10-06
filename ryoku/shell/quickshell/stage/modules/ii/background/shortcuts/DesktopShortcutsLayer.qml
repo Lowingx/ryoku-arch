@@ -4,6 +4,7 @@ import QtQuick
 import QtQuick.Layouts
 import Quickshell
 import Quickshell.Widgets
+import Ryoku.Ui.Singletons
 import stage.modules.common
 import stage.modules.common.widgets
 
@@ -11,6 +12,7 @@ Item {
     id: root
 
     required property string screenName
+    property Item overlayParent: null
     // The grid is the store's (DesktopShortcuts.cellWidth/cellHeight): the
     // spacing preset scaled by the icon size, so a bigger icon takes a
     // bigger cell. Positions keep the 10px snap; every hit-test reads the
@@ -28,7 +30,7 @@ Item {
     visible: root.opacity > 0.01
     enabled: !root.iconsHidden
     Behavior on opacity {
-        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(root)
+        NumberAnimation { duration: Tokens.swap; easing.type: Tokens.ease }
     }
     onIconsHiddenChanged: {
         if (root.iconsHidden)
@@ -87,14 +89,6 @@ Item {
     // Handed in by the host window; 1 when nothing is applied.
     property real surfaceScale: 1
     readonly property real counterScale: 1 / Math.max(0.2, Math.min(5, root.surfaceScale))
-    // Wallpaper brightness, without sampling: matugen picks the scheme FROM
-    // the wallpaper's luminance, so the palette itself is the signal. One
-    // scalar for the whole layer, re-evaluated only when the theme changes.
-    // Rec.709 luma over the color's rgb floats — the same reading the
-    // ColorPickerPopup makes; QML colors expose no .hsl in this Qt.
-    readonly property bool wallpaperLight: (0.2126 * Appearance.m3colors.m3background.r
-        + 0.7152 * Appearance.m3colors.m3background.g
-        + 0.0722 * Appearance.m3colors.m3background.b) > 0.55
     // ── Click-to-open ──────────────────────────────────────────────────────
     // Windows/KDE semantics: the first click SELECTS and arms, the second
     // click of the pair opens. One timer for the whole layer (never one per
@@ -385,6 +379,27 @@ Item {
         }
         return null;
     }
+    // The wallpaper's full-surface right-click catcher sits above this layer
+    // outside Edit Mode. Let it route a hit back to the exact tile while still
+    // retaining empty-space clicks for the desktop menu.
+    function openContextAt(x, y) {
+        if (root.iconsHidden)
+            return false;
+        for (let i = iconRepeater.count - 1; i >= 0; --i) {
+            const tile = iconRepeater.itemAt(i);
+            if (!tile || !tile.visible || tile.merging)
+                continue;
+            if (x < tile.x || y < tile.y
+                || x >= tile.x + tile.width || y >= tile.y + tile.height)
+                continue;
+            root.focusId = tile.entry.id;
+            if (!root.isSelected(tile.entry.id))
+                root.clearSelection();
+            root.openContext(tile.entry.id, x, y);
+            return true;
+        }
+        return false;
+    }
     // Type to find: letters typed within a beat of each other build one
     // prefix; a repeated single letter cycles through the icons it starts.
     property string typeAhead: ""
@@ -483,26 +498,26 @@ Item {
         property bool snapping: false
         width: root.cellWidth
         height: root.cellHeight
-        radius: Appearance.rounding.large
-        color: Qt.alpha(Appearance.colors.colPrimary, 0.1)
-        border.width: 2
-        border.color: Qt.alpha(Appearance.colors.colPrimary, 0.55)
+        radius: Tokens.radius
+        color: Tokens.tint10
+        border.width: Tokens.border
+        border.color: Tokens.lineStrong
         opacity: dropGhost.shown ? 1 : 0
         visible: opacity > 0.001
         scale: dropGhost.shown ? 1 : 0.9
         Behavior on x {
-            enabled: !dropGhost.snapping && !Appearance.reducedMotion
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(dropGhost)
+            enabled: !dropGhost.snapping && !Tokens.reduceMotion
+            NumberAnimation { duration: Tokens.move; easing.type: Tokens.ease }
         }
         Behavior on y {
-            enabled: !dropGhost.snapping && !Appearance.reducedMotion
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(dropGhost)
+            enabled: !dropGhost.snapping && !Tokens.reduceMotion
+            NumberAnimation { duration: Tokens.move; easing.type: Tokens.ease }
         }
         Behavior on opacity {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(dropGhost)
+            NumberAnimation { duration: Tokens.snap; easing.type: Tokens.ease }
         }
         Behavior on scale {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(dropGhost)
+            NumberAnimation { duration: Tokens.snap; easing.type: Tokens.ease }
         }
     }
 
@@ -544,7 +559,7 @@ Item {
             readonly property real restY: tile.bumped ? root.dragPlan.bumpY - tile.settled.y : 0
             function glide() {
                 glideMotion.stop();
-                if (Appearance.reducedMotion || (tile.offX === tile.restX && tile.offY === tile.restY)) {
+                if (Tokens.reduceMotion || (tile.offX === tile.restX && tile.offY === tile.restY)) {
                     tile.offX = tile.restX;
                     tile.offY = tile.restY;
                     return;
@@ -575,16 +590,14 @@ Item {
                 NumberAnimation {
                     id: glideX
                     target: tile; property: "offX"
-                    duration: Appearance.animation.elementMove.duration
-                    easing.type: Appearance.animation.elementMove.type
-                    easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
+                    duration: Tokens.move
+                    easing.type: Tokens.ease
                 }
                 NumberAnimation {
                     id: glideY
                     target: tile; property: "offY"
-                    duration: Appearance.animation.elementMove.duration
-                    easing.type: Appearance.animation.elementMove.type
-                    easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
+                    duration: Tokens.move
+                    easing.type: Tokens.ease
                 }
             }
 
@@ -597,9 +610,9 @@ Item {
             // ── Entrance ───────────────────────────────────────────────────
             // A rise and fade, delayed by the tile's distance from the
             // top-left in cells: the whole desktop arrives as one wave.
-            property real intro: Appearance.reducedMotion ? 1 : 0
+            property real intro: Tokens.reduceMotion ? 1 : 0
             function replayIntro() {
-                if (Appearance.reducedMotion) {
+                if (Tokens.reduceMotion) {
                     tile.intro = 1;
                     return;
                 }
@@ -624,9 +637,8 @@ Item {
                 PauseAnimation { id: introDelay; duration: 0 }
                 NumberAnimation {
                     target: tile; property: "intro"; to: 1
-                    duration: Appearance.animation.elementMove.duration
-                    easing.type: Appearance.animation.elementMove.type
-                    easing.bezierCurve: Appearance.animation.elementMove.bezierCurve
+                    duration: Tokens.move
+                    easing.type: Tokens.ease
                 }
             }
 
@@ -644,26 +656,24 @@ Item {
                 id: targetPop
                 NumberAnimation {
                     target: tileContent; property: "scale"; to: 1.1
-                    duration: 90; easing.type: Easing.OutQuad
+                    duration: Tokens.snap; easing.type: Tokens.ease
                 }
                 NumberAnimation {
                     target: tileContent; property: "scale"; to: 1.0
-                    duration: 170; easing.type: Easing.OutCubic
+                    duration: Tokens.move; easing.type: Tokens.ease
                 }
             }
             ParallelAnimation {
                 id: mergeMotion
                 NumberAnimation {
                     target: tileContent; property: "opacity"; to: 0
-                    duration: 150
-                    easing.type: Easing.BezierSpline
-                    easing.bezierCurve: Appearance.animationCurves.emphasizedAccel
+                    duration: Tokens.move
+                    easing.type: Tokens.ease
                 }
                 NumberAnimation {
                     target: tileContent; property: "scale"; to: 0.3
-                    duration: 150
-                    easing.type: Easing.BezierSpline
-                    easing.bezierCurve: Appearance.animationCurves.emphasizedAccel
+                    duration: Tokens.move
+                    easing.type: Tokens.ease
                 }
                 onFinished: {
                     const m = tile.mergeData;
@@ -682,16 +692,14 @@ Item {
                 id: tileContent
                 anchors.fill: parent
                 opacity: tile.intro
-                // Press feedback mirrors RippleButton's interactionScale (dip
-                // while held, spring back on release), but at 0.9: a 100px
-                // tile at 0.96 moves the icon barely 2px. Suppressed during a
-                // drag (the Translate already moves the tile).
+                // Keep press feedback noticeable without moving a tile enough
+                // to look like the start of a drag.
                 scale: (gesture.pressedButtons & Qt.LeftButton) !== 0
                     && !tile.dragging ? 0.9 : 1.0
                 Behavior on scale {
                     NumberAnimation {
-                        duration: 150
-                        easing.type: Easing.OutQuad
+                        duration: Tokens.move
+                        easing.type: Tokens.ease
                     }
                 }
                 transform: [
@@ -707,13 +715,12 @@ Item {
                 // Hover and merge-target plates.
                 Rectangle {
                     anchors.fill: parent
-                    radius: Appearance.rounding.normal
-                    color: root.dropTargetId === tile.entry.id ? Appearance.colors.colPrimaryContainer
-                        : Qt.alpha(Appearance.m3colors.m3onSurface, 0.08)
+                    radius: Tokens.radius
+                    color: root.dropTargetId === tile.entry.id ? Tokens.tint16 : Tokens.tint5
                     opacity: root.dropTargetId === tile.entry.id || (tile.hovered && !tile.selected && !tile.dragging) ? 1 : 0
                     visible: opacity > 0.001
                     Behavior on opacity {
-                        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                        NumberAnimation { duration: Tokens.snap; easing.type: Tokens.ease }
                     }
                 }
                 ColumnLayout {
@@ -732,12 +739,10 @@ Item {
                         Rectangle {
                             anchors.fill: parent
                             visible: plate.style !== "none" && tile.entry.type !== "group"
-                            radius: plate.style === "circle" ? width / 2
-                                : plate.style === "squircle" ? width * 0.3 : Appearance.rounding.normal
-                            color: plate.shaped ? Appearance.colors.colPrimaryContainer
-                                : Qt.alpha(Appearance.m3colors.m3surfaceContainer, 0.55)
-                            border.width: plate.style === "translucent" ? 1 : 0
-                            border.color: Qt.alpha(Appearance.m3colors.m3outlineVariant, 0.5)
+                            radius: plate.style === "circle" ? width / 2 : Tokens.radius
+                            color: plate.shaped ? Tokens.bone : Tokens.paperLift
+                            border.width: Tokens.border
+                            border.color: plate.shaped ? Tokens.bone : Tokens.line
                         }
                         Loader {
                             anchors.centerIn: parent
@@ -752,19 +757,19 @@ Item {
                         Rectangle {
                             anchors.horizontalCenter: parent.horizontalCenter
                             anchors.top: parent.bottom
-                            anchors.topMargin: -2
+                            anchors.topMargin: -Tokens.border * 2
                             readonly property bool shown: (root.options.runningBadges ?? true) && DesktopShortcuts.isRunning(tile.entry)
-                            width: shown ? 12 * Math.max(0.75, root.iconScale) : 4
-                            height: 4
-                            radius: 2
-                            color: Appearance.colors.colPrimary
+                            width: shown ? Tokens.s3 * Math.max(0.75, root.iconScale) : Tokens.s1
+                            height: Tokens.s1
+                            radius: height / 2
+                            color: Tokens.ink
                             opacity: shown ? 1 : 0
                             visible: opacity > 0.001
                             Behavior on opacity {
-                                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                                NumberAnimation { duration: Tokens.snap; easing.type: Tokens.ease }
                             }
                             Behavior on width {
-                                animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                                NumberAnimation { duration: Tokens.move; easing.type: Tokens.ease }
                             }
                         }
                         // Unread notifications from the app.
@@ -775,22 +780,23 @@ Item {
                             anchors.top: parent.top
                             anchors.rightMargin: -4
                             anchors.topMargin: -4
-                            height: 18
-                            width: Math.max(height, unreadText.implicitWidth + 10)
+                            height: Tokens.s4 + Tokens.s1
+                            width: Math.max(height, unreadText.implicitWidth + Tokens.s3)
                             radius: height / 2
-                            color: Appearance.m3colors.m3error
+                            color: Tokens.alert
                             scale: unreadBadge.count > 0 ? 1 : 0
                             visible: scale > 0.01
                             Behavior on scale {
-                                NumberAnimation { duration: 260; easing.type: Easing.OutBack; easing.overshoot: 2 }
+                                NumberAnimation { duration: Tokens.swap; easing.type: Tokens.ease }
                             }
-                            StyledText {
+                            Text {
                                 id: unreadText
                                 anchors.centerIn: parent
                                 text: unreadBadge.count > 99 ? "99+" : String(unreadBadge.count)
-                                font.pixelSize: Appearance.font.pixelSize.smallest
+                                font.family: Tokens.ui
+                                font.pixelSize: Tokens.fTiny
                                 font.weight: Font.DemiBold
-                                color: Appearance.m3colors.m3onError
+                                color: Tokens.keycapOnDark
                             }
                         }
                     }
@@ -800,41 +806,39 @@ Item {
                         Layout.fillHeight: true
                         readonly property string mode: root.options.labels ?? "always"
                         readonly property string style: root.options.labelStyle ?? "auto"
-                        // A bright wallpaper swallows the raised shadow, so
-                        // "auto" draws the M3 inverse pair's scrim there and
-                        // the shadow elsewhere; the other two force one.
-                        readonly property bool pill: labelBox.style === "pill"
-                            || (labelBox.style === "auto" && root.wallpaperLight)
+                        readonly property bool pill: labelBox.style !== "shadow"
                         visible: labelBox.mode !== "never"
                         opacity: labelBox.mode === "hover" ? (tile.hovered || tile.selected ? 1 : 0) : 1
                         Behavior on opacity {
-                            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                            NumberAnimation { duration: Tokens.snap; easing.type: Tokens.ease }
                         }
                         Rectangle {
                             anchors.horizontalCenter: parent.horizontalCenter
                             anchors.top: parent.top
-                            width: Math.min(parent.width, tileLabel.contentWidth + 12)
-                            height: tileLabel.contentHeight + 5
-                            radius: Appearance.rounding.small
-                            color: Appearance.m3colors.m3inverseSurface
-                            opacity: 0.7
+                            width: Math.min(parent.width, tileLabel.contentWidth + Tokens.s3)
+                            height: tileLabel.contentHeight + Tokens.s1
+                            radius: Tokens.radius
+                            color: labelBox.style === "pill" ? Tokens.bone : Tokens.paperLift
+                            border.width: Tokens.border
+                            border.color: labelBox.style === "pill" ? Tokens.bone : Tokens.line
                             visible: labelBox.pill
                         }
-                        StyledText {
+                        Text {
                             id: tileLabel
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.top: parent.top
-                            anchors.topMargin: 2
+                            anchors.topMargin: Tokens.border * 2
                             text: tile.entry.name || tile.entry.id
-                            font.pixelSize: Appearance.font.pixelSize.smaller
-                            color: labelBox.pill ? Appearance.m3colors.m3inverseOnSurface : Appearance.m3colors.m3onSurface
+                            font.family: Tokens.ui
+                            font.pixelSize: Tokens.fSmall
+                            color: labelBox.style === "pill" ? Tokens.inkOnBone : Tokens.ink
                             elide: Text.ElideRight
                             wrapMode: (root.options.labelLines ?? 1) === 2 ? Text.Wrap : Text.NoWrap
                             horizontalAlignment: Text.AlignHCenter
                             maximumLineCount: (root.options.labelLines ?? 1) === 2 ? 2 : 1
                             style: labelBox.pill ? Text.Normal : Text.Raised
-                            styleColor: root.wallpaperLight ? Qt.alpha("white", 0.6) : Appearance.colors.colShadow
+                            styleColor: Tokens.paper
                         }
                     }
                 }
@@ -845,13 +849,14 @@ Item {
                     visible: opacity > 0.001
                     opacity: tile.selected ? 1 : 0
                     anchors.fill: parent
-                    anchors.margins: -6
-                    radius: Appearance.rounding.large
-                    color: Qt.alpha(Appearance.colors.colPrimary, 0.08)
-                    border.color: Appearance.colors.colPrimary
-                    border.width: root.focusId === tile.entry.id && root.selectedIds.length > 1 ? 3 : 2
+                    anchors.margins: -Tokens.s2
+                    radius: Tokens.radius
+                    color: Tokens.tint16
+                    border.color: Tokens.bone
+                    border.width: root.focusId === tile.entry.id && root.selectedIds.length > 1
+                        ? Tokens.border * 3 : Tokens.border * 2
                     Behavior on opacity {
-                        animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
+                        NumberAnimation { duration: Tokens.snap; easing.type: Tokens.ease }
                     }
                 }
                 Component {
@@ -862,7 +867,8 @@ Item {
                         // shrink has no counter for them — they are the
                         // desktop). Mipmapping keeps their edges clean.
                         mipmap: true
-                        source: Quickshell.iconPath(tile.entry.icon || (tile.entry.type === "file" ? "text-x-generic" : "folder"), "image-missing")
+                        source: Quickshell.iconPath(tile.entry.icon || (tile.entry.type === "directory"
+                            ? "folder" : tile.entry.type === "url" ? "internet-web-browser" : "text-x-generic"), "image-missing")
                     }
                 }
                 Component {
@@ -870,9 +876,10 @@ Item {
                     Rectangle {
                         id: groupPlate
                         readonly property string style: root.options.iconBackground ?? "none"
-                        radius: style === "circle" ? width / 2 : style === "squircle" ? width * 0.3 : Appearance.rounding.normal
-                        color: style === "circle" || style === "squircle" ? Appearance.colors.colPrimaryContainer
-                            : Appearance.m3colors.m3surfaceContainerHigh
+                        radius: style === "circle" ? width / 2 : Tokens.radius
+                        color: style === "circle" || style === "squircle" ? Tokens.bone : Tokens.paperLift
+                        border.width: Tokens.border
+                        border.color: style === "circle" || style === "squircle" ? Tokens.bone : Tokens.line
                         Grid {
                             anchors.centerIn: parent
                             columns: 2
@@ -1030,16 +1037,13 @@ Item {
                             root.clearSelection();
                         const p = root.mapFromItem(gesture, mouse.x, mouse.y);
                         root.openContext(tile.entry.id, p.x, p.y);
-                    } else if (Config.options.interactions.desktopDoubleClick
-                        && root.armedId !== tile.entry.id) {
-                        // First beat of the pair: select it, arm, wait. The
-                        // halo is the feedback that the icon is loaded.
+                    } else if (root.armedId !== tile.entry.id) {
+                        // A single click selects. The second click within the
+                        // desktop double-click interval opens the item.
                         root.selectedIds = [tile.entry.id];
                         root.armedId = tile.entry.id;
                         clickTimer.restart();
                     } else {
-                        // The second beat — or the whole gesture when the
-                        // option is off: open what is under the pointer.
                         root.armedId = "";
                         clickTimer.stop();
                         root.openEntry(tile.entry);
@@ -1054,6 +1058,7 @@ Item {
     // popup on the popup itself.
     Loader {
         id: contextDialog
+        parent: root.overlayParent ?? root
         anchors.fill: parent
         z: 3
         active: false
@@ -1084,6 +1089,7 @@ Item {
 
     Loader {
         id: groupPopup
+        parent: root.overlayParent ?? root
         anchors.fill: parent
         z: 4
         active: false

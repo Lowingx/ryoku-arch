@@ -6,7 +6,8 @@ StagePreviewCard StagePreviewCard.qml
 StageAngleDial StageAngleDial.qml
 StageEditorHost StageEditorHost.qml
 StageWidgetProvider StageWidgetProvider.qml
-StageSheet StageSheet.qml
 StageVisualizerPage StageVisualizerPage.qml
 StageDepthPage StageDepthPage.qml
 StageDepthOptions StageDepthOptions.qml
+StageDepthHero StageDepthHero.qml
+StageWidgetPage StageWidgetPage.qml

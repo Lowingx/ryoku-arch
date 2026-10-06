@@ -20,7 +20,7 @@ Button {
     property bool invertedSelection: true
     property string buttonText
     property bool pointingHandCursor: true
-    property real buttonRadius: Appearance?.rounding?.small ?? 6
+    property real buttonRadius: Appearance.rounding.small
     property real buttonRadiusPressed: buttonRadius
     property real buttonEffectiveRadius: root.down ? root.buttonRadiusPressed : root.buttonRadius
     readonly property bool isPressed: root.down
@@ -83,22 +83,18 @@ Button {
         return (pStr.indexOf("RowLayout") !== -1 || pStr.indexOf("Row") !== -1) && pStr.indexOf("Column") === -1;
     }
 
-    readonly property real rFull: useDynamicRadius ? (Appearance?.rounding?.scale === 0 ? 0 : Math.min(height / 2, Appearance?.rounding?.large ?? 23)) : buttonEffectiveRadius
+    readonly property real rFull: root.buttonEffectiveRadius
 
-    property real topLeftRadius: useDynamicRadius ? ((isPressed || prevIsPressed) ? rFull : (isFirst ? Appearance?.rounding?.large ?? 23 : Appearance?.rounding?.verysmall ?? 4)) : buttonEffectiveRadius
-    property real topRightRadius: useDynamicRadius ? ((isPressed || prevIsPressed) ? rFull : (isHorizontalLayout ? (isLast ? Appearance?.rounding?.large ?? 23 : Appearance?.rounding?.verysmall ?? 4) : (isFirst ? Appearance?.rounding?.large ?? 23 : Appearance?.rounding?.verysmall ?? 4))) : buttonEffectiveRadius
-    property real bottomLeftRadius: useDynamicRadius ? ((isPressed || nextIsPressed) ? rFull : (isHorizontalLayout ? (isFirst ? Appearance?.rounding?.large ?? 23 : Appearance?.rounding?.verysmall ?? 4) : (isLast ? Appearance?.rounding?.large ?? 23 : Appearance?.rounding?.verysmall ?? 4))) : buttonEffectiveRadius
-    property real bottomRightRadius: useDynamicRadius ? ((isPressed || nextIsPressed) ? rFull : (isLast ? Appearance?.rounding?.large ?? 23 : Appearance?.rounding?.verysmall ?? 4)) : buttonEffectiveRadius
+    property real topLeftRadius: root.buttonEffectiveRadius
+    property real topRightRadius: root.buttonEffectiveRadius
+    property real bottomLeftRadius: root.buttonEffectiveRadius
+    property real bottomRightRadius: root.buttonEffectiveRadius
     readonly property bool intentionalCircle: Math.abs(root.width - root.height) < 0.5
         && root.buttonEffectiveRadius >= root.height / 2 - 0.5
-    readonly property real paintedTopLeftRadius: root.intentionalCircle
-        ? root.topLeftRadius : Math.min(root.topLeftRadius, Appearance.rounding.small)
-    readonly property real paintedTopRightRadius: root.intentionalCircle
-        ? root.topRightRadius : Math.min(root.topRightRadius, Appearance.rounding.small)
-    readonly property real paintedBottomLeftRadius: root.intentionalCircle
-        ? root.bottomLeftRadius : Math.min(root.bottomLeftRadius, Appearance.rounding.small)
-    readonly property real paintedBottomRightRadius: root.intentionalCircle
-        ? root.bottomRightRadius : Math.min(root.bottomRightRadius, Appearance.rounding.small)
+    readonly property real paintedTopLeftRadius: root.topLeftRadius
+    readonly property real paintedTopRightRadius: root.topRightRadius
+    readonly property real paintedBottomLeftRadius: root.bottomLeftRadius
+    readonly property real paintedBottomRightRadius: root.bottomRightRadius
 
 
     Behavior on topLeftRadius {
@@ -134,14 +130,14 @@ Button {
         }
     }
 
-    property color colBackground: ColorUtils.transparentize(Appearance?.colors.colLayer1Hover, 1) || "transparent"
-    property color colBackgroundHover: Appearance?.colors.colLayer1Hover ?? "#E5DFED"
-    property color colBackgroundActive: Appearance?.colors.colLayer1Active ?? colBackgroundHover
-    property color colBackgroundToggled: Appearance?.colors.colSecondary ?? "#f1dedb"
-    property color colBackgroundToggledHover: Appearance?.colors.colSecondaryHover ?? "#f1dedb"
-    property color colBackgroundToggledActive: Appearance?.colors.colSecondaryActive ?? "#d8c6c3"
-    property color colRipple: Appearance?.colors.colLayer1Active ?? "#D6CEE2"
-    property color colRippleToggled: Appearance?.colors.colSecondaryActive ?? "#d8c6c3"
+    property color colBackground: "transparent"
+    property color colBackgroundHover: Appearance.colors.colLayer1Hover
+    property color colBackgroundActive: Appearance.colors.colLayer1Active
+    property color colBackgroundToggled: Appearance.colors.colSecondary
+    property color colBackgroundToggledHover: Appearance.colors.colSecondaryHover
+    property color colBackgroundToggledActive: Appearance.colors.colSecondaryActive
+    property color colRipple: Appearance.colors.colLayer1Active
+    property color colRippleToggled: Appearance.colors.colOnSecondaryContainer
     function sameColor(left, right) {
         return String(left).toLowerCase() === String(right).toLowerCase();
     }
@@ -151,7 +147,7 @@ Button {
             || root.sameColor(root.colBackground, Appearance.colors.colPrimaryContainer))
     property real borderWidth: 1
     property color borderColor: root.usesInvertedPlate
-        ? Appearance.colors.colSecondary : Appearance?.colors.colOutline ?? "transparent"
+        ? Appearance.colors.colSecondary : Appearance.colors.colOutlineVariant
 
     Behavior on buttonEffectiveRadius {
         enabled: root.animationsEnabled && root.radiusBehaviorEnabled
@@ -178,15 +174,13 @@ Button {
         animation: Appearance.animation.elementResize.numberAnimation.createObject(this)
     }
 
-    property real interactionScale: root.animationsEnabled
-        ? (root.down ? 0.96 : (root.hovered ? 1.01 : 1.0))
-        : 1.0
+    property real interactionScale: root.animationsEnabled && root.down ? 0.97 : 1
     scale: root.interactionScale * root.visualScale
     Behavior on interactionScale {
         enabled: root.animationsEnabled && root.scaleBehaviorEnabled
         NumberAnimation {
-            duration: 150
-            easing.type: Easing.OutQuad
+            duration: Appearance.animation.elementMoveSnap.duration
+            easing.type: Appearance.animation.elementMoveSnap.type
         }
     }
 

@@ -57,5 +57,12 @@ Scope {
             if (!GlobalStates.editMode && StageCfg.StageSession.widgets)
                 StageCfg.StageSession.leave();
         }
+        function onEditModeMonitorChanged() {
+            if (GlobalStates.editMode
+                    && StageCfg.StageSession.widgets
+                    && GlobalStates.editModeMonitor !== ""
+                    && StageCfg.StageSession.monitor !== GlobalStates.editModeMonitor)
+                StageCfg.StageSession.monitor = GlobalStates.editModeMonitor;
+        }
     }
 }
