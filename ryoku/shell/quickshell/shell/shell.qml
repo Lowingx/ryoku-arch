@@ -13,6 +13,7 @@ import Quickshell
 import shell.services
 import "modules/visualizer/Singletons" as VizCfg
 import "modules/stage/Singletons" as StageCfg
+import "modules/stage" as StageEditor
 import "components"
 import "modules/wallpaper"
 import "modules/wallpaper/Singletons" as WallCfg
@@ -521,6 +522,12 @@ ShellRoot {
             }
             Timer { id: confirmHold; interval: 5000 }
         }
+    }
+
+    // The Stage Editor: the ported desktop chrome, mounted once (it is
+    // per-screen inside) and driven by the Edit widgets session. Built only
+    // while that session is on (docs/stage.md).
+    StageEditor.StageEditorHost {
     }
 
 

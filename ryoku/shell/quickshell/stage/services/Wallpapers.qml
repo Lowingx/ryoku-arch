@@ -230,7 +230,12 @@ Singleton {
      * the same when it is handed no image. The colour previews were the one path
      * that did not, which is why a first install had nothing to derive them from.
      */
+    // Under the Ryoku mount the live picture is the provider's (ryogami owns
+    // the plane); the island's own option answers for everything else.
     readonly property string effectiveWallpaperPath: {
+        const bridged = Config.wallpaperPath;
+        if (bridged !== "")
+            return bridged;
         const background = Config.options && Config.options.background ? Config.options.background : null;
         if (!background)
             return Directories.defaultWallpaperImagePath;

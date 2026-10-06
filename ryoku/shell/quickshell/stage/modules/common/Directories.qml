@@ -59,12 +59,22 @@ Singleton {
     readonly property string widgetBackupsPath: FileUtils.trimFileProtocol(`${root.state}/stage/widget-backups`)
     readonly property string localSendDownloadPath: FileUtils.trimFileProtocol(`${root.state}/stage/localsend`)
 
-    // Helpers the copied services shell out to. Ryoku has its own wallpaper
-    // switcher (the daemon), so these resolve to the shell's scripts when the
-    // tree is present and to "" (a guarded no-op) when it is not.
-    readonly property string wallpaperSwitchScriptPath: FileUtils.trimFileProtocol(`${root.scriptPath}/ryoku-stage-wallpaper`)
-    readonly property string extractColorsScriptPath: FileUtils.trimFileProtocol(`${root.scriptPath}/ryoku-stage-colors`)
-    readonly property string generateLockscreenColorsScriptPath: FileUtils.trimFileProtocol(`${root.scriptPath}/ryoku-stage-colors`)
+    // Helpers the copied services shell out to. Ryoku ships its own wallpaper
+    // switcher seam (ryoku-stage-wallpaper) and colour generator
+    // (ryoku-stage-colors); they resolve to the shell tree's scripts when the
+    // tree is present (a dev checkout) and to the bare name otherwise, which
+    // the packaged box finds on PATH (where ryoku-shell installs ryoku-*).
+    readonly property string wallpaperSwitchScriptPath: root._helper("ryoku-stage-wallpaper")
+    readonly property string extractColorsScriptPath: root._helper("ryoku-stage-colors")
+    readonly property string generateLockscreenColorsScriptPath: root._helper("ryoku-stage-colors")
+
+    function _helper(name) {
+        // The same resolution the plugin discover script uses: a dev checkout
+        // runs the scripts straight out of the tree; a packaged box finds the
+        // bare name on PATH, where ryoku-shell installs every ryoku-* script.
+        return root._shellDir && root._shellDir.length > 0
+            ? FileUtils.trimFileProtocol(`${root.scriptPath}/${name}`) : name;
+    }
     readonly property string gammaControlScriptPath: ""
     readonly property string losslessCutDesktopPath: FileUtils.trimFileProtocol(`${root.home}/.local/share/applications/losslesscut.desktop`)
 }

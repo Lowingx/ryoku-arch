@@ -68,8 +68,11 @@ StyledFlickable {
         spacing: 3
 
         // ── Presets ──────────────────────────────────────────────────────────
+        // The island's preset engine (presets.sh, its own theme.json) is not
+        // Ryoku's; the block stands down under the mount.
         EditStylePresets {
             Layout.fillWidth: true
+            visible: !Config.widgetProvider
             onFieldFocusRequested: field => root.fieldFocusRequested(field)
             onFieldFocusReleased: root.fieldFocusReleased()
         }
@@ -100,10 +103,12 @@ StyledFlickable {
         }
 
         // App theming, scheduling, Wallpaper Engine, the online browser: pages
-        // of forms, and Settings is where they belong.
+        // of forms, and Settings is where they belong. The island's settings
+        // portal is not mounted under Ryoku; Hub owns those pages there.
         EditPanelRow {
             Layout.fillWidth: true
             Layout.topMargin: 10
+            visible: !Config.widgetProvider
             symbol: "settings"
             title: Translation.tr("Colours & Themes settings")
             subtitle: Translation.tr("Leaves Edit Mode")

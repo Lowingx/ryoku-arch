@@ -183,7 +183,7 @@ Singleton {
     /// stale-write guard, so a real switch starting while this runs moves the
     /// token past the value read here and the write is dropped.
     function _generationCommand(wallpaper, mode) {
-        const script = `${Directories.scriptPath}/colors/generate_colors_material.py`;
+        const script = Directories.extractColorsScriptPath;
         const termscheme = `${Directories.scriptPath}/colors/terminal/scheme-base.json`;
         const out = Directories.wallpaperPreviewColorsPath;
         const token = `${Directories.state}/user/generated/.preview_request_token`;

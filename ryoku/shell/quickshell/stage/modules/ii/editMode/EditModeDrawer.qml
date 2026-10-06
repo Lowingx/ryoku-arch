@@ -270,7 +270,9 @@ Item {
         && GlobalStates.editDrawerDropScreen === root.screenName
 
     // ── Catalogues ───────────────────────────────────────────────────────────
-    readonly property var activeWidgets: Config.options.background.activeWidgets ?? []
+    // Both lists follow the store: the island's own, or Ryoku's through the
+    // provider the shell installs (stage.md). The rows never see the difference.
+    readonly property var activeWidgets: Config.activeWidgets
     readonly property var usedBarIds: {
         if (root.section !== "bar")
             return [];
@@ -332,7 +334,36 @@ Item {
         { "key": "Resources", "title": Translation.tr("Resources"), "icon": "monitor_heart" }
     ]
 
+    // Group a flat catalogue (rows with widgetId/name/icon/category) into the
+    // drawer's group shape, honouring widgetCategoryOrder where it applies.
+    function groupRows(catalogue) {
+        const groups = [];
+        const byKey = {};
+        for (const widget of (catalogue ?? [])) {
+            const key = widget?.category ?? "";
+            let group = byKey[key];
+            if (!group) {
+                const named = root.widgetCategoryOrder.find(c => c.key === key);
+                group = {
+                    "key": key === "" ? "other" : key,
+                    "title": named ? named.title : (key === "" ? Translation.tr("Other") : key),
+                    "icon": named ? named.icon : "widgets",
+                    "items": []
+                };
+                byKey[key] = group;
+                groups.push(group);
+            }
+            group.items.push(widget);
+        }
+        return groups.filter(group => group.items.length > 0);
+    }
+
     readonly property var widgetGroups: {
+        // With Ryoku's store mounted the catalogue is Ryoku's roster: the
+        // desktop's real widgets, grouped by their own set names. The
+        // reference's registry only serves the island's self-contained mode.
+        if (Config.widgetProvider)
+            return root.groupRows(Config.widgetCatalogue);
         const groups = [];
         const byKey = {};
         for (const category of root.widgetCategoryOrder) {
@@ -1079,7 +1110,7 @@ Item {
                     EditPanelRow {
                         id: desktopAppsRow
                         Layout.fillWidth: true
-                        visible: !root.lockTab
+                        visible: !root.lockTab && !Config.widgetProvider
                         first: true
                         last: true
                         symbol: "add_to_home_screen"
@@ -1095,7 +1126,7 @@ Item {
                     // shortcuts, not of the widget canvas above it.
                     EditPanelRow {
                         Layout.fillWidth: true
-                        visible: !root.lockTab
+                        visible: !root.lockTab && !Config.widgetProvider
                         first: true
                         last: true
                         symbol: "grid_view"

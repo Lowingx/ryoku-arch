@@ -264,12 +264,13 @@ StyledFlickable {
             }
         }
 
-        // The full selector - search, the online browser, sorting, folders -
-        // opens over the mode's toolbar and the mode stays on underneath it.
+        // The island's full selector (search, the online browser) is not part
+        // of the Ryoku mount; the folder browser above is the pick path there.
         EditPanelRow {
             Layout.fillWidth: true
             first: false
             last: true
+            visible: !Config.widgetProvider
             symbol: "open_in_full"
             title: Translation.tr("Browse all wallpapers")
             subtitle: Translation.tr("Search, folders and the online browser")
@@ -285,14 +286,14 @@ StyledFlickable {
         // another screen there swaps its picture in as the shared one; no
         // screen changes what it shows.
         EditPanelSectionLabel {
-            visible: !root.lockTab && WallpaperLayout.multiScreen
+            visible: !root.lockTab && WallpaperLayout.multiScreen && WallpaperLayout.available
             text: Translation.tr("Screens")
         }
 
         EditPanelNotice {
             Layout.leftMargin: 4
             Layout.rightMargin: 4
-            visible: !root.lockTab && WallpaperLayout.multiScreen && !WallpaperLayout.available
+            visible: !root.lockTab && !Config.widgetProvider && WallpaperLayout.multiScreen && !WallpaperLayout.available
             symbol: "movie"
             text: Translation.tr("A video or Wallpaper Engine scene is painting every screen, so each one shows it. Pick a picture to give screens their own.")
         }
@@ -398,14 +399,18 @@ StyledFlickable {
         }
 
         // ── Position & zoom ──────────────────────────────────────────────────
+        // Position & zoom is the island's own wallpaper plane, which Ryoku's
+        // desktop does not have (ryogami paints the picture); the section
+        // stands down entirely under the Ryoku mount.
         EditPanelSectionLabel {
+            visible: !Config.widgetProvider
             text: Translation.tr("Position & zoom")
         }
 
         EditPanelNotice {
             Layout.leftMargin: 4
             Layout.rightMargin: 4
-            visible: !root.framingAvailable
+            visible: !Config.widgetProvider && !root.framingAvailable
             symbol: root.lockTab ? "desktop_windows" : "movie"
             text: root.lockTab
                 ? Translation.tr("Moving, zooming and turning the wallpaper happens on the Desktop tab, where the card becomes the picture.")
@@ -514,7 +519,11 @@ StyledFlickable {
         }
 
         // ── Variants ─────────────────────────────────────────────────────────
+        // Lock-screen and light-mode wallpaper variants belong to the island's
+        // own background engine; Ryoku paints one wallpaper (and the lock has
+        // its own editor in Hub), so the section stands down under the mount.
         EditPanelSectionLabel {
+            visible: !Config.widgetProvider
             text: Translation.tr("Variants")
         }
 
@@ -522,6 +531,7 @@ StyledFlickable {
         // wallpaper, so neither needs a tab or a theme change to get to.
         EditPanelRow {
             Layout.fillWidth: true
+            visible: !Config.widgetProvider
             first: true
             last: false
             symbol: "lock"
@@ -533,7 +543,7 @@ StyledFlickable {
 
         EditPanelRow {
             Layout.fillWidth: true
-            visible: root.separateLock
+            visible: root.separateLock && !Config.widgetProvider
             first: false
             last: false
             symbol: "wallpaper"
@@ -545,6 +555,7 @@ StyledFlickable {
 
         EditPanelRow {
             Layout.fillWidth: true
+            visible: !Config.widgetProvider
             first: false
             last: !root.separateLight
             symbol: "light_mode"
@@ -556,7 +567,7 @@ StyledFlickable {
 
         EditPanelRow {
             Layout.fillWidth: true
-            visible: root.separateLight
+            visible: root.separateLight && !Config.widgetProvider
             first: false
             last: true
             symbol: "wallpaper"
@@ -571,6 +582,7 @@ StyledFlickable {
         EditPanelRow {
             Layout.fillWidth: true
             Layout.topMargin: 10
+            visible: !Config.widgetProvider
             symbol: "settings"
             title: Translation.tr("Background settings")
             subtitle: Translation.tr("Leaves Edit Mode")

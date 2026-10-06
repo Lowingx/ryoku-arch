@@ -695,6 +695,40 @@ Singleton {
         return true;
     }
 
+    // ── Ryoku bridge ────────────────────────────────────────────────────────
+    // When Ryoku mounts the Stage Editor it installs a provider here: the
+    // desktop widget store becomes Ryoku's (widgets.json + the plugin place
+    // tool) rather than this island's own `activeWidgets` list, so the chrome
+    // edits the desktop the user actually has. Without a provider the island
+    // is self-contained (the verbatim reference behaviour).
+    property var widgetProvider: null
+
+    // The placed widgets, in the island's entry shape, from whichever store is
+    // live. Readers (the drawer's counts, the clear row, the reset) go through
+    // this rather than the raw option.
+    readonly property var activeWidgets: root.widgetProvider
+        ? root.widgetProvider.activeWidgets
+        : (root.options.background.activeWidgets ?? [])
+
+    // The catalogue the drawer lists: the provider's roster in the island's
+    // row shape, or the reference's own registry.
+    readonly property var widgetCatalogue: root.widgetProvider
+        ? root.widgetProvider.catalogue
+        : null
+
+    // The drop grid's snap flag, from whichever store is live.
+    readonly property bool widgetSnapEnabled: root.widgetProvider
+        ? root.widgetProvider.snapEnabled
+        : (root.options.background.widgets.enableSnap ?? true)
+
+    // The picture the desktop shows, from whichever store is live. The Ryoku
+    // mount reads it through the provider (ryogami owns the plane); the island
+    // keeps its own option. Read-only: picks still land in `background` via
+    // Wallpapers.apply, so the style history works unchanged.
+    readonly property string wallpaperPath: root.widgetProvider
+        ? root.widgetProvider.wallpaperPath
+        : String(root.options.background.wallpaperPath ?? "")
+
     function isWidgetActive(widgetId) {
         return root.countWidgetInstances(widgetId) > 0;
     }
@@ -703,6 +737,8 @@ Singleton {
     // than once - two clocks in two corners, one weather card per city - so
     // "is it there" is a special case of "how many", not the other way round.
     function countWidgetInstances(widgetId) {
+        if (root.widgetProvider)
+            return root.widgetProvider.count(widgetId);
         let list = root.options.background.activeWidgets || [];
         let count = 0;
         for (let i = 0; i < list.length; i++) {
@@ -874,6 +910,11 @@ Singleton {
     // "two clocks in two corners" impossible to express. Returns the new
     // instance id so a caller can act on the one it just made.
     function addWidgetToDesktop(widgetId, defaultX, defaultY, monitorName, lockBehavior = "hide") {
+        // The provider owns the write and its history entry: for Ryoku a
+        // re-add of a placed widget is a move, and only the store can say
+        // what the walk-back of that is.
+        if (root.widgetProvider)
+            return root.widgetProvider.addWidget(widgetId, defaultX, defaultY, monitorName);
         let cloned = JSON.parse(JSON.stringify(root.options.background.activeWidgets || []));
 
         let startX = defaultX !== undefined ? defaultX : 200;
@@ -945,6 +986,15 @@ Singleton {
     }
 
     function removeWidgetInstance(instanceId) {
+        if (root.widgetProvider) {
+            const before = root.widgetProvider.snapshot(instanceId);
+            root.widgetProvider.removeWidget(instanceId);
+            GlobalStates.editHistoryPush({
+                "undo": () => root.widgetProvider.restore(instanceId, before),
+                "redo": () => root.widgetProvider.restore(instanceId, null)
+            });
+            return;
+        }
         let cloned = JSON.parse(JSON.stringify(root.options.background.activeWidgets || []));
         const at = root._widgetEntryIndex(cloned, instanceId);
         if (at === -1)
@@ -960,7 +1010,7 @@ Singleton {
     // copy - Settings' widget cards, the extension list. One history entry for
     // the lot, so undoing brings them all back.
     function removeWidgetFromDesktop(widgetId) {
-        const list = root.options.background.activeWidgets || [];
+        const list = root.activeWidgets;
         const ids = [];
         for (let i = 0; i < list.length; i++) {
             if (list[i].widgetId === widgetId)
@@ -979,7 +1029,7 @@ Singleton {
     // just made - a row that adds at one end and removes at the other would
     // be two different widgets to anyone watching the desktop.
     function removeLastWidgetInstance(widgetId) {
-        const list = root.options.background.activeWidgets || [];
+        const list = root.activeWidgets;
         for (let i = list.length - 1; i >= 0; i--) {
             if (list[i].widgetId === widgetId) {
                 root.removeWidgetInstance(list[i].id);

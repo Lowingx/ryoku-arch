@@ -28,9 +28,13 @@ StyledFlickable {
         width: root.width
         spacing: 4
 
+        // The built-in and custom preset files belong to the island's theme
+        // engine; under the Ryoku mount the swatches are wallpaper-derived
+        // only, so the source picker (and its one chip) stands down.
         EditOptionChips {
             label: Translation.tr("Source")
             compact: false
+            visible: !Config.widgetProvider
             currentValue: root.source
             options: {
                 const list = [

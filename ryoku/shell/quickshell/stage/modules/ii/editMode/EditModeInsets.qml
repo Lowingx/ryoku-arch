@@ -79,4 +79,19 @@ Singleton {
             "insetRight": insets.right
         });
     }
+
+    // The desktop's shrink as one matrix, for a surface that hosts the real
+    // desktop (Ryoku's wallpaper and widget layer) rather than the reference's
+    // own background windows. Same arithmetic the chrome frames itself with:
+    // the viewport above, the mode's progress, the drawer's sideways travel.
+    function editMatrixFor(screenName, screenWidth, screenHeight, progress, drawerProgress) {
+        const viewport = root.viewportFor(screenName, screenWidth, screenHeight);
+        const shift = EditModeLogic.drawerTravel(viewport) * drawerProgress;
+        const t = EditModeLogic.atProgress(viewport, progress, shift);
+        return Qt.matrix4x4(
+            t.scale, 0, 0, t.x,
+            0, t.scale, 0, t.y,
+            0, 0, 1, 0,
+            0, 0, 0, 1);
+    }
 }

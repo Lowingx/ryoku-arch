@@ -30,8 +30,7 @@ RippleButton {
     // startColorFetch() returns before consulting any cache, which is what left
     // these buttons blank. See Wallpapers.effectiveWallpaperPath.
     readonly property string activeWallpaperPath: Wallpapers.effectiveWallpaperPath
-    readonly property string scriptPath: FileUtils.trimFileProtocol(
-        `${Directories.scriptPath}/colors/generate_colors_material.py`)
+    readonly property string scriptPath: Directories.extractColorsScriptPath
     // scheme-auto is passed through: the script resolves it from the image the
     // same way switchwall does, instead of always previewing tonal spot.
     readonly property string fullCommand: activeWallpaperPath !== ""

@@ -103,44 +103,36 @@ Hub reads the stores but is not their writer. Typed shell IPC updates the
 canonical stage and visualizer settings; wallpaper effects and layers use the
 daemon's stage commands.
 
-## Edit widgets
+## The Stage Editor
 
-The desktop lifts above open windows, the dock steps back, and every enabled
-widget wears a frame:
+Editing the desktop opens the Stage Editor: the shrinking chrome ported from the
+reference shell's Edit Mode (`ryoku/shell/quickshell/stage/`), mounted over the
+live desktop by `shell/modules/stage/StageEditorHost.qml`. It frames one screen
+at a time: the desktop under edit shrinks into a card with the toolbar on its
+edge, the other screens dim, and every enabled widget wears a frame (a 1 px
+outline with its name, a Settings button that opens that widget's own menu, and
+a Remove button). Drag anywhere to move (grid-snapped, live), the bottom-right
+bracket to resize, Ctrl+wheel to scale. Built-ins, the Shima and Python faces,
+and the plugin tiles alike.
 
-- a 1 px outline with the widget's name at its top-left;
-- drag anywhere on it to move (grid-snapped, live), the bottom-right bracket to
-  resize;
-- two small buttons on its top-right: **Settings** (opens that widget's own
-  menu: design, lock, size, opacity, colour, snap) and **Remove** (hides it).
+The toolbar row is Desktop (one tab per monitor) | Widgets | Wallpaper | Style,
+then undo, redo, and Done. There is no lock-screen, bar, or dock editing: those
+tabs of the reference are cut. The drawer's Widgets page is Ryoku's own roster
+(built-ins, hosted faces, installed plugin sets, the visualizer) read and
+written through `StageWidgetProvider`, the bridge onto widgets.json,
+plugins.json and the visualizer store; the Wallpaper page frames the current
+wallpaper; the Style page holds the presets.
 
-Every framed widget gets one: the built-ins, the Shima and Python faces, and
-the plugin tiles alike.
+There is no Save and no Reset: the desktop is the document, and the chrome's
+undo stack is the walk-back. Every edit the mode makes is recorded - catalogue
+adds, removes and moves, wallpaper framing, style presets - and so is each of
+Ryoku's own gestures: a slot drag, corner resize or wheel scale commits through
+`Desktop.stageRecordGesture`, a plugin tile's commit through
+`stageRecordPluginGesture`, so Ctrl+Z steps any of them back exactly like the
+reference's canvas steps its own.
 
-One toolbar rests bottom-centre, one row:
-
-```
-部品 EDIT WIDGETS  [grid] [16]  [Widgets]  [Reset]  [Done]
-```
-
-- **Widgets** grows a panel out of the bar's top edge. The roster is too long
-  for one honest list, so the panel is a settings page: a category rail on the
-  left (Ryoku widgets, Shima widgets, Python widgets, each installed plugin
-  set, with a live count) and a two-column grid of widget cards for the chosen
-  category. A card carries the glyph, name, hint, an on/off dot, and (once on)
-  a tune affordance that opens that widget's editor -- the inspector for a
-  slot-hosted face, the Placer for the visualizer, the tile's own menu for a
-  plugin. The whole card toggles. Search drops into a flat result grid across
-  every category, each card wearing its category as an eyebrow. Keyboard:
-  Down from the search enters the grid, arrows move, Space toggles, Esc
-  unwinds. Plugin rows read the installed set (enabled or not), so a hidden
-  tile keeps its card and the switch brings it back.
-- **Reset** restores widgets.json as it was when the session opened (every
-  widget's enabled set, placement, size, style, colour and face options, plus
-  the visualizer's flag and the placed plugin set); its slot is kept while
-  clean so Done never moves.
-- **Done** (or Escape, or a click on bare wallpaper when nothing is selected)
-  leaves. There is no Save; the desktop is the document.
+Done, Escape (one level per press: the drawer, the selection, the mode), or a
+click on bare wallpaper when nothing is selected leaves the mode.
 
 ## Customize visualizer
 
@@ -151,11 +143,12 @@ visualizer on if it is off and opens it. Its Done closes it.
 
 ## Session model
 
-`modules/stage/Singletons/StageSession.qml` is the Edit widgets session only:
-`mode` is `""` or `"widgets"`; `monitor` names the screen that opened it;
-`selected` is a widget id; `panel` is the drop-down that is open (`"add"`);
-`dirty` shows Reset. `escapeStep()` unwinds one level per press: the
-drop-down, then the selection, then the session. Hub keeps pending scene
+`modules/stage/Singletons/StageSession.qml` is Ryoku's half of the edit
+session: `mode` is `""` or `"widgets"`; `monitor` names the screen that opened
+it; `selected` is a widget id; `panel` is the drop-down that is open (`"add"`).
+Entering it opens the chrome on that monitor, leaving the chrome leaves it
+(StageEditorHost wires the two). `escapeStep()` unwinds one level per press:
+the drop-down, then the selection, then the session. Hub keeps pending scene
 confirmations locally; the settings page is not an edit session.
 
 ## Models: one catalogue, visible provenance
@@ -327,10 +320,12 @@ Hub's Desktop Scene page sits beside the stack, not in it. It reads stage.json
 and sends typed `stage-settings` IPC requests to the shell's canonical
 `modules/stage/Singletons/Config.qml`; per-wallpaper changes go through the
 daemon's `StageBackend` contract. Drag updates coalesce before being sent.
-The desktop mounts `modules/desktop/WidgetEditBar.qml`, the widget outlines,
-and the picker, and lifts to the Top layer for the edit session. Reset writes
-each store as one update: bursts of single-key writes can interleave with a
-watcher's reload of an older version and put an old value back.
+The desktop mounts the widget outlines and lifts to the Top layer for the edit
+session; the chrome itself lives on its own surfaces under
+`shell/modules/stage/`. Each undo step writes a store as one update
+(`setMany`, or one place-tool command): bursts of single-key writes can
+interleave with a watcher's reload of an older version and put an old value
+back.
 
 ## Delivery
 

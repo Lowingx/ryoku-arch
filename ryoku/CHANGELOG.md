@@ -3,6 +3,16 @@
 ## Unreleased
 
 ### Added
+- **The Stage Editor is the desktop's edit mode.** Editing widgets opens the
+  shrinking chrome ported from ii-p3drovfx's Edit Mode: the toolbar frames one
+  monitor at a time (Desktop | Widgets | Wallpaper | Style, undo, redo, Done),
+  the drawer lists Ryoku's real catalogue (built-ins, Shima and Python faces,
+  installed plugin sets), and every edit - a catalogue add, a wallpaper frame,
+  a style preset, a widget drag, resize or scale - lands in one undo stack.
+  The old Edit widgets bar, its picker and its Reset button are gone: the
+  desktop is the document and undo is the walk-back. Bar, dock and lock
+  editing stay in the Hub (`ryoku/shell/quickshell/stage/`,
+  `shell/modules/stage/`, docs/stage.md).
 - **Rashin splits into a Ryoku lane and a Chat lane.** The Ryoku lane is the
   machine agent: the Needle with the vault, the `ryoku` skill, the wiki, prowl
   over the Ryoku source and the approval modes, on the Alt+Space bar, in the

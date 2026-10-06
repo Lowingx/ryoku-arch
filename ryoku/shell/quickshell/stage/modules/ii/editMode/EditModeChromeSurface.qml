@@ -215,7 +215,7 @@ PanelWindow {
             return;
         const p = EditModeLogic.canvasPointFromScreen(root.viewport, root.progress, root.editShift, dropX, dropY);
         const placed = EditModeLogic.dropPosition({
-            "gridSize": 10,
+            "gridSize": Config.widgetProvider ? Config.widgetProvider.gridSize : 10,
             "canvasX": p.x,
             "canvasY": p.y,
             "screenWidth": root.width,
@@ -647,7 +647,7 @@ PanelWindow {
 
     function resetSurface(what) {
         if (what === "widgets") {
-            const ids = (Config.options.background.activeWidgets ?? []).filter(e => e && e.id).map(e => e.id);
+            const ids = Config.activeWidgets.filter(e => e && e.id).map(e => e.id);
             if (ids.length === 0)
                 return;
             GlobalStates.editHistoryBeginBatch();
@@ -943,6 +943,8 @@ PanelWindow {
         onDrawerResetRequested: what => root.resetSurface(what)
         // A preference, not a layout edit: no history entry, same as the
         // Settings toggle that writes the same key.
-        onSnapToggleRequested: Config.options.background.widgets.enableSnap = !Config.options.background.widgets.enableSnap
+        onSnapToggleRequested: Config.widgetProvider
+            ? Config.widgetProvider.toggleSnap()
+            : Config.options.background.widgets.enableSnap = !Config.options.background.widgets.enableSnap
     }
 }

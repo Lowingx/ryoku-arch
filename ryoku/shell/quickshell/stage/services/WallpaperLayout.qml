@@ -41,7 +41,12 @@ Singleton {
     // How many pictures a screen remembers a framing for.
     readonly property int framingMemory: 12
 
+    // Ryoku's wallpaper plane belongs to ryogami (the daemon paints every
+    // screen, still or video), which is this service's own "another process
+    // paints the desktop" case: per-screen copies and framing cannot land
+    // anywhere, so the Wallpaper catalogue hides the section outright.
     readonly property bool available: Config.ready && !Wallpapers.videoWallpaperActive
+        && !Config.widgetProvider
     readonly property var screenNames: Array.from(Quickshell.screens).map(screen => screen.name)
     readonly property bool multiScreen: root.screenNames.length > 1
 

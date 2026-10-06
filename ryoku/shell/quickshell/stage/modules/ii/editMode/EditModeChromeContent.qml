@@ -338,13 +338,13 @@ Item {
             // lines a dragged widget latches onto. The alignment glyph this
             // used to carry says "align these to the left", which is a
             // different thing and the wrong promise.
-            text: Config.options.background.widgets.enableSnap ? "grid_guides" : "grid_off"
-            toggled: Config.options.background.widgets.enableSnap
+            text: Config.widgetSnapEnabled ? "grid_guides" : "grid_off"
+            toggled: Config.widgetSnapEnabled
             onClicked: root.snapToggleRequested()
 
             StyledToolTip {
                 requireOverlay: false
-                text: Config.options.background.widgets.enableSnap
+                text: Config.widgetSnapEnabled
                     ? Translation.tr("Edge snapping on")
                     : Translation.tr("Edge snapping off")
             }
