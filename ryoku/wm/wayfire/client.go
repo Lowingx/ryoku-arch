@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -46,14 +47,19 @@ func sendRequest(method string, data any) (json.RawMessage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("wayfire %s: %w", method, err)
 	}
-	var envelope map[string]json.RawMessage
-	if err := json.Unmarshal(reply, &envelope); err != nil {
-		return nil, fmt.Errorf("wayfire %s: bad reply %q", method, string(reply))
-	}
-	if raw, ok := envelope["error"]; ok {
-		var msg string
-		if json.Unmarshal(raw, &msg) == nil && msg != "" {
-			return nil, fmt.Errorf("wayfire %s: %s", method, msg)
+	// Only an object reply can carry an error envelope: the list methods
+	// answer with a bare array, which must pass through untouched.
+	trimmed := bytes.TrimSpace(reply)
+	if len(trimmed) > 0 && trimmed[0] == '{' {
+		var envelope map[string]json.RawMessage
+		if err := json.Unmarshal(reply, &envelope); err != nil {
+			return nil, fmt.Errorf("wayfire %s: bad reply %q", method, string(reply))
+		}
+		if raw, ok := envelope["error"]; ok {
+			var msg string
+			if json.Unmarshal(raw, &msg) == nil && msg != "" {
+				return nil, fmt.Errorf("wayfire %s: %s", method, msg)
+			}
 		}
 	}
 	return reply, nil

@@ -36,6 +36,10 @@ func main() {
 	switch os.Args[1] {
 	case "caps":
 		err = runCaps()
+	case "state":
+		err = runState()
+	case "watch":
+		err = runWatch(os.Args[2:])
 	case "-h", "--help", "help":
 		usage()
 	default:
