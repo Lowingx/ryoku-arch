@@ -1,6 +1,14 @@
 # Changelog: ryoku/hub/
 
 ### Fixed
+- **Vesktop colours follow the Ryoku theme, not Midnight.** The palette
+  bridge's Vesktop integration wrote a competing Midnight theme file and could
+  clobber the user's QuickCSS; it now ships a managed palette template beside
+  the user's other matugen templates, toggles the bridge through Vesktop's own
+  QuickCSS marker, preserves any existing QuickCSS on setup and removal, and
+  the Settings integration card reports the template it actually manages
+  (`../palette-bridge/`, `backend/palettebridge.go`).
+
 - **The Stage scene page reports a blocked cut.** When the daemon cannot cut
   (the quality tier's model is not installed, or a cut failed), the page now
   says why and offers Retry instead of showing a wallpaper that never gains
