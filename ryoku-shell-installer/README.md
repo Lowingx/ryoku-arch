@@ -105,5 +105,11 @@ curl -fsSL https://raw.githubusercontent.com/ryoku-dev/ryoku/<branch>/ryoku-shel
   | RYOKU_SHELL_REF=<branch> bash
 ```
 
+The ref also picks the package channel: `unstable-dev` points `[ryoku]` at the
+unstable (testing) channel its payload is built against, any other ref at
+stable, and the choice is recorded the way `ryoku track` records it. Rerunning
+from the other ref moves an existing Ryoku channel and redoes the payload and
+package steps, so a half-finished stable install can be finished on unstable.
+
 `--payload /path/to/checkout` (or `RYOKU_SHELL_PAYLOAD`) skips the payload
 clone and uses a local repo, for iterating without pushing.

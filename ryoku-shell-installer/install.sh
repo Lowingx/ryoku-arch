@@ -8,6 +8,9 @@
 #
 # args after `bash -s --` are forwarded to the installer (--yes, --dry-run).
 # RYOKU_SHELL_REF picks the git ref to fetch the installer and payload from.
+# unstable-dev also puts the box on the unstable (testing) package channel:
+#
+#   curl -fsSL https://raw.githubusercontent.com/ryoku-dev/ryoku-arch/unstable-dev/ryoku-shell-installer/install.sh | RYOKU_SHELL_REF=unstable-dev bash
 set -euo pipefail
 
 main() {
@@ -55,7 +58,8 @@ main() {
     say "Debian detected: the desktop is built from source, which takes a few minutes"
   fi
 
-  local work
+  # global, not local: the EXIT trap fires after main returns, when a local is
+  # gone and set -u would turn every finished run into exit 1.
   work="$(mktemp -d)"
   trap 'rm -rf "$work"' EXIT
 

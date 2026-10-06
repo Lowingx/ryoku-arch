@@ -2,7 +2,22 @@
 
 ## Unreleased
 
+### Added
+- **The unstable script installs onto the unstable channel.**
+  `RYOKU_SHELL_REF=unstable-dev` now points `[ryoku]` at the testing channel
+  its payload is built against (any other ref stays on stable) and records the
+  choice like `ryoku track` does. Before, it paired an unstable-dev payload
+  with stable packages and failed on packages only testing carries. A rerun
+  from the other ref moves the channel and redoes the payload and package
+  steps, so a stuck stable install can be finished on unstable.
+
 ### Fixed
+- **The install no longer hangs at 9/15 "Wiring the login session".** A
+  power-policy cutover left behind by the desktop package could keep holding
+  the lock screen's locks, and `install-qylock` then waited on them forever with
+  no output. The session step now stops those leftover guard units first.
+  `install.sh` also stopped ending every run, including successful ones, with
+  `work: unbound variable` and exit 1. Rebuilt the committed binary + checksum.
 - **Converting a box that runs oh-my-zsh-git no longer dies at the desktop
   transaction.** ryoku-oh-my-zsh provides and replaces both upstream
   frameworks, but a plain removal under --noconfirm refuses while an installed

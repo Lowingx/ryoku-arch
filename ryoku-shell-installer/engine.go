@@ -28,11 +28,52 @@ var ryokuStanzaRe = regexp.MustCompile(`(?m)^\[ryoku\]`)
 
 const repoURL = "https://github.com/ryoku-dev/ryoku-arch.git"
 
-const pacmanStanza = `
-[ryoku]
-SigLevel = Required
-Server = https://repo.ryoku.dev/stable/$arch
-`
+// the [ryoku] channels the installer can point a box at. a payload ref is
+// built against one of them: unstable-dev is what the testing channel rebuilds
+// on every push, everything else (main, release tags) matches stable. pairing
+// an unstable-dev payload with stable packages fails on any package that only
+// exists in testing yet.
+const (
+	stableServer  = "https://repo.ryoku.dev/stable/$arch"
+	testingServer = "https://repo.ryoku.dev/stable/channels/testing/$arch"
+)
+
+// channelForRef names the [ryoku] channel a payload ref belongs to (the value
+// `ryoku track` records as the channel intent) and its Server.
+func channelForRef(ref string) (channel, server string) {
+	if ref == "unstable-dev" {
+		return "testing", testingServer
+	}
+	return "stable", stableServer
+}
+
+func pacmanStanza(server string) string {
+	return "\n[ryoku]\nSigLevel = Required\nServer = " + server + "\n"
+}
+
+// setRyokuServer points the [ryoku] stanza's Server at server and returns the
+// rewritten config with the Server it replaced ("" when the stanza has none).
+// other sections' Server lines are never touched.
+func setRyokuServer(conf, server string) (string, string) {
+	lines := strings.Split(conf, "\n")
+	inRyoku := false
+	for i, ln := range lines {
+		t := strings.TrimSpace(ln)
+		if strings.HasPrefix(t, "[") {
+			inRyoku = t == "[ryoku]"
+			continue
+		}
+		if !inRyoku {
+			continue
+		}
+		k, v, ok := strings.Cut(t, "=")
+		if ok && strings.TrimSpace(k) == "Server" {
+			lines[i] = "Server = " + server
+			return strings.Join(lines, "\n"), strings.TrimSpace(v)
+		}
+	}
+	return conf, ""
+}
 
 // ryokuPkgs mirrors the ISO's deploy.sh: the keyring plus the ryoku-desktop
 // umbrella. The umbrella version-pins and pulls every monorepo component and
@@ -211,6 +252,7 @@ func newEngine(f *facts, p *plan, dry bool, ref, payloadOverride string) *engine
 	// the first completed step).
 	if p.resume && f.prevRun != nil {
 		e.state = f.prevRun
+		e.state.adoptRef(ref)
 		if f.prevRun.BackupDir != "" {
 			if fi, err := os.Stat(f.prevRun.BackupDir); err == nil && fi.IsDir() {
 				e.backupDir = f.prevRun.BackupDir
@@ -804,6 +846,7 @@ func stepRepo(e *engine) error {
 		}
 	}
 
+	channel, server := channelForRef(e.ref)
 	conf, err := os.ReadFile("/etc/pacman.conf")
 	if err != nil {
 		return err
@@ -816,14 +859,35 @@ func stepRepo(e *engine) error {
 		// invoking user's umask (sudo propagates it), and a umask-077 box would
 		// flip pacman.conf to 0600, breaking every non-root pacman reader,
 		// including this installer's own resume read above.
-		if err := e.sudoSh(`{ cat /etc/pacman.conf && printf '%s' '` + pacmanStanza + `'; } > /etc/pacman.conf.ryoku-new && ` +
+		if err := e.sudoSh(`{ cat /etc/pacman.conf && printf '%s' '` + pacmanStanza(server) + `'; } > /etc/pacman.conf.ryoku-new && ` +
 			`chmod 644 /etc/pacman.conf.ryoku-new && ` +
 			`mv -f /etc/pacman.conf.ryoku-new /etc/pacman.conf`); err != nil {
 			return err
 		}
-		e.say(i18n.T("added the [ryoku] repository to /etc/pacman.conf"))
-	} else {
+		e.say(i18n.Tf("added the [ryoku] repository (%s channel) to /etc/pacman.conf", channel))
+	} else if next, cur := setRyokuServer(string(conf), server); cur == server {
 		e.say(i18n.T("[ryoku] repository already present in /etc/pacman.conf"))
+	} else if cur == stableServer || cur == testingServer {
+		// a rerun from the other branch (or a box that ran the other script
+		// first) moves between Ryoku's own channels; a private mirror or a
+		// release pin is someone's deliberate choice and stays.
+		if err := e.sudoWrite("/etc/pacman.conf.ryoku-new", next); err != nil {
+			return err
+		}
+		if err := e.sudoSh(`chmod 644 /etc/pacman.conf.ryoku-new && mv -f /etc/pacman.conf.ryoku-new /etc/pacman.conf`); err != nil {
+			return err
+		}
+		e.say(i18n.Tf("moved the [ryoku] repository onto the %s channel", channel))
+	} else {
+		e.say(i18n.Tf("[ryoku] repository points at %s; left as it is", cur))
+	}
+	// the channel intent is what `ryoku track` records; it keeps the doctor and
+	// a failed boot-guard revert on the channel this install chose. umask 022:
+	// sudo carries the caller's umask, and /var/lib/ryoku must stay 0755.
+	if err := e.sudoSh(`umask 022 && mkdir -p /var/lib/ryoku && ` +
+		`printf '%s\n' '` + channel + `' > /var/lib/ryoku/channel-intent.new && ` +
+		`mv -f /var/lib/ryoku/channel-intent.new /var/lib/ryoku/channel-intent`); err != nil {
+		return err
 	}
 	// refresh right after the -Syu step, so this cannot strand a partial
 	// upgrade; it only pulls the fresh [ryoku] db.
@@ -1040,6 +1104,13 @@ func stepDrivers(e *engine) error {
 	return nil
 }
 
+// releaseQylockGuards stops leftover qylock cutover units, waiter first so it
+// cannot take a guard back. an absent unit is fine.
+const releaseQylockGuards = `for u in ryoku-qylock-cutover-wait ryoku-qylock-generation-guard ryoku-qylock-launch-guard; do
+  systemctl --user stop "$u.service" 2>/dev/null || :
+done
+rm -f "${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"/ryoku-qylock-*.ready`
+
 func stepSession(e *engine) error {
 	if e.p.switchDM {
 		if dm := e.f.otherDM(); dm != "" {
@@ -1057,6 +1128,15 @@ func stepSession(e *engine) error {
 		}
 	} else {
 		e.say(i18n.T("keeping your current display manager; select the Hyprland session at login"))
+	}
+
+	// an older ryoku-desktop pacman hook also cut over the session this install
+	// runs from, and a cutover that failed there leaves qylock guard units
+	// holding the locks install-qylock takes: this step then waits on them
+	// with no output. nothing here needs them: the installer replaces the lock
+	// generation outright and the new session starts after a reboot.
+	if err := e.cmd("", nil, "sh", "-c", releaseQylockGuards); err != nil {
+		return err
 	}
 
 	// qylock bundle lives at the same system path the ISO uses, then its own
