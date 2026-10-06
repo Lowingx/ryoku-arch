@@ -40,7 +40,8 @@ Item {
         { "name": "nixos-configuration", "by": "ilyamiro", "role": I18n.tr("legacy island bar"),   "url": "https://github.com/ilyamiro/nixos-configuration" },
         { "name": "dotfiles",     "by": "Jules3182",     "role": I18n.tr("dyad dual-edge bar"),   "url": "https://github.com/Jules3182/dotfiles" },
         { "name": "NibrasShell",  "by": "Ahmed Saadi",    "role": I18n.tr("depth effect engine"),  "url": "https://github.com/AhmedSaadi0/NibrasShell" },
-        { "name": "skwd-wall",    "by": "liixini",        "role": I18n.tr("ryogami wallpaper engine"), "url": "https://github.com/liixini/skwd-wall" }
+        { "name": "skwd-wall",    "by": "liixini",        "role": I18n.tr("ryogami wallpaper engine"), "url": "https://github.com/liixini/skwd-wall" },
+        { "name": "ii-p3drovfx",  "by": "P3DROVFX",       "role": I18n.tr("Stage Editor (GPL-3.0)"), "url": "https://github.com/P3DROVFX/ii-p3drovfx" }
     ]
 
     // the alpha/beta crew, constantly stress-testing and filing bugs. each name

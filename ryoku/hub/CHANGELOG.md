@@ -47,6 +47,10 @@
   (`quickshell/Hub.qml`)
 
 ### Added
+- **Credits name ii-p3drovfx.** The Stage Editor is ported from the Edit Mode
+  of P3DROVFX's ii-p3drovfx shell; the Credits page now lists it beside the
+  other shells Ryoku grows from, and NOTICE records where the ported code comes
+  from (`quickshell/pages/CreditsPage.qml`, `../../NOTICE`).
 - **UPDATE NOW runs the update right in Ryoku Settings.** No terminal window:
   the page asks for your password itself, answers the run's questions, and
   draws the run as a timeline of its steps with how long each took, the line
