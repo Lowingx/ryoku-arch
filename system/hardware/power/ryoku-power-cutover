@@ -707,19 +707,6 @@ session_users() {
       fi
       continue
     fi
-    # A compositor session is Ryoku's only once Ryoku runs in it. A rival shell
-    # on the same compositor (the session a shell install runs from) has no lid
-    # or sleep owner of ours to swap, and cutting it over would start the Ryoku
-    # session inside that desktop and leave its qylock guards holding the locks
-    # the installer's own install-qylock then waits on forever.
-    if pgrep -u "$uid" -x 'ryoku-shell|ryoku-clamshell|ryoku-idle' >/dev/null 2>&1; then
-      :
-    else
-      rc=$?
-      (( rc == 1 )) && continue
-      log "cannot inspect uid $uid for running Ryoku daemons" >&2
-      return 1
-    fi
     if ! user="$(getent passwd "$uid" | cut -d: -f1)" || [[ -z $user ]]; then
       log "cannot resolve login1 uid $uid" >&2
       return 1
@@ -742,6 +729,29 @@ session_users() {
     selected=${active_sid[$uid]:-${fallback_sid[$uid]}}
     printf '%s %s %s\n' "${users[$uid]}" "$uid" "$selected"
   done
+}
+
+# The package hook's session set. A compositor session is Ryoku's only once
+# Ryoku runs in it: a rival shell on the same compositor (the session a shell
+# install runs from) has no lid or sleep owner of ours to swap, and cutting it
+# over would start the Ryoku session inside that desktop and leave its qylock
+# guards holding the locks the installer's install-qylock then waits on.
+package_session_users() {
+  local listing user uid sid rc
+  listing="$(session_users)" || return 1
+  while read -r user uid sid; do
+    [[ -n ${user:-} ]] || continue
+    rc=0
+    pgrep -u "$uid" -x 'ryoku-shell|ryoku-clamshell|ryoku-idle' >/dev/null 2>&1 || rc=$?
+    case $rc in
+      0) printf '%s %s %s\n' "$user" "$uid" "$sid" ;;
+      1) ;;
+      *)
+        log "cannot inspect uid $uid for running Ryoku daemons" >&2
+        return 1
+        ;;
+    esac
+  done <<<"$listing"
 }
 
 current_user_graphical_sessions() {
@@ -1058,7 +1068,7 @@ prepare_package() {
     log "cannot acquire pretransaction sleep protection" >&2
     return 1
   fi
-  if ! sessions="$(session_users)"; then
+  if ! sessions="$(package_session_users)"; then
     log "cannot record graphical Ryoku sessions before the package transaction" >&2
     return 1
   fi
@@ -1101,7 +1111,7 @@ root_cutover() {
   local sessions user uid sid failed=0
   if ! target_policy_present && [[ -r $runtime_sessions ]]; then
     sessions="$(<"$runtime_sessions")"
-  elif ! sessions="$(session_users)"; then
+  elif ! sessions="$(package_session_users)"; then
     log "cannot enumerate graphical Ryoku sessions" >&2
     return 1
   fi

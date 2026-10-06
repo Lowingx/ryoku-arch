@@ -114,14 +114,21 @@ users="$(
 )"
 [[ $users == 'alice 1001 7' ]] \
   || fail "session selection did not choose only each user's active Ryoku Wayland login: $users"
-users="$(
-  RYOKU_RUNNING_UIDS="" PATH="$tmp/session-bin:$PATH" \
-    RYOKU_CUTOVER_RUNTIME_ROOT="$tmp/runtime" \
-    RYOKU_CUTOVER_PROVIDER_ROOT="$tmp/provider-bin" \
-    bash -c 'source "$1"; session_users' _ "$helper"
-)"
-[[ -z $users ]] \
-  || fail "a compositor session running another shell, not Ryoku, was selected for cutover: $users"
+for running in 1001 ""; do
+  users="$(
+    RYOKU_RUNNING_UIDS="$running" PATH="$tmp/session-bin:$PATH" \
+      RYOKU_CUTOVER_RUNTIME_ROOT="$tmp/runtime" \
+      RYOKU_CUTOVER_PROVIDER_ROOT="$tmp/provider-bin" \
+      bash -c 'source "$1"; package_session_users' _ "$helper"
+  )"
+  if [[ -n $running ]]; then
+    [[ $users == 'alice 1001 7' ]] \
+      || fail "the package hook skipped a session Ryoku runs in: $users"
+  else
+    [[ -z $users ]] \
+      || fail "the package hook selected a session running another shell, not Ryoku: $users"
+  fi
+done
 if LOGINCTL_FAIL_LIST=1 PATH="$tmp/session-bin:$PATH" \
     RYOKU_CUTOVER_RUNTIME_ROOT="$tmp/runtime" \
     RYOKU_CUTOVER_PROVIDER_ROOT="$tmp/provider-bin" \
