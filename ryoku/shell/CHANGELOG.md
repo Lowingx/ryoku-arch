@@ -435,6 +435,16 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **Region recordings no longer come out tiled.** The screenshot tool's Record
+  action (including Capture this monitor) and the capture card's Window and
+  Region targets scaled the box to physical pixels before handing it to GPU
+  Screen Recorder, which reads `-region` in layout coordinates and scales it
+  again. On a scaled display the recorder grabbed an area the scale too big, so
+  the clip repeated the screen in tiles (a 1.33-scaled 2560x1600 panel recorded
+  at 3414x2134). The box now travels in layout coordinates, and the delayed
+  screenshot crop, which grim reads the same way, lands where it was drawn
+  (`quickshell/ryoshot/shell.qml`, `quickshell/shell/services/Capture.qml`).
+
 - **The lid can no longer deny its own suspend.** The sleep transaction
   closed its hard block and asked login1 to suspend on the same connection
   immediately; login1 watches the block fd on its own schedule, so a Suspend
