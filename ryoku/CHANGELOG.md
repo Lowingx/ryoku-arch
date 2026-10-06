@@ -13,6 +13,15 @@
   desktop is the document and undo is the walk-back. Bar, dock and lock
   editing stay in the Hub (`ryoku/shell/quickshell/stage/`,
   `shell/modules/stage/`, docs/stage.md).
+- **The visualizer is edited in the Stage Editor.** Its standalone placement
+  surface, its edge bar and its gear drawer are gone: the look is a framed
+  widget like the rest. The Visualiser row, `Super+Alt+M` and the Hub's
+  Placement sheet open the Stage Editor with the look selected, where a drag
+  moves it, the corner sizes it, the dot turns it and Ctrl+wheel scales it,
+  each gesture on the chrome's undo stack. The look's own menu and Customize
+  sheet carry every knob the old bar owned: the gallery, colour, instances,
+  playback, shape and the field's deep controls
+  (`shell/modules/visualizer/`, `shell/modules/desktop/`).
 - **Rashin splits into a Ryoku lane and a Chat lane.** The Ryoku lane is the
   machine agent: the Needle with the vault, the `ryoku` skill, the wiki, prowl
   over the Ryoku source and the approval modes, on the Alt+Space bar, in the

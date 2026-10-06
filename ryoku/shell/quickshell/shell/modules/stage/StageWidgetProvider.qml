@@ -99,6 +99,11 @@ Scope {
         }
         if (widgetId === "visualizer") {
             VizCfg.Config.setEnabled(true);
+            // A drop places the look's centre where the pointer let go, the same
+            // way a built-in lands under the cursor: the visualiser box is
+            // fractions of the monitor, so the chrome's pixel point converts here.
+            if (x !== undefined && y !== undefined)
+                root.placeVisualizerAt(x, y);
             return;
         }
         if (x === undefined || y === undefined) {
@@ -113,6 +118,25 @@ Scope {
         store.setMany(patch);
     }
 
+    // The drop point is the widget's top-left in screen px; the visualiser has
+    // no top-left to keep (it is a centred box), so the box centre lands there
+    // and the store's own clamp keeps it on screen.
+    function placeVisualizerAt(px, py) {
+        const scr = root._screen();
+        if (!scr)
+            return;
+        const v = VizCfg.Config;
+        const nx = px / scr.width - v.w / 2;
+        const ny = py / scr.height - v.h / 2;
+        v.setBox(nx, ny, v.w, v.h, scr.width / Math.max(1, scr.height));
+    }
+
+    // The screen this provider frames, falling back to the first one.
+    function _screen() {
+        return Quickshell.screens.find(s => s.name === root.monitor)
+            || Quickshell.screens[0] || null;
+    }
+
     function removeWidget(instanceId) {
         root.restore(instanceId, null);
     }
@@ -120,8 +144,8 @@ Scope {
     // The state a restore needs, or null when the widget is not on the
     // desktop (the undo of an add is then a plain disable). For a
     // built-in/face: its placement keys; for a plugin: its whole plugins.json
-    // entry (through Registry's merged placement); for the visualizer, a
-    // marker (only the flag matters).
+    // entry (through Registry's merged placement); for the visualizer, its box,
+    // so a walk-back lands the look where it was and not where it drifted.
     function snapshot(instanceId) {
         const store = WidgetStore.Config;
         if (instanceId.indexOf("plugin:") === 0) {
@@ -132,7 +156,10 @@ Scope {
             return { plugin: pid, entry: JSON.parse(JSON.stringify(e.placement)) };
         }
         if (instanceId === "visualizer")
-            return VizCfg.Config.enabled ? { viz: true } : null;
+            return VizCfg.Config.enabled
+                ? { viz: true, x: VizCfg.Config.x, y: VizCfg.Config.y,
+                    w: VizCfg.Config.w, h: VizCfg.Config.h, angle: VizCfg.Config.angle }
+                : null;
         if (store[instanceId + "Enabled"] !== true)
             return null;
         return { key: instanceId,
@@ -158,7 +185,15 @@ Scope {
             return;
         }
         if (instanceId === "visualizer") {
-            VizCfg.Config.setEnabled(snap !== null && snap !== undefined);
+            const v = VizCfg.Config;
+            v.setEnabled(snap !== null && snap !== undefined);
+            // A re-add restores the box the walk-back found, not wherever the
+            // last session left it; a plain disable leaves the placement alone.
+            if (snap && snap.x !== undefined) {
+                const scr = root._screen();
+                v.setBox(snap.x, snap.y, snap.w, snap.h,
+                         scr ? scr.width / Math.max(1, scr.height) : 1);
+            }
             return;
         }
         if (snap === null || snap === undefined) {

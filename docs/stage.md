@@ -37,15 +37,18 @@ Three places, each with one job:
 - **The sidebar's Stage section** shows the current wallpaper, scene mode,
   enabled widgets, and visualizer state. Its buttons open the corresponding Hub
   view; the sidebar does not duplicate the editors.
-- **Ryoku Hub > Desktop Scene** owns Scene, Visualizer, and Widgets views.
+- **Ryoku Hub > Desktop Scene** owns Scene, Visualizer, and Widgets settings.
   Scene settings apply live, with an explicit confirmation for a re-cut or
-  clearing layers. The widget and visualizer views open their on-desktop editors.
+  clearing layers. The widget and visualizer views hand off to the Stage
+  Editor, which places and tunes both on the desktop.
 - **The desktop** (right-click) provides direct access to wallpaper, widgets,
   and the visualizer. Its Depth row opens Desktop Scene in Hub. A widget's own
-  menu and the visualizer's edit bar each retain a Depth control for lifting that
-  widget above the in-front cut-outs or dropping it behind them.
+  menu (the visualizer included, as a framed widget) retains a Depth control
+  for lifting that widget above the in-front cut-outs or dropping it behind
+  them.
 
-There is no shell editor. The bar, dock and menus keep their Hub pages.
+The Stage Editor is the shell's one editor. The bar, dock, lockscreen and menus
+keep their Hub pages.
 
 ## The desktop right-click menu
 
@@ -87,16 +90,16 @@ viewport beneath the view selector.
   slider when moving; music response with an intensity slider when enabled.
   Follow mouse exposes a Fine-tune pointer section with sensitivity, range,
   and backdrop-drift sliders. A preset is highlighted only while its values match.
-- **Composition:** Open widget editor hands off to the desktop editor.
+- **Composition:** the Stage Editor button opens the desktop editor.
 
 ### Visualizer and Widgets
 
 Visualizer includes visibility, style, depth relative to cut-outs, frame rate,
-adaptive quality, gain, and smoothing. Open visualizer editor hands off to its
-desktop placement and per-look controls.
+adaptive quality, gain, and smoothing. Open the Stage Editor hands off to it
+with the look selected, where placement and every per-look control live.
 
-Widgets opens the desktop widget editor for placement, size, color, locking,
-depth, and installed plugin widgets. Both hand-offs close Hub only after the
+Widgets opens the Stage Editor for placement, size, color, locking, depth, and
+installed plugin widgets. Both hand-offs close Hub only after the
 shell accepts the request; a failed hand-off leaves the page open with an error.
 
 Hub reads the stores but is not their writer. Typed shell IPC updates the
@@ -134,12 +137,18 @@ reference's canvas steps its own.
 Done, Escape (one level per press: the drawer, the selection, the mode), or a
 click on bare wallpaper when nothing is selected leaves the mode.
 
-## Customize visualizer
+## The visualizer in the Stage Editor
 
-The visualizer's own editor, unchanged: the Placer (drag to move, corner to
-size, dot to turn, scroll to resize) with its EditBar fixed to a screen edge.
-The menu row (and the picker's tune on the visualizer card) turns the
-visualizer on if it is off and opens it. Its Done closes it.
+The look is a framed widget like the rest. The Visualiser row in the desktop
+menu (and `Super+Alt+M`) turns it on if it is off and opens the Stage Editor
+with the look selected: drag its box to move it, the corner bracket to size
+it, the dot on its top edge to turn it, Ctrl+wheel to scale it. The frame's
+Settings button opens the look's own menu (style, depth, Customize), and the
+Customize sheet carries every knob the old standalone editing bar owned: the
+look gallery, colour, instances, playback, shape, and the field's deep
+controls. A placement gesture commits to the chrome's undo stack like any
+other edit. The edge field has no box to aim, so it wears a frame but no
+handles; it is tuned from the same sheet.
 
 ## Session model
 
@@ -255,7 +264,7 @@ Global only; anything per-wallpaper is in the registry.
 | `motion.sensitivity` | `1.0` | the pointer's pull (0..2) |
 | `motion.range` | `1.0` | how far a layer may travel (0..2) |
 | `motion.backdrop` | `0` | the inpainted backdrop's own drift (0..1); above 0 a sliver of the base wallpaper shows at the trailing edge |
-| `front` | `[]` | widget ids (built-in, plugin tile, or `visualizer`) drawn above the layers marked "in front"; written by the `Depth` row in a widget's right-click menu or the visualiser's edit bar |
+| `front` | `[]` | widget ids (built-in, plugin tile, or `visualizer`) drawn above the layers marked "in front"; written by the `Depth` row in a widget's menu, the visualizer's included |
 
 The daemon reads `quality`; the shell reads the rest. On the first start after
 v2 a v1 `stage.json` (one still carrying `feather`, `lift`, `preset` or the

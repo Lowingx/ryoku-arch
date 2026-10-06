@@ -6,6 +6,7 @@ import Ryoku.Ui.Singletons
 import "iris/IrisRoster.js" as IrisRoster
 import "python/PythonRoster.js" as PythonRoster
 import "../stage/Singletons" as StageCfg
+import "../visualizer/Singletons" as VizCfg
 
 // A desktop widget's right-click menu, built on the shared DesktopMenu chrome in
 // the quick-settings sidebar idiom: a short card that names the widget, offers
@@ -33,6 +34,10 @@ Item {
     property string wall: ""
 
     readonly property bool isWidget: menu.scope !== "desktop"
+    // The visualiser is a framed widget like the rest, but its store is its
+    // own: no per-widget lock, no scale (the grip sizes its box), and a look
+    // catalogue walked through the visualiser config rather than a design ladder.
+    readonly property bool isVisualizer: menu.scope === "visualizer"
     readonly property bool isStats: menu.scope === "stats"
     readonly property bool isNotes: menu.scope === "notes"
     readonly property bool isCalendar: menu.scope === "calendar"
@@ -40,7 +45,8 @@ Item {
     readonly property bool isAio: menu.scope === "aio"
     readonly property bool isDayprogress: menu.scope === "dayprogress"
     readonly property bool isShape: menu.scope === "shape"
-    readonly property bool locked: menu.isWidget ? Config[menu.scope + "Locked"] : false
+    readonly property bool locked: menu.isWidget && !menu.isVisualizer
+        ? Config[menu.scope + "Locked"] : false
     // The stage lift (docs/stage.md): Depth offers this widget a place above
     // every in-front cut-out; the row only shows while the wall cuts a subject.
     readonly property bool stageActive: menu.wall !== ""
@@ -176,14 +182,21 @@ Item {
             onTriggered: menu.cycleFacePreset()
         }
         MenuRow {
-            visible: menu.isWidget
+            visible: menu.isVisualizer
+            label: I18n.tr("Style")
+            value: menu.cap(VizCfg.Config.styleId)
+            closeOnTrigger: false
+            onTriggered: VizCfg.Config.cycleStyle(1)
+        }
+        MenuRow {
+            visible: menu.isWidget && !menu.isVisualizer
             label: I18n.tr("Size")
             value: Math.round(menu.curScale * 100) + "%"
             closeOnTrigger: false
             onTriggered: menu.cycleScale()
         }
         MenuRow {
-            visible: menu.isWidget
+            visible: menu.isWidget && !menu.isVisualizer
             label: I18n.tr("Lock")
             value: menu.locked ? "On" : "Off"
             on: menu.locked
@@ -212,7 +225,8 @@ Item {
         MenuRow {
             visible: menu.isWidget
             label: I18n.tr("Hide")
-            onTriggered: Config.set(menu.scope + "Enabled", false)
+            onTriggered: menu.isVisualizer ? VizCfg.Config.setEnabled(false)
+                : Config.set(menu.scope + "Enabled", false)
         }
 
         // ── globals ────────────────────────────────────────────────────

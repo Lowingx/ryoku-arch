@@ -218,27 +218,28 @@ ShellRoot {
 
             // Stage now renders entirely inside the desktop surface (one stack:
             // backdrop, layers, widgets), so there is no separate Background
-            // surface here (docs/stage.md). Built on first enable or first
-            // placement; cava and its buffers never exist while the visualizer
-            // is off.
+            // surface here (docs/stage.md). Built on first enable; cava and its
+            // buffers never exist while the visualizer is off. Placement runs in
+            // the Stage Editor now: the desktop hosts the look while the mode
+            // frames this monitor, so this surface exists for the plain and
+            // overlay cases only.
             LazyLoader {
                 id: vizLoader
-                activeAsync: VizCfg.Config.enabled || (perScreen.st && perScreen.st.visualizerPlacing)
+                activeAsync: VizCfg.Config.enabled
                 Visualizer {
                     id: perScreenViz
                     screen: perScreen.modelData
                     mode: !VizCfg.Config.enabled ? "off"
                         : (perScreen.st && perScreen.st.visualizerOverlay ? "overlay" : "desktop")
-                    placing: perScreen.st ? perScreen.st.visualizerPlacing : false
                     // The desktop hosts the visualizer behind the cut-outs while the
-                    // stage is on; this surface steps aside (cava keeps running).
-                    // A rebuilt monitor stack (DPMS off/on, a lid close/open) starts
-                    // with no wallpaper frame, so hostsVisualizer briefly reads false
-                    // even for a stage wallpaper: stay suppressed until the frame
-                    // lands, or the surface maps full-screen and pulses for a few
-                    // seconds on every resume.
+                    // stage is on, and inside the lifted desktop while the Stage
+                    // Editor frames this monitor; this surface steps aside (cava
+                    // keeps running). A rebuilt monitor stack (DPMS off/on, a lid
+                    // close/open) starts with no wallpaper frame, so
+                    // hostsVisualizer briefly reads false even for a stage wallpaper:
+                    // stay suppressed until the frame lands, or the surface maps
+                    // full-screen and pulses for a few seconds on every resume.
                     suppressed: desktop.hostsVisualizer || !wallpaper.reloadReady
-                    onPlacingDone: if (perScreen.st) perScreen.st.visualizerPlacing = false
                 }
             }
 
@@ -561,8 +562,7 @@ ShellRoot {
                 st.visualizerOverlay = !st.visualizerOverlay;
             break;
         case "visualizer-place":
-            if (st)
-                root.placeVisualizer(!st.visualizerPlacing);
+            root.placeVisualizer(!StageCfg.StageSession.active);
             break;
         case "quicksettings":
             ShellState.requestSurfaceActive("sidebar-left", undefined);
@@ -647,14 +647,25 @@ ShellRoot {
         onPressed: root.toggleSurface("visualizer-place")
     }
 
-    // Aiming a hidden spectrum aims nothing, so placing it shows it first.
+    // Aiming a look happens in the Stage Editor now (docs/stage.md): the bind,
+    // the desktop menu row and the Hub hand-off all enter the edit session on
+    // the active monitor, where the look wears its placement grip like every
+    // other widget. A hidden spectrum aims nothing, so placing it shows it
+    // first. The editor's own Done/Escape leaves the session, so `off` only
+    // unwinds a session that is open.
     function placeVisualizer(on) {
         const st = ShellState.forActive();
         if (!st)
             return;
-        if (on && !VizCfg.Config.enabled)
+        const mon = (st.modelData && st.modelData.name) ? st.modelData.name : "";
+        if (!on) {
+            if (StageCfg.StageSession.active)
+                StageCfg.StageSession.leave();
+            return;
+        }
+        if (!VizCfg.Config.enabled)
             VizCfg.Config.setEnabled(true);
-        st.visualizerPlacing = on;
+        StageCfg.StageSession.enterWidgets(mon);
     }
 
     // --- Root machinery (ported from the reference pill root) --------------

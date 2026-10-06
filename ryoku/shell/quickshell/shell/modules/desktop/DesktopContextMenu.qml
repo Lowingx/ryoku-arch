@@ -46,12 +46,13 @@ Item {
         menu.close();
     }
     function customizeVisualizer() {
-        const st = menu.targetState();
-        if (!st)
-            return;
+        // The look is aimed in the Stage Editor now: show it, enter the edit
+        // session on this monitor, and select the visualiser so its frame and
+        // grip come up on the spot (docs/stage.md).
         if (!VizCfg.Config.enabled)
             VizCfg.Config.setEnabled(true);
-        st.visualizerPlacing = true;
+        StageCfg.StageSession.enterWidgets(menu.activeMonitor());
+        StageCfg.StageSession.select("visualizer");
         menu.close();
     }
     function changeWallpaper() {

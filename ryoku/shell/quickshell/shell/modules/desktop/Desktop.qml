@@ -73,8 +73,14 @@ Scope {
         return StageCfg.Config.isFront(id) ? 5 : 3;
     }
     readonly property var stageState: Services.ShellState.forScreen(root.screen)
-    readonly property bool hostsVisualizer: root.stageOn && VizCfg.Config.enabled
-        && !(root.stageState && (root.stageState.visualizerOverlay || root.stageState.visualizerPlacing))
+    // The visualiser paints inside this surface (docs/stage.md) while the
+    // stage cuts this wall, or while the Stage Editor frames the monitor: the
+    // desktop lifts to Top then, so the inline look still clears open windows
+    // and the placement grip shares its surface. In overlay mode outside the
+    // editor it keeps its own raised surface.
+    readonly property bool hostsVisualizer: VizCfg.Config.enabled
+        && (root.stageComposing
+            || (root.stageOn && !(root.stageState && root.stageState.visualizerOverlay)))
     readonly property string monitorName: root.screen ? root.screen.name : ""
     // Edit widgets on this monitor frees every widget for dragging and lifts
     // this desktop above open windows; Done restores the per-widget locks.
@@ -98,7 +104,7 @@ Scope {
     // Human titles for every framed widget: the built-ins by name, then the
     // hosted rosters' own labels, so a frame never reads "irisClock".
     function widgetTitle(w) {
-        const n = { clock: "Clock", calendar: "Calendar", music: "Music", aio: "All-in-one", stats: "System stats", weather: "Weather", notes: "Notes", dayprogress: "Day Progress", shape: "Shape" };
+        const n = { clock: "Clock", calendar: "Calendar", music: "Music", aio: "All-in-one", stats: "System stats", weather: "Weather", notes: "Notes", dayprogress: "Day Progress", shape: "Shape", visualizer: "Visualizer" };
         if (n[w])
             return n[w];
         const iris = IrisRoster.byPrefix(w);
@@ -210,6 +216,13 @@ Scope {
         return null;
     }
     function slotFor(w) {
+        // The visualiser has no WidgetSlot; the placement grip's box item is
+        // the look's footprint, and the frame and inspector dock beside that.
+        // The edge field covers the screen, so its frame rings the screen:
+        // that frame is its only Settings/Remove affordance, the handles being
+        // meaningless on a look with no box to aim.
+        if (w === "visualizer")
+            return VizCfg.Config.enabled ? vizGrip.boxItem : null;
         const outer = root._outerFor(w);
         if (!outer)
             return null;
@@ -317,7 +330,14 @@ Scope {
     function stageRemoveWidget(id) {
         const p = root.stageProvider();
         const before = p ? p.snapshot(id) : null;
-        Config.set(id + "Enabled", false);
+        // The provider owns the per-kind disable: widgets.json for a built-in
+        // or a hosted face, the place tool for a plugin tile, the visualizer's
+        // own store for the look. Writing Config here would land a key no
+        // store reads for the visualizer.
+        if (p)
+            p.removeWidget(id);
+        else
+            Config.set(id + "Enabled", false);
         if (StageCfg.StageSession.selected === id)
             StageCfg.StageSession.deselect();
         if (before)
@@ -357,6 +377,29 @@ Scope {
         patch[w + "Y"] = p.Y;
         patch[w + "Scale"] = p.Scale;
         Config.setMany(patch);
+    }
+    // The visualiser's walk-back is the provider's vocabulary too: the press
+    // snapshots the box, the eased settle compares it, and a change lands as
+    // one undo entry (the box is the whole placement document).
+    property var vizGestureBefore: null
+    function stageVizGestureStart() {
+        const p = root.stageProvider();
+        root.vizGestureBefore = p ? p.snapshot("visualizer") : null;
+    }
+    function stageVizGestureFinish() {
+        const p = root.stageProvider();
+        const before = root.vizGestureBefore;
+        root.vizGestureBefore = null;
+        if (!p || !before)
+            return;
+        const v = VizCfg.Config;
+        const after = { viz: true, x: v.x, y: v.y, w: v.w, h: v.h, angle: v.angle };
+        if (JSON.stringify(before) === JSON.stringify(after))
+            return;
+        Stage.GlobalStates.editHistoryPush({
+            undo: () => p.restore("visualizer", before),
+            redo: () => p.restore("visualizer", after)
+        });
     }
     // A plugin gesture commits through the place tool, which is asynchronous:
     // the Registry still holds the old placement the moment the gesture
@@ -568,18 +611,33 @@ Scope {
             visible: root.stageParallax
         }
 
-        // While the stage is on, the visualizer lives inside this surface. By
-        // default it sits behind every cut-out (above the backdrop, below every
-        // layer and widget); the Depth row in the edit bar lifts it above the
-        // in-front layers, the way a lifted built-in widget rises to z 5. Its
-        // own surface (a sibling window that can never interleave with the
-        // subject) is suppressed meanwhile; Above windows and the Placer keep
-        // that surface (docs/stage.md).
+        // While the stage is on (or the Stage Editor frames this monitor), the
+        // visualizer lives inside this surface. By default it sits behind every
+        // cut-out (above the backdrop, below every layer and widget); the Depth
+        // row lifts it above the in-front layers, the way a lifted built-in
+        // widget rises to z 5. Its own surface (a sibling window that can never
+        // interleave with the subject) is suppressed meanwhile; Above windows
+        // outside the editor keep that surface (docs/stage.md).
         Item {
+            id: vizHost
             z: StageCfg.Config.isFront("visualizer") ? 5 : 1.5
             anchors.fill: parent
             visible: root.hostsVisualizer
             Viz.InlineVisualizer { anchors.fill: parent }
+        }
+
+        // The Stage Editor's placement grip for the look: the box outline, its
+        // corner and its turn dot, above every widget while the mode frames
+        // this monitor. Its gestures write the visualizer store directly; the
+        // press and the eased settle become one undo entry through the
+        // provider's snapshot/restore, like a plugin tile's do.
+        Viz.VisualizerGrip {
+            id: vizGrip
+            z: 5.6
+            composing: root.stageComposing
+            onGestureStarted: root.stageVizGestureStart()
+            onGestureFinished: root.stageVizGestureFinish()
+            onMenuRequested: (x, y) => root.openWidgetMenu("visualizer", x, y)
         }
 
         // Mirror of the same image for glass widgets: Qt cannot sample another
@@ -1302,7 +1360,7 @@ Scope {
             }
             Repeater {
                 model: ["clock", "calendar", "music", "aio", "stats", "weather",
-                    "notes", "dayprogress", "shape"]
+                    "notes", "dayprogress", "shape", "visualizer"]
                     .concat(IrisRoster.faces.map(f => f.prefix))
                     .concat(PythonRoster.faces.map(f => f.prefix))
                 delegate: WidgetFrame {

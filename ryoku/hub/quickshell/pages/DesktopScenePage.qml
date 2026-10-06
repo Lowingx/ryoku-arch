@@ -506,8 +506,8 @@ Item {
                         ValueRow { label: I18n.tr("Smoothing"); detail: Math.round(vizCfg.smoothing * 100) + "%"; Slid { width: parent.width; value: vizCfg.smoothing; from: 0; to: 1; onModified: value => pg.coalesce("visualizer.smoothing", "visualizer", "setSmoothing", value, I18n.tr("Saving visualizer smoothing")) } }
                     }
                     Sheet { title: I18n.tr("PLACEMENT")
-                        Title { text: I18n.tr("Place it on the desktop"); detail: I18n.tr("Drag, resize, rotate, colour, duplicate, and tune the selected look against the real wallpaper.") }
-                        Btn { text: I18n.tr("Open visualizer editor"); primary: true; onAct: pg.launchEditor("visualizer") }
+                        Title { text: I18n.tr("Place it on the desktop"); detail: I18n.tr("The Stage Editor opens with the look selected: drag the box to move it, the corner to size it, the dot to turn it, then colour, tune and duplicate it from its own sheet.") }
+                        Btn { text: I18n.tr("Open the Stage Editor"); primary: true; onAct: pg.launchEditor("visualizer") }
                     }
                 }
             }

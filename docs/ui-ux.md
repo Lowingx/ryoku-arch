@@ -745,42 +745,33 @@ maps that bound onto the box. The quad then touches all four sides at every lean
 crosses none of them, which `place.test.mjs` pins as an invariant, and the placement
 guides stay honest without the gestures having to invert a projection.
 
-The box is placed by hand rather than by numbers. `Super+Alt+M`, the Move
-visualiser row in the desktop's right-click menu, or the Edit widgets toolbar's
-`Visualizer...` button starts placement mode. The box takes an outline, a grip on its corner and a
-dot on a stem above its top edge: a drag anywhere moves it, the grip or the wheel
+The box is placed by hand rather than by numbers. `Super+Alt+M`, the Visualiser
+row in the desktop's right-click menu, or the Hub's Placement sheet opens the
+Stage Editor with the look selected. The box takes a grip on its corner and a
+dot on a stem above its top edge: a drag anywhere moves it, the grip or Ctrl+wheel
 sizes it, and the dot turns it through a full circle. Each step writes to
-`visualizer.json` as it happens, and right click, Escape or the keybind ends it.
+`visualizer.json` as it happens, and the editor's Done, Escape or a click on bare
+wallpaper ends it; every gesture is on the chrome's undo stack.
 
-An editing bar (`EditBar.qml`) comes with it, fixed to the bottom of the screen and
-stepping to the top when the box would be under it: a readout of the thing being
-moved is the one thing on screen that must not move with it. It carries the look
-itself, and the knobs you judge by eye rather than by number: the current look drawn
-as a silhouette (click for a tray of all thirteen, or wheel the chip to walk them),
-bands, mirror, peak caps, gain, smoothing, the live angle with a SQUARE reset, the
-two leans with a LEVEL reset, the size, a gear that opens a square drawer of
-everything the bar has no room for (`SettingsPopup.qml`: playback, shape, and the
-field's deep knobs, scrollable, dimming what the current look ignores), FLIP and
-DONE. `F` flips, `M` mirrors, `P`
-toggles peak caps, `R` squares, `S` opens the drawer, `[` and `]` walk the looks.
-The point is that a look
-is tuned where you can see it,
-on the wallpaper, instead of behind the Hub's window; the Hub keeps the look
-picker and the enable switch.
+The knobs live on the look's own inspector sheet (the Customize sheet every
+widget opens), which folded the old standalone editing bar in: the look itself
+(a tray of all thirteen drawn from the Hub's catalogue painter, plus the walk
+keys), colour with its gradient stops and the field's triad, instance dots and
+the duplicate/remove pair, bands, mirror, peak caps, gain, smoothing, the two
+leans with a LEVEL reset, playback, and the field's deep knobs. The point is
+unchanged: a look is tuned where you can see it, on the wallpaper, inside the
+same editor that places it; the Hub keeps the enable switch and the settings.
 
-The bar is built from `Ryoku.Ui`'s own controls (`Btn`, `Step`, `Sw`, `Slid`,
-`Gallery`) at the shell's own token metrics, so it is the shell's idiom at the
-shell's size rather than a surface with a look of its own, and the tray is the Hub's
-gallery with the Hub's painter (`VizStyles`), so what a look looks like is drawn from
-one catalogue. Each control carries a tracked eyebrow naming it, and the gestures sit
-under a hairline inside the plate: an instruction is not a control, and outside the
-plate it was unreadable over a picture. A knob that means nothing for the look in
-hand dims rather than vanishing, since a bar that reflows as you walk the catalogue
-cannot be aimed at; `Config` owns which those are (`peaksApply`, `mirrorApplies`) and
-the renderer reads the same rule, so the switch that dims is the one the shader
-ignores. Every edit from the bar settles through the same coalescer as a placement
-gesture: the file is watched, so a write returns as a reload, and the look changes
-the instant the adapter does because the render reads the adapter, not the file.
+The sheet is built from the desktop menu's own rows (`MenuRow`, `MenuSlider`,
+`MenuChip`, `MenuInkPicker`) and the Hub's `Gallery` with the Hub's painter
+(`VizStyles`), so what a look looks like is drawn from one catalogue. A knob
+that means nothing for the look in hand hides rather than dims, since the sheet
+slices its tabs by section and a dead tab reads worse than a missing one;
+`Config` owns which those are (`peaksApply`, `mirrorApplies`) and the renderer
+reads the same rule. Every edit settles through the same coalescer as a
+placement gesture: the file is watched, so a write returns as a reload, and the
+look changes the instant the adapter does because the render reads the adapter,
+not the file.
 
 Every gesture applies the pointer's delta from where it was pressed rather than its
 absolute position, so nothing jumps out from under the cursor, and the box eases
@@ -810,13 +801,13 @@ one transform instead of re-deriving every band, its reflection and its bloom; t
 box itself stays axis-aligned, and the wallpaper tone is read from the turned
 region the look actually covers rather than from the box.
 
-Placement runs on its own overlay surface (`Placer.qml`) rather than lifting the
-spectrum's own, which is click-through for life: a masked surface does not start
-taking a pointer again just because the region is swapped. While a box is being
-aimed the spectrum rides the top layer so a window cannot hide what is being
-placed, and aiming one that is off turns it on first, since aiming nothing places
-nothing. Ending placement hands the layer back to the mode, so it drops behind
-windows again unless the overlay is what the user chose.
+Placement runs inside the lifted desktop surface while the Stage Editor frames
+the monitor: the spectrum's own surface is click-through for life and a masked
+surface does not start taking a pointer again just because the region is
+swapped, so the grip rides the desktop instead, which already takes presses
+while composing. Aiming a look that is off turns it on first, since aiming
+nothing places nothing; outside the editor the overlay mode still raises the
+spectrum's own surface over windows.
 
 Whether the spectrum runs at all is the persisted `enabled` key, so the keybind, the
 Hub's switch and the next restart all read one answer; only the layer, desktop or

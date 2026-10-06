@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # widget-depth-lift-probe: the `Depth` lift row in a desktop widget's right-click
-# menu (WidgetMenu), a plugin tile's menu (PluginWidgetMenu), and the visualiser's
-# edit bar (EditBar) writes the shared `front` list on stage.json through the
-# stage Config singleton: it toggles the named widget only, hides/dims itself
-# while the wallpaper has no cut-out, keeps the menu card open on trigger, and
+# menu (WidgetMenu), a plugin tile's menu (PluginWidgetMenu), and the
+# visualiser's own menu scope writes the shared `front` list on stage.json
+# through the stage Config singleton: it toggles the named widget only, hides
+# itself while the wallpaper has no cut-out, keeps the menu card open on trigger, and
 # persists across the seam (the wrapper greps the written file after the run).
 # Loads the real components against a mirrored shell/ tree, the way
 # center-popout-probe.sh does. Commit nothing.

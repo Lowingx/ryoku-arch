@@ -1,13 +1,13 @@
 import QtQuick
 import Quickshell
 import "modules/desktop" as Desk
-import "modules/visualizer" as Viz
 import "modules/stage/Singletons" as Stage
 
 // widget-depth-lift-probe: the per-widget `Depth` row (built-in menu, plugin
-// tile menu, visualiser edit bar group) lifts the named widget above the
-// in-front stage cut-outs via the shared `front` list on stage.json, shows only
-// while the monitor's wallpaper actually has a cut, and persists the choice.
+// tile menu, and the visualiser's own menu scope) lifts the named widget above
+// the in-front stage cut-outs via the shared `front` list on stage.json, shows
+// only while the monitor's wallpaper actually has a cut, and persists the
+// choice.
 // Loads the real shell components against the mirrored shell tree, the way
 // center-popout-probe does. Commit nothing.
 ShellRoot {
@@ -75,7 +75,6 @@ ShellRoot {
 
         Desk.WidgetMenu { id: widgetMenu }
         Desk.PluginWidgetMenu { id: pluginMenu }
-        Viz.EditBar { id: editBar; box: Qt.rect(0, 0, 200, 100) }
     }
 
     function run() {
@@ -117,18 +116,17 @@ ShellRoot {
         check("plugin trigger lifts the tile id",
             Stage.Config.isFront("probe.tile") === true);
 
-        // The visualiser's edit bar carries the same choice as a segment; the
-        // group dims without a stage and lights with one.
-        var grp = findByProp(editBar, "label", "DEPTH");
-        check("edit bar builds a DEPTH group", grp !== null);
-        check("group live while stage on", grp && grp.enabled === true);
-        var seg = findDepthSeg(editBar);
-        check("group carries a Behind/In front segment", seg !== null);
-        check("segment reads Behind while not lifted", seg.current === "Behind");
-        Stage.Config.setFront("visualizer", true);
-        check("lift flips the segment", seg.current === "In front");
-        seg.chose("Behind");
-        check("segment choice writes the lift off",
+        // The visualiser wears the same row: its scope opens the built-in
+        // menu shape with the visualiser's id, and the lift keys off that id.
+        widgetMenu.openFor("visualizer", 10, 10, wall);
+        var vrow = findByProp(widgetMenu, "label", "Depth");
+        check("visualiser menu builds a Depth row", vrow !== null);
+        check("visualiser row gated on its wall", vrow && vrow.visible === true);
+        vrow.triggered();
+        check("visualiser trigger lifts the look",
+            Stage.Config.isFront("visualizer") === true);
+        vrow.triggered();
+        check("second trigger drops it back",
             Stage.Config.isFront("visualizer") === false);
 
         // Final state: clock + tile lifted, visualizer behind. The coalesced

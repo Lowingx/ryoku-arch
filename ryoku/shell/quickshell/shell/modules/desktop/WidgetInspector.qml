@@ -75,7 +75,8 @@ Item {
         weather: { label: "Weather", icon: "partly_cloudy_day", gloss: "天気" },
         notes: { label: "Notes", icon: "sticky_note_2", gloss: "筆記" },
         dayprogress: { label: "Day Progress", icon: "donut_large", gloss: "経過" },
-        shape: { label: "Shape", icon: "category", gloss: "図形" }
+        shape: { label: "Shape", icon: "category", gloss: "図形" },
+        visualizer: { label: "Visualizer", icon: "graphic_eq", gloss: "音波" }
     })
     readonly property var _info: insp.builtinInfo[insp.scope] || null
     readonly property string wLabel: insp.hostedFace ? insp.hostedFace.label : (insp._info ? insp._info.label : insp.cap(insp.scope))
@@ -89,8 +90,11 @@ Item {
     readonly property bool isAio: insp.scope === "aio"
     readonly property bool isDayprogress: insp.scope === "dayprogress"
     readonly property bool isShape: insp.scope === "shape"
+    // The visualiser's own store owns its look, colour and box, so the generic
+    // Look tab (which writes widgets.json) would edit keys nothing reads; its
+    // tabs come entirely from its options panel.
+    readonly property bool isVisualizer: insp.scope === "visualizer"
     readonly property bool isRyokuStyle: (insp.isIris || insp.isPython) && Config[insp.scope + "Style"] === "ryoku"
-    readonly property bool isCanvas: insp.isIris && insp.irisFace.kind === "canvas"
     readonly property string curIrisSize: insp.isIris ? (Config[insp.scope + "Size"] || insp.irisFace.sizes[0]) : ""
     readonly property string curPythonVariant: insp.isPython ? (Config[insp.scope + "Variant"] || insp.pythonFace.variants[0]) : ""
 
@@ -180,15 +184,16 @@ Item {
     }
 
     readonly property var tabs: {
-        var t = [{ kind: "look", label: I18n.tr("Look"), gloss: "見た目" }];
+        var t = insp.isVisualizer ? [] : [{ kind: "look", label: I18n.tr("Look"), gloss: "見た目" }];
         if (insp.hasOptions) {
             var s = insp.sections;
-            if (s.length <= 1) {
+            var shown = s.filter(sec => sec && sec.visible !== false);
+            if (shown.length <= 1) {
                 // one section or none: a single tab named after the widget itself.
-                t.push({ kind: "opt", label: insp.wLabel, gloss: insp.wGloss, si: (s.length === 1 ? 0 : -1) });
+                t.push({ kind: "opt", label: insp.wLabel, gloss: insp.wGloss, si: (shown.length === 1 ? insp.sections.indexOf(shown[0]) : -1) });
             } else {
-                for (var i = 0; i < s.length; i++)
-                    t.push({ kind: "opt", label: s[i].label, gloss: s[i].gloss, si: i });
+                for (var i = 0; i < shown.length; i++)
+                    t.push({ kind: "opt", label: shown[i].label, gloss: shown[i].gloss, si: insp.sections.indexOf(shown[i]) });
             }
         }
         return t;

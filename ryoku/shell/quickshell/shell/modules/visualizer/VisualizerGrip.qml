@@ -1,43 +1,60 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import Quickshell
-import Quickshell.Wayland
 import Ryoku.Ui
 import Ryoku.Ui.Singletons as Ui
 import "Singletons"
-
-// Placement gestures for the look's box: drag to move, the corner grip to size, the
-// dot on the top edge to turn. The controls live in EditBar.
+// The Stage Editor's placement grip for the visualiser: the corner grip and
+// turn dot of the standalone placer, ported. Drag to move, the corner to size,
+// the dot to turn, Ctrl+wheel to scale. It rides the desktop surface while the
+// Stage Editor frames this monitor, so the look is aimed with every other
+// widget rather than on a surface of its own; the outline, name and buttons
+// are the shared edit frame's (StageOutline), which boxes the look's turned
+// footprint through `boxItem`.
 //
-// Its own surface, because the spectrum window is click-through for life and a
-// surface masked that way does not start taking a pointer again. Same geometry as
-// that window (exclusions ignored), so a pointer position means the same in both.
-PanelWindow {
+// The gestures are the placer's, easing included: a gesture aims at a target
+// and the box eases toward it, so an unsteady hand still lands a clean size,
+// and the easing outlives the release or letting go mid-drag would strand the
+// box short of where the pointer asked. The box is fractions of the monitor,
+// so the same numbers land on any screen.
+Item {
     id: win
 
-    required property var screen
-    required property rect box     // the look's box in screen px
-    required property color guide
+    // Whether the Stage Editor frames this desktop right now.
+    required property bool composing
 
-    signal done
+    // A gesture's walk-back is the desktop's to record: it started here and it
+    // lands here, so the press and the eased settle raise these together.
+    signal gestureStarted()
+    signal gestureFinished()
+    // Right-click on the look asks the desktop for its menu, like a slot does.
+    signal menuRequested(real x, real y)
+    // Keep the shared spectrum running while a look is being aimed, even under
+    // Power Saver or silence, so it stays visible to place; released when the
+    // editor leaves. The hold is the placer's, moved here with the gestures.
+    readonly property bool holding: win.composing && Config.enabled
+    onHoldingChanged: Spectrum.placementHolds += holding ? 1 : -1
+    Component.onDestruction: if (holding) Spectrum.placementHolds -= 1
 
-    screen: win.screen
-    color: "transparent"
-    exclusionMode: ExclusionMode.Ignore
-    WlrLayershell.namespace: "ryoku-visualizer-place"
-    WlrLayershell.layer: WlrLayer.Overlay
-    WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
-    anchors { top: true; bottom: true; left: true; right: true }
+    anchors.fill: parent
+    visible: win.composing && Config.enabled
 
-    // Token-sized: a scale of its own would fight the shell's control metrics.
     readonly property real handle: Ui.Tokens.s4
+    // The look's box, in desktop px; the field's box is the screen.
+    readonly property rect box: Config.isAura
+        ? Qt.rect(0, 0, win.width, win.height)
+        : Qt.rect(Config.x * win.width, Config.y * win.height,
+                  Config.w * win.width, Config.h * win.height)
     // Rotation is about the box centre, which is the one point a turn never moves.
     readonly property real cx: win.box.x + win.box.width / 2
     readonly property real cy: win.box.y + win.box.height / 2
+    readonly property real aspect: win.height > 0 ? win.width / win.height : 1
 
-    // A gesture aims at a target and the box eases toward it, so an unsteady hand
-    // still lands a clean size. Easing outlives the release, or letting go mid-drag
-    // would strand the box short of where the pointer asked.
+    // The guide colour: the look's own pinned colour, else the shell accent,
+    // the way the placer matched its guides to the ramp.
+    readonly property color guide: Config.hasCustomColor ? Config.customColor
+        : (Scheme.accent.r !== Scheme.accent.g || Scheme.accent.g !== Scheme.accent.b
+            ? Scheme.accent : "white")
+
     property string gesture: ""
     property real tx: 0
     property real ty: 0
@@ -61,35 +78,62 @@ PanelWindow {
             } else if (win.gesture === "move") {
                 done = Math.abs(win.tx - Config.x) < eps && Math.abs(win.ty - Config.y) < eps;
                 if (done)
-                    Config.moveBox(win.tx, win.ty, win.width / win.height);
+                    Config.moveBox(win.tx, win.ty, win.aspect);
                 else
                     Config.moveBox(Config.x + (win.tx - Config.x) * k,
                                    Config.y + (win.ty - Config.y) * k,
-                                   win.width / win.height);
+                                   win.aspect);
             } else {
                 done = Math.abs(win.tx - Config.x) < eps && Math.abs(win.ty - Config.y) < eps
                     && Math.abs(win.tw - Config.w) < eps && Math.abs(win.th - Config.h) < eps;
                 if (done)
-                    Config.setBox(win.tx, win.ty, win.tw, win.th, win.width / win.height);
+                    Config.setBox(win.tx, win.ty, win.tw, win.th, win.aspect);
                 else
                     Config.setBox(Config.x + (win.tx - Config.x) * k,
                                   Config.y + (win.ty - Config.y) * k,
                                   Config.w + (win.tw - Config.w) * k,
                                   Config.h + (win.th - Config.h) * k,
-                                  win.width / win.height);
+                                  win.aspect);
             }
-            // Over only once the hand is off and the box has caught up.
-            if (done && grab.mode === "")
+            // Over only once the hand is off and the box has caught up; the
+            // desktop turns that into one undo entry.
+            if (done && grab.mode === "") {
                 win.gesture = "";
+                win.gestureFinished();
+            }
         }
     }
 
-    // The frame carries the look's turn, so a guide lands where the look actually is.
-    // The edge field owns the whole screen and has no box to aim: drawing its
-    // guide would just ring the display with a line that edits nothing (the Hub
-    // preview treats edge looks the same way), so the bar rides alone.
+    // The look's turned footprint, axis-aligned: the edit frame (StageOutline)
+    // boxes this the way it boxes every other widget, and the inspector docks
+    // beside it. Same bounding-box maths the spectrum field uses for its cover
+    // rect, so the frame hugs the look at any angle rather than its unturned w/h.
+    readonly property rect outer: {
+        var a = Config.angle * Math.PI / 180;
+        var c = Math.abs(Math.cos(a)), s = Math.abs(Math.sin(a));
+        var w = win.box.width * c + win.box.height * s;
+        var h = win.box.width * s + win.box.height * c;
+        return Qt.rect(win.cx - w / 2, win.cy - h / 2, w, h);
+    }
+    Item {
+        id: footprint
+        x: win.outer.x
+        y: win.outer.y
+        width: win.outer.width
+        height: win.outer.height
+    }
+    // The turned footprint, exposed for the desktop: the edit frame boxes this
+    // the way it boxes a slot, and the inspector docks beside it.
+    readonly property Item boxItem: footprint
+
+    // The handles ride a turned frame, so they sit where the look's own corner
+    // and top edge actually are. The outline itself is the edit frame's job.
     Item {
         id: frame
+
+        // The field owns the whole screen and has no box to aim: the edge
+        // handles would ring the display with controls that edit nothing (the
+        // placer treated it the same way), so the field rides handleless.
         visible: !Config.isAura
         x: win.box.x
         y: win.box.y
@@ -97,14 +141,6 @@ PanelWindow {
         height: win.box.height
         rotation: Config.angle
         transformOrigin: Item.Center
-
-        Rectangle {
-            anchors.fill: parent
-            color: Qt.alpha(win.guide, 0.05)
-            border.width: 1
-            border.color: Qt.alpha(win.guide, 0.55)
-            radius: 2
-        }
 
         // the grip sits on the box's own corner, so it is always beside what it sizes
         Rectangle {
@@ -141,15 +177,34 @@ PanelWindow {
         }
     }
 
+    // Ctrl+wheel scales, the same chord every other widget in the editor uses.
+    // A notch that repeats is one gesture: the walk-back opens on the first and
+    // closes when the wheel settles, the way the slot's does.
+    property bool wheelHold: false
+    Timer {
+        id: wheelSettle
+        interval: 350
+        onTriggered: {
+            win.wheelHold = false;
+            win.gestureFinished();
+        }
+    }
+
+    // The press area is the box's turned footprint plus the handles' reach, so
+    // a press on the look or its grips lands here and a press anywhere else
+    // falls through to the desktop's own click-away.
     MouseArea {
         id: grab
-        anchors.fill: parent
+
+        enabled: !Config.isAura
+        x: Math.max(0, win.box.x - win.handle)
+        y: Math.max(0, win.box.y - win.handle * 3)
+        width: Math.min(win.width, win.box.width + 2 * win.handle)
+        height: Math.min(win.height, win.box.height + 4 * win.handle)
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         hoverEnabled: true
-        focus: true
-        cursorShape: Config.isAura ? Qt.ArrowCursor
-            : (grab.over === "size" ? Qt.SizeFDiagCursor
-               : (grab.over === "turn" ? Qt.CrossCursor : Qt.SizeAllCursor))
+        cursorShape: grab.over === "size" ? Qt.SizeFDiagCursor
+            : (grab.over === "turn" ? Qt.CrossCursor : Qt.SizeAllCursor)
 
         // The handles ride a turned frame, so map their centres rather than compute
         // them: a mapped centre is right at every angle.
@@ -172,16 +227,14 @@ PanelWindow {
 
         onPressed: (m) => {
             if (m.button === Qt.RightButton) {
-                win.done();
+                win.menuRequested(win.box.x, win.box.y);
                 return;
             }
-            // The edge field owns the whole screen and has no box to aim: the
-            // keys and the bar still edit it, a drag must not shove a box it
-            // never reads.
             if (Config.isAura)
                 return;
             grab.mode = grab.over;
             win.gesture = grab.over;
+            win.gestureStarted();
             grab.pressX = m.x;
             grab.pressY = m.y;
             grab.baseX = Config.x;
@@ -199,7 +252,7 @@ PanelWindow {
         onReleased: grab.mode = ""
         // Deltas from the press, never absolute positions, so nothing jumps.
         onPositionChanged: (m) => {
-            if (!grab.pressed || grab.mode === "")
+            if (!grab.pressed || grab.mode === "" || Config.isAura)
                 return;
             if (grab.mode === "turn") {
                 // Near the centre a pixel of travel is a wild swing.
@@ -225,56 +278,20 @@ PanelWindow {
             win.tw = out.w;
             win.th = out.h;
         }
-        onWheel: (w) => {
-            if (Config.isAura)
-                return;
-            var k = w.angleDelta.y > 0 ? 1.06 : 0.94;
-            Config.sizeBox(Config.w * k, Config.h * k, win.width / win.height);
-        }
-        Keys.onEscapePressed: {
-            if (editBar.trayOpen)
-                editBar.closeTray();
-            else if (editBar.colorOpen)
-                editBar.closeColor();
-            else if (editBar.settingsOpen)
-                editBar.closeSettings();
-            else
-                win.done();
-        }
-        Keys.onReturnPressed: win.done()
-        Keys.onPressed: (e) => {
-            if (e.key === Qt.Key_S) {
-                editBar.toggleSettings();
-                e.accepted = true;
-            } else if (e.key === Qt.Key_F) {
-                Config.flip();
-                e.accepted = true;
-            } else if (e.key === Qt.Key_M) {
-                if (Config.mirrorApplies)
-                    Config.toggleMirror();
-                e.accepted = true;
-            } else if (e.key === Qt.Key_P) {
-                if (Config.peaksApply)
-                    Config.togglePeaks();
-                e.accepted = true;
-            } else if (e.key === Qt.Key_R) {
-                Config.rotate(0);
-                e.accepted = true;
-            } else if (e.key === Qt.Key_BracketLeft) {
-                Config.cycleStyle(-1);
-                e.accepted = true;
-            } else if (e.key === Qt.Key_BracketRight) {
-                Config.cycleStyle(1);
-                e.accepted = true;
+        // Ctrl+wheel scales over the same footprint as the press: a wheel
+        // anywhere else still scrolls what is under it. The handler takes no
+        // geometry of its own; nesting it in the area borrows the area's.
+        WheelHandler {
+            acceptedModifiers: Qt.ControlModifier
+            onWheel: (w) => {
+                if (!win.wheelHold) {
+                    win.wheelHold = true;
+                    win.gestureStarted();
+                }
+                var k = w.angleDelta.y > 0 ? 1.06 : 0.94;
+                Config.sizeBox(Config.w * k, Config.h * k, win.aspect);
+                wheelSettle.restart();
             }
         }
-    }
-
-    // Everything you tune while looking at it: its own component, since the window's
-    // job is the placement gestures and the bar's job is the controls.
-    EditBar {
-        id: editBar
-        box: win.box
-        onDone: win.done()
     }
 }
