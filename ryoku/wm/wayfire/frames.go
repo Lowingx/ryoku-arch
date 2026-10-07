@@ -441,9 +441,7 @@ func (s *stage) outputFrame(o wayfireOutput) wm.Output {
 	}
 	if v, ok := section["transform"]; ok {
 		if s, ok := v.valueString(); ok {
-			if n, err := strconv.Atoi(s); err == nil {
-				frame.Transform = n
-			}
+			frame.Transform = transformFromWayfire(s)
 		}
 	}
 	if v, ok := section["vrr"]; ok {
