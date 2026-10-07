@@ -383,9 +383,12 @@ ensure_venv() {
     return 1
 }
 
+# `python -m pip`, never bin/pip: a venv adopted by rename above keeps console
+# scripts whose shebangs name the old directory, so bin/pip no longer runs.
+venv_has_pip() { "$venv/bin/python" -m pip --version >/dev/null 2>&1; }
 venv_pip() {
-    if [[ -x "$venv/bin/pip" ]]; then
-        "$venv/bin/pip" install --quiet "$@"
+    if venv_has_pip; then
+        "$venv/bin/python" -m pip install --quiet "$@"
         return
     fi
     uv pip install --quiet --python "$venv/bin/python" "$@"
@@ -399,7 +402,7 @@ cmd_install() {
     ensure_venv || return 1
 
     printf 'Installing rembg (CPU)...\n'
-    [[ -x "$venv/bin/pip" ]] && venv_pip --upgrade pip
+    venv_has_pip && venv_pip --upgrade pip
     if ! venv_pip "rembg[cpu]"; then
         printf 'ryostage: could not install rembg (no onnxruntime wheel for this Python?)\n' >&2
         return 1

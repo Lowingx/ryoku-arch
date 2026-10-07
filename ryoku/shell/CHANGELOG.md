@@ -511,6 +511,11 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **New cut-out models install on machines upgraded from the old depth
+  tool.** Ryostage adopts the earlier `depth` environment by moving it, which
+  left its `pip` pointing at the old folder, so every model download failed
+  with "bad interpreter" while models already on disk kept working. It now
+  runs pip through the environment's own Python (`scripts/ryostage`).
 - **The wallpaper picker's download browser no longer tears into shards.**
   Switching between Wallhaven, MoeWalls, MotionBGs and YouTube while results
   loaded could draw the new card count from the previous frame's buffer; on
