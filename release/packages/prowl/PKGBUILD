@@ -6,7 +6,7 @@
 # pacman-owned binary. The minishlab potion-code-16M embedding model is compiled
 # into the binary, so indexing never downloads a model at runtime.
 pkgname=prowl
-pkgver=0.17.1
+pkgver=0.17.2
 pkgrel=1
 pkgdesc="Prowl model gateway and code intelligence for Ryoku Rashin"
 arch=('x86_64')
@@ -17,7 +17,7 @@ makedepends=('go' 'git' 'gcc')
 conflicts=('prowl-agent')
 replaces=('prowl-agent')
 options=('!lto' '!debug')
-_commit=dda72967de67f6509541f2bea2c8aa38a3333c87
+_commit=5ba05eb922ff023e3cbc2b9a3768829179bca980
 source=("git+https://github.com/neur0map/prowl.git#commit=$_commit")
 sha256sums=('SKIP')
 
