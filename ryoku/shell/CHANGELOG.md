@@ -761,6 +761,11 @@
 - **The old wall-ui picker.** Replaced by the new picker; its day/night
   rotation lives on as two schedule rules, migrated automatically
   (`ryogami/wall-ui/`).
+- **The QS Bar settings rail ends at its routes.** The footer block under the
+  Community route (the Search hint, the QS BAR / QUICK SETTINGS switch, the
+  OPEN THE HUB link and the RYOKU barcode) is gone. Ctrl+K still opens search,
+  and the brand logo keeps opening QS Bar Settings
+  (`quickshell/shell/modules/bar/barstyles/qsbar/controlcenter/CcRail.qml`).
 
 ### Added
 - **The iRiS frame's Spotlight is now a launcher style.** Settings -> App
