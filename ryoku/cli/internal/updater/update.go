@@ -512,6 +512,7 @@ func dbRejection(err error) bool {
 var splitMetapackages = []string{
 	"ryoku-desktop-hyprland",
 	"ryoku-desktop-niri",
+	"ryoku-desktop-wayfire",
 	wm.RetiredCompositor().VariantPackage,
 }
 
