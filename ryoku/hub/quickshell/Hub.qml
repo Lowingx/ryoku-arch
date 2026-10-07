@@ -6,6 +6,11 @@ import Quickshell.Io
 import Ryoku.Ui
 import Ryoku.Ui.Singletons
 import "Singletons"
+// The pages load by URL, so nothing else imports their directory, and
+// Quickshell writes a qmldir only for directories reached by an import.
+// Without one a page cannot name its siblings (UpdatesPage's UpdateRun) and
+// fails to load.
+import "pages"
 import "schema/DesktopPage.js" as DesktopSchema
 import "schema/BarStudioPage.js" as BarStudioSchema
 import "schema/WindowSettings.js" as WindowSettingsSchema
@@ -503,7 +508,7 @@ Rectangle {
     function pageFile(s) {
         var map = {
             "plugins": "PluginsPage", "profile": "ProfilePage",
-            "bar-studio": "BarStudioPage", "desktop": "DesktopPage",
+            "bar-studio": "BarStudioPage", "desktop": "DesktopPage", "session": "SessionPage",
             "layerrules": "LayerRulesPage", "windowrules": "WindowRulesPage",
             "appoverrides": "AppOverridesPage", "animations": "AnimationsPage",
             "input": "InputPage", "keybinds": "KeybindsPage",

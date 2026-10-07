@@ -14,6 +14,15 @@
   through Prowl (`quickshell/pages/RashinPage.qml`).
 
 ### Fixed
+- **The Updates and Session pages open again.** The Updates page named its
+  own parts (the run timeline, the log, the password prompt), but Quickshell
+  only writes a type list for directories something imports, and nothing
+  imported the pages, so the page failed to load and the Hub stayed on the
+  previous one. The Hub now imports its pages directory. The Session page had
+  dropped out of the page map when Desktop Scene was retired, so its rail
+  entry did nothing. `tests/ui/hub-pages-probe.sh` loads every section's page
+  (`quickshell/Hub.qml`).
+
 - **Vesktop colours follow the Ryoku theme, not Midnight.** The palette
   bridge's Vesktop integration wrote a competing Midnight theme file and could
   clobber the user's QuickCSS; it now ships a managed palette template beside
