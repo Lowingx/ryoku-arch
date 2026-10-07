@@ -69,6 +69,13 @@
   (`quickshell/Hub.qml`)
 
 ### Added
+- **Dictation has more Whisper models.** The page now lists English Tiny,
+  Base and Small, multilingual Base, Medium and Large Turbo, and the OpenAI
+  API, each with its language, speed and download size; models over 1 GB ask
+  before downloading. The Voxtype setup now runs from the shell service, so it
+  happens on niri as well as Hyprland, and it leaves boxes without Voxtype
+  untouched (`backend/voxtype.go`, `quickshell/pages/DictationPage.qml`,
+  `../shell/systemd/user/ryoku-shell.service`).
 - **Import config reads niri.** Point the Import page at a niri config folder
   or a dotfiles checkout and it follows the `include` tree, maps input, layout,
   animations, environment, startup apps, cursor, binds and window rules onto
