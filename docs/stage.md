@@ -131,15 +131,22 @@ selection marquee rather than closing the editor.
 
 ### Wallpaper
 
-The Wallpaper catalogue shows ryogami's library and thumbnails. A per-screen
-pick goes through `ryoku-stage-wallpaper --screen`, so ryogami remains the
-wallpaper owner. On the card, drag to move the real wallpaper, use the wheel or
-a pinch to zoom, and use the restyled framing dock to rotate, mirror, centre, or
-reset it. A live drag remains authoritative until its committed record can be
-read, so releasing after zoom no longer bounces the picture. Wheel, pinch, and
-touchpad steps are written once they settle, so the dock's buttons build on the
-zoom you see. Mirror and rotation also re-render the visible picture after a
-reveal transition, and a click on the dock between its buttons never reaches the
+The Wallpaper catalogue shows Ryogami's library and thumbnails. A per-screen
+pick goes through Ryogami's output target, so Ryogami remains the wallpaper
+owner. **Use for this workspace** pins the wallpaper currently shown on the
+edited display to its active workspace. **Clear workspace wallpaper** removes
+that pin and reveals the display, all-display, or shipped-default fallback
+again. The workspace changes the selected wallpaper only: Stage scenes and
+their generated cut-outs stay keyed by wallpaper path, so two workspaces using
+the same image share one scene.
+
+On the card, drag to move the real wallpaper, use the wheel or a pinch to zoom,
+and use the restyled framing dock to rotate, mirror, centre, or reset it. A live
+drag remains authoritative until its committed record can be read, so releasing
+after zoom no longer bounces the picture. Wheel, pinch, and touchpad steps are
+written once they settle, so the dock's buttons build on the zoom you see.
+Mirror and rotation also re-render the visible picture after a reveal
+transition, and a click on the dock between its buttons never reaches the
 picture's drag or double-click reset. While framing, widgets, desktop icons, and
 the visualizer dim to one quarter opacity and stop taking input. Framing is
 stored per monitor and wallpaper path in

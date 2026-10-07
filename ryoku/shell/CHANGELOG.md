@@ -3,6 +3,16 @@
 ## Unreleased
 
 ### Added
+- **Each workspace can keep its own wallpaper.** The picker's target choice
+  now offers All, This monitor and This workspace, and the Stage Editor's
+  wallpaper page has Use for this workspace and Clear workspace wallpaper.
+  Ryogami resolves workspace, then monitor, then the shared wallpaper on every
+  workspace switch, on both Hyprland and niri: a settled switch reveals with
+  the usual transition, fast cycling cuts straight to the wallpaper you land
+  on, video wallpapers paint their poster first, and the choice survives a
+  restart. A Ryogami restart no longer leaves the desktop deaf to later
+  wallpaper changes (`ryogami/daemon/workspaces.go`,
+  `quickshell/shell/modules/wallpaper/Wallpaper.qml`).
 - **First run is a live tour instead of a static slideshow.** Welcome now opens
   with the compact Ryoku artwork, lets a new user try all five shipped bar
   styles immediately, introduces wallpaper and Ryostore, and turns the
