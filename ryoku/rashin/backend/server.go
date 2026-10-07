@@ -93,7 +93,7 @@ func Serve(cfg Config) error {
 	// conversation with the harness, spawned only when a surface joins it.
 	hub := newChatHub(ryokuLane())
 	chatHubPlain := newChatHub(chatLane())
-	laneHubs := map[string]*chatHub{laneRyoku: hub, laneChat: chatHubPlain}
+	laneHubs = map[string]*chatHub{laneRyoku: hub, laneChat: chatHubPlain}
 	// Pre-warm the Ryoku session: hermes pays its Python cold start at boot,
 	// not on the user's first question.
 	go hub.warm()
@@ -197,22 +197,12 @@ func Serve(cfg Config) error {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		if !pending && chatAgentInUse(body.ID, LoadConfig()) {
+			resetChatLanes(LoadConfig())
+		}
 		writeJSON(w, map[string]any{"ok": true, "pending": pending, "reason": reason})
 	})
-	mux.HandleFunc("POST /api/agents/unwire", func(w http.ResponseWriter, r *http.Request) {
-		var body struct {
-			ID string `json:"id"`
-		}
-		if json.NewDecoder(r.Body).Decode(&body) != nil || body.ID == "" {
-			http.Error(w, "missing agent id", http.StatusBadRequest)
-			return
-		}
-		if err := disconnectHarness(r.Context(), body.ID); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		writeJSON(w, map[string]bool{"ok": true})
-	})
+	mux.HandleFunc("POST /api/agents/unwire", handleUnwireAgent)
 	mux.HandleFunc("POST /api/harnesses/route", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, routeConnectedHarnesses(r.Context()))
 	})
@@ -239,16 +229,7 @@ func Serve(cfg Config) error {
 	mux.HandleFunc("GET /api/chat/agent", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, chatBackendInfos(LoadConfig()))
 	})
-	mux.HandleFunc("POST /api/chat/agent", func(w http.ResponseWriter, r *http.Request) {
-		if err := setChatAgent(r.URL.Query().Get("id")); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		for _, h := range laneHubs { // switch takes effect on the next turn, on every lane
-			h.resetConn()
-		}
-		writeJSON(w, chatBackendInfos(LoadConfig()))
-	})
+	mux.HandleFunc("POST /api/chat/agent", handleSetChatAgent)
 
 	mux.HandleFunc("GET /api/hermes/skills", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, SkillsReportNow())
@@ -321,6 +302,61 @@ func Serve(cfg Config) error {
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+func handleUnwireAgent(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		ID string `json:"id"`
+	}
+	if json.NewDecoder(r.Body).Decode(&body) != nil || body.ID == "" {
+		http.Error(w, "missing agent id", http.StatusBadRequest)
+		return
+	}
+	if chatAgentInUse(body.ID, LoadConfig()) {
+		http.Error(w, "pick another Rashin chat agent before disconnecting this harness", http.StatusConflict)
+		return
+	}
+	if err := disconnectHarness(r.Context(), body.ID); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	writeJSON(w, map[string]bool{"ok": true})
+}
+
+func handleSetChatAgent(w http.ResponseWriter, r *http.Request) {
+	routing, err := setChatAgent(r.Context(), r.URL.Query().Get("id"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	resetChatLanes(LoadConfig())
+	writeJSON(w, chatAgentSelection{Agents: chatBackendInfos(LoadConfig()), Routing: routing})
+}
+
+// laneHubs holds the running daemon's chat lanes; it stays nil outside serve.
+var laneHubs map[string]*chatHub
+
+// resetChatLanes drops each lane's live harness process so the next turn
+// starts one that reads the harness's current config, as after Prowl routing
+// rewrote it. The daemon resets the lanes it owns; the CLI asks a running
+// daemon to do it through the chat-agent route, which also re-confirms routing.
+func resetChatLanes(cfg Config) {
+	if laneHubs != nil {
+		for _, h := range laneHubs {
+			h.resetConn()
+		}
+		return
+	}
+	notifyDaemonChatAgent(cfg.Port, cfg.ChatAgent)
+}
+
+// notifyDaemonChatAgent tells a running daemon to switch (or re-confirm) its
+// chat agent, which drops its live sessions. A variable because it reaches a
+// real daemon on this machine's port: tests replace it.
+var notifyDaemonChatAgent = func(port int, id string) {
+	if pingDaemon(port) {
+		askPost(port, "/api/chat/agent?id="+url.QueryEscape(id))
+	}
 }
 
 // loopbackOrigin reports whether a browser request came from this machine's

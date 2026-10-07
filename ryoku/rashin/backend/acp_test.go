@@ -4,6 +4,9 @@ import (
 	"bufio"
 	"encoding/json"
 	"io"
+	"os"
+	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -331,4 +334,69 @@ func TestACPV2ImagesModelsSessions(t *testing.T) {
 	}
 	expectEvent(t, conn.Events(), "models")
 	expectEvent(t, conn.Events(), "replay_end")
+}
+
+func TestSavedNonProwlModelIsDropped(t *testing.T) {
+	home := quickTestEnv(t)
+	t.Setenv("RYOKU_STATE_PATH", filepath.Join(home, "state"))
+	path := modelStatePath()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("openai-codex:gpt-5.6\n"+configModelKey()+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	models := []ModelInfo{
+		{ID: "prowl:auto", Name: "Prowl"},
+		{ID: "openai-codex:gpt-5.6", Name: "Direct"},
+	}
+	conn := &acpConn{
+		agentID:      "hermes",
+		prowl:        chatAgentRouting{Active: true},
+		startedModel: "prowl:auto",
+		models:       models,
+	}
+	conn.reconcileModel(modelState{models: models, current: "prowl:auto", ok: true}, "session/new")
+	if got := savedSessionModel(); got != "prowl:auto" {
+		t.Fatalf("saved model = %q, want live Prowl model", got)
+	}
+}
+
+func TestSetModelRequiresProwlOnlyWhileActive(t *testing.T) {
+	active, _ := newTestPair(t)
+	defer active.Close()
+	active.agentID = "hermes"
+	active.prowl = chatAgentRouting{Active: true}
+	active.startedModel = "prowl:auto"
+	active.models = []ModelInfo{{ID: "prowl:auto"}, {ID: "openai-codex:gpt-5.6"}}
+	event := active.modelsEvent(active.models, active.startedModel)
+	if event.Prowl != "active" || len(event.Models) != 1 || event.Models[0].ID != "prowl:auto" {
+		t.Fatalf("active models event = %+v", event)
+	}
+	if err := active.SetModel("openai-codex:gpt-5.6"); err == nil || !strings.Contains(err.Error(), "not routed through Prowl") {
+		t.Fatalf("active direct model error = %v", err)
+	}
+
+	pending, agent := newTestPair(t)
+	defer pending.Close()
+	pending.agentID = "hermes"
+	pending.prowl = chatAgentRouting{Pending: true, Reason: "no provider"}
+	pending.sessionID = "s1"
+	pending.startedModel = "prowl:auto"
+	pending.models = []ModelInfo{{ID: "prowl:auto"}, {ID: "openai-codex:gpt-5.6"}}
+	done := make(chan error, 1)
+	go func() { done <- pending.SetModel("openai-codex:gpt-5.6") }()
+	request := agent.read()
+	if request.Method != "session/set_model" {
+		t.Fatalf("method = %q, want session/set_model", request.Method)
+	}
+	agent.respond(*request.ID, map[string]any{})
+	if err := <-done; err != nil {
+		t.Fatalf("pending model switch: %v", err)
+	}
+
+	event = pending.modelsEvent(pending.models, pending.startedModel)
+	if event.Prowl != "pending" || event.ProwlReason != "no provider" || len(event.Models) != 2 {
+		t.Fatalf("pending models event = %+v", event)
+	}
 }

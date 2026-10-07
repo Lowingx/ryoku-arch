@@ -3,6 +3,12 @@
 ## Unreleased
 
 ### Added
+- **New accounts start with the Ryoku default rice.** The packaged look carries
+  the maintainer's current QS Bar, window styling, visualizer, input and brand
+  choices without machine-specific paths, keyboard layout, app pins or a fixed
+  wallpaper. On the first graphical login Ryoku waits for the desktop services,
+  applies the look, and chooses a random wallpaper from the seeded library
+  (`assets/rices/default/`, `shell/scripts/ryoku-session-intro`).
 - **Prowl lives inside Rashin.** The console's Prowl section (Overview,
   Providers, Routing, Activity, Projects, Harnesses, Toolkit) is the one place
   to run Prowl, Ryoku's model gateway and code index: add API keys, keyless free
@@ -21,8 +27,10 @@
   Prowl's `auto` route that harness's default model; Disconnect restores the
   model it had. With no provider that can serve `auto`, the harness waits as
   pending and routes once one connects, and `ryoku-rashin wire` keeps connected
-  harnesses routed after an update (`rashin/backend/agents.go`,
-  `rashin/backend/harnesses.go`).
+  harnesses routed after an update. Rashin's own chat follows suit: choosing its
+  chat agent connects it, and while routed its model picker offers only models
+  that go through Prowl (`rashin/backend/agents.go`,
+  `rashin/backend/harnesses.go`, `rashin/backend/chatbackend.go`).
 - **The Stage Editor is the desktop's edit mode.** Its toolbar frames one
   monitor at a time, names the edited display and cycles displays from its chip,
   while the drawer keeps the active catalogue instead of repeating those tabs.

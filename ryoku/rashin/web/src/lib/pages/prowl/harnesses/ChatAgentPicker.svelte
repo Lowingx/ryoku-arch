@@ -6,16 +6,28 @@
   import Empty from "$lib/ui/Empty.svelte";
   import type { ChatAgentInfo } from "./harnesses";
 
+  interface ChatAgentRouting {
+    active: boolean;
+    pending: boolean;
+    reason?: string;
+  }
+
+  interface ChatAgentSwitchResponse {
+    routing: ChatAgentRouting;
+  }
+
   interface Props {
     agents: ChatAgentInfo[];
     busy?: boolean;
     error?: string;
-    onswitch: (id: string) => void;
+    onswitch: (id: string) => Promise<ChatAgentSwitchResponse | void>;
   }
 
   let { agents, busy = false, error = "", onswitch }: Props = $props();
   let open = $state(false);
   let pending = $state<ChatAgentInfo | null>(null);
+  let routing = $state<ChatAgentRouting | null>(null);
+  let switchedName = $state("");
 
   function choose(agent: ChatAgentInfo) {
     if (!agent.available || agent.active) return;
@@ -23,18 +35,24 @@
     open = true;
   }
 
-  function confirm() {
+  async function confirm() {
     if (!pending) return;
-    onswitch(pending.id);
+    const selected = pending;
+    routing = null;
     open = false;
+    const response = await onswitch(selected.id);
+    if (response?.routing) {
+      switchedName = selected.name;
+      routing = response.routing;
+    }
   }
 </script>
 
-<Card title="Rashin chat agent" gloss="対話" lead="Choose which connected harness answers Rashin's chat lane.">
+<Card title="Rashin chat agent" gloss="対話" lead="Choose which supported harness answers Rashin's chat lane.">
   {#if error}
     <Empty title="Chat agents are unavailable" body={error} />
   {:else if agents.length === 0}
-    <Empty title="No chat harness is connected" body="Connect a supported harness above, then return here to choose it for chat." />
+    <Empty title="No chat harness is available" body="Install a supported ACP harness, then return here to choose it for chat." />
   {:else}
     <div class="plates">
       {#each agents as agent (agent.id)}
@@ -45,6 +63,16 @@
         </button>
       {/each}
     </div>
+    {#if routing}
+      <p class:waiting={routing.pending} class="routing-result" aria-live="polite">
+        {#if routing.active}
+          {switchedName} is routed through Prowl.
+        {:else}
+          {switchedName} is waiting for Prowl. {routing.reason || "Connect a provider before Prowl can route this chat agent."}
+          <a href="#/prowl/providers">Open Providers</a>
+        {/if}
+      </p>
+    {/if}
   {/if}
 </Card>
 
@@ -61,6 +89,9 @@
   .state { min-width: 96px; text-align: right; color: var(--ink-faint); font-size: var(--f-small); }
   .plate.on .state { color: color-mix(in srgb, var(--ink-on-bone) 65%, transparent); }
   .plate:disabled:not(.on) { cursor: default; opacity: 0.5; }
+  .routing-result { margin-top: var(--s3); padding: var(--s3); border: 1px solid var(--line-soft); border-radius: var(--radius); color: var(--ink-dim); font-size: var(--f-small); }
+  .routing-result.waiting { border-color: color-mix(in srgb, var(--alert) 45%, transparent); color: var(--alert); }
+  .routing-result a { margin-left: var(--s2); color: inherit; text-decoration: underline; text-underline-offset: 3px; }
   p { color: var(--ink-dim); }
   strong { color: var(--ink); font-weight: 500; }
   @media (max-width: 560px) { .state { min-width: 0; } }

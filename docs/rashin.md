@@ -491,6 +491,16 @@ at Prowl's authenticated `/v1` gateway and uses the `auto` route. Changing a
 provider or routing set therefore applies to Rashin and every connected harness
 in one place.
 
+Rashin's own chat lanes follow the same rule. Choosing a chat agent connects it
+through Prowl first, and the agent answering chat cannot be disconnected until
+another one takes over. While the agent routes through Prowl, its model picker
+offers only Prowl-routed models: every Claude Code model (its whole endpoint
+points at Prowl), and for Hermes, Oh My Pi and opencode the `prowl` provider's
+models plus the one the session started on. A remembered model from another
+provider is dropped rather than re-applied. Until a provider can serve `auto`,
+the agent stays pending, chat keeps answering on its previous model, and the
+console says why.
+
 Rashin proxies the gateway's management API under `/api/prowl/`, adding the
 machine-local token itself. The browser never receives that token and cannot
 proxy `/v1`. Code requests default to Rashin's source mirror, while the Projects

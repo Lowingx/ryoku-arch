@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -64,6 +65,8 @@ type AcpEvent struct {
 	Models       []ModelInfo
 	CurrentModel string
 	AgentName    string
+	Prowl        string
+	ProwlReason  string
 	Commands     []CommandInfo
 	SessionID    string
 	SessionTitle string
@@ -118,10 +121,14 @@ type acpConn struct {
 	promptImages bool
 	// agentName is the chat backend's display name (Hermes, Oh My Pi, ...), so
 	// the UI can label the session even when the agent advertises no model list.
+	agentID   string
 	agentName string
+	prowl     chatAgentRouting
 	// modelOption is the id of the agent's model config option when it offers
 	// models as ACP configOptions (omp) instead of the legacy models block.
-	modelOption string
+	modelOption  string
+	startedModel string
+	models       []ModelInfo
 
 	// errTail holds the agent's own stderr, bounded. An ACP error like
 	// session/new's bare "Internal error" carries no cause; the agent always
@@ -345,8 +352,56 @@ func configModelState(opts []acpConfigOption) modelState {
 func (c *acpConn) emitModels(st modelState) {
 	c.mu.Lock()
 	c.modelOption = st.option
+	c.models = append(c.models[:0], st.models...)
 	c.mu.Unlock()
-	c.emit(AcpEvent{Type: "models", Models: st.models, CurrentModel: st.current, AgentName: c.agentName})
+	c.emit(c.modelsEvent(st.models, st.current))
+}
+
+func (c *acpConn) modelsEvent(models []ModelInfo, current string) AcpEvent {
+	c.mu.Lock()
+	agentID, agentName := c.agentID, c.agentName
+	routing, started := c.prowl, c.startedModel
+	c.mu.Unlock()
+	visible := models
+	firstHidden := -1
+	for i, model := range models {
+		if !chatModelRouted(agentID, routing.Active, model, started) {
+			firstHidden = i
+			break
+		}
+	}
+	if firstHidden >= 0 {
+		visible = make([]ModelInfo, 0, len(models)-1)
+		visible = append(visible, models[:firstHidden]...)
+		for _, model := range models[firstHidden+1:] {
+			if chatModelRouted(agentID, routing.Active, model, started) {
+				visible = append(visible, model)
+			}
+		}
+	}
+	prowl := ""
+	if routing.Active {
+		prowl = "active"
+	} else if routing.Pending {
+		prowl = "pending"
+	}
+	return AcpEvent{
+		Type: "models", Models: visible, CurrentModel: current, AgentName: agentName,
+		Prowl: prowl, ProwlReason: routing.Reason,
+	}
+}
+
+func (c *acpConn) modelAllowed(id string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	model := ModelInfo{ID: id}
+	for _, candidate := range c.models {
+		if candidate.ID == id {
+			model = candidate
+			break
+		}
+	}
+	return chatModelRouted(c.agentID, c.prowl.Active, model, c.startedModel)
 }
 
 // reconcileModel keeps a fresh session on the remembered model, and remembers
@@ -358,6 +413,10 @@ func (c *acpConn) reconcileModel(st modelState, method string) {
 	}
 	current := st.current
 	saved := savedSessionModel()
+	if saved != "" && !c.modelAllowed(saved) {
+		_ = os.Remove(modelStatePath())
+		saved = ""
+	}
 	avail := func(id string) bool {
 		for _, m := range st.models {
 			if m.ID == id {
@@ -369,7 +428,7 @@ func (c *acpConn) reconcileModel(st modelState, method string) {
 	// A remembered pick that is still on offer: apply it to this fresh session.
 	if method == "session/new" && saved != "" && saved != current && avail(saved) {
 		if err := c.SetModel(saved); err == nil {
-			c.emit(AcpEvent{Type: "models", Models: st.models, CurrentModel: saved, AgentName: c.agentName})
+			c.emit(c.modelsEvent(st.models, saved))
 			return
 		}
 	}
@@ -447,10 +506,11 @@ func (c *acpConn) openSession(method string, params map[string]any) error {
 	if out.SessionID == "" {
 		return errors.New(method + ": no sessionId")
 	}
+	st := out.modelState()
 	c.mu.Lock()
 	c.sessionID = out.SessionID
+	c.startedModel = st.current
 	c.mu.Unlock()
-	st := out.modelState()
 	c.emitModels(st)
 	c.reconcileModel(st, method)
 	return nil
@@ -543,6 +603,9 @@ func stripIdentityPreamble(s string) string {
 // SetModel switches the session's model, through the model config option when
 // the agent exposes one and the legacy session/set_model otherwise.
 func (c *acpConn) SetModel(modelID string) error {
+	if !c.modelAllowed(modelID) {
+		return fmt.Errorf("model %q is not routed through Prowl", modelID)
+	}
 	c.mu.Lock()
 	sid, option := c.sessionID, c.modelOption
 	c.mu.Unlock()
@@ -893,6 +956,9 @@ func startACP(cwd string) (*acpConn, error) {
 	if !ok {
 		return nil, errors.New("no chat agent available; install Hermes (recommended) or a supported ACP agent")
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	routing := chatHarnessRouting(ctx, b.ID)
+	cancel()
 	stamp := hermesConfigStamp()
 	cmd := exec.Command(b.Argv[0], b.Argv[1:]...)
 	cmd.Dir = cwd
@@ -915,7 +981,9 @@ func startACP(cwd string) (*acpConn, error) {
 	c := newACPConn(stdin, stdout, stdin)
 	c.errTail = tail
 	c.configStamp = stamp
+	c.agentID = b.ID
 	c.agentName = b.Name
+	c.prowl = routing
 	go func() { _ = cmd.Wait() }()
 	return c, nil
 }

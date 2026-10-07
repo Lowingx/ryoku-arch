@@ -612,6 +612,33 @@ func HarnessesWithRouting(ctx context.Context) []Harness {
 	return rows
 }
 
+func chatHarnessRouting(ctx context.Context, id string) chatAgentRouting {
+	setup, err := gatewayRouting(ctx)
+	if err != nil {
+		return chatAgentRouting{}
+	}
+	for _, row := range setup.Harnesses {
+		if row.ID != id {
+			continue
+		}
+		if row.Active {
+			return chatAgentRouting{Active: true}
+		}
+		if !row.Injected {
+			return chatAgentRouting{}
+		}
+		reason := row.Note
+		if reason == "" {
+			reason = setup.Reason
+		}
+		if reason == "" {
+			reason = "Prowl has no provider connected; open Prowl > Providers in Rashin"
+		}
+		return chatAgentRouting{Pending: true, Reason: reason}
+	}
+	return chatAgentRouting{}
+}
+
 type harnessRoutePending struct {
 	ID     string `json:"id"`
 	Reason string `json:"reason"`
@@ -657,6 +684,12 @@ func routeConnectedHarnesses(ctx context.Context) harnessRouteResult {
 			result.Pending = append(result.Pending, harnessRoutePending{ID: row.ID, Reason: reason})
 		} else {
 			result.Routed = append(result.Routed, row.ID)
+		}
+	}
+	for _, id := range result.Routed {
+		if chatAgentInUse(id, cfg) {
+			resetChatLanes(cfg)
+			break
 		}
 	}
 	return result

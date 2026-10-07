@@ -55,6 +55,8 @@ func TestMain(m *testing.M) {
 		testGatewaySpawns.Unlock()
 		return nil
 	}
+	// The default daemon port is the user's live Rashin; no test may post to it.
+	notifyDaemonChatAgent = func(int, string) {}
 
 	code := m.Run()
 	_ = os.RemoveAll(root)

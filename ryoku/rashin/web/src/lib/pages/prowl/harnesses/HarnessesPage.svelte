@@ -30,11 +30,7 @@
   let switching = $state(false);
 
   const harnesses = $derived(mergeHarnesses(ledger, setup?.harnesses ?? []));
-  const connectedIds = $derived(new Set(harnesses.filter((row) => row.rashinWired || row.injected).map((row) => row.id)));
-  const pickerAgents = $derived(chatAgents.map((agent) => ({
-    ...agent,
-    available: agent.available && connectedIds.has(agent.id),
-  })));
+  const pickerAgents = $derived(chatAgents);
   const installed = $derived(harnesses.filter((row) => row.installed).length);
   const active = $derived(harnesses.filter((row) => row.active).length);
   const pending = $derived(harnesses.filter((row) => row.pending).length);
@@ -174,8 +170,12 @@
     switching = true;
     chatError = "";
     try {
-      await api.setChatAgent(id);
-      chatAgents = await api.chatAgents() as unknown as ChatAgentInfo[];
+      const result = await api.setChatAgent(id) as unknown as {
+        agents: ChatAgentInfo[];
+        routing: { active: boolean; pending: boolean; reason?: string };
+      };
+      chatAgents = result.agents;
+      return result;
     } catch (reason) {
       chatError = reason instanceof Error
         ? `${reason.message} Keep the harness connected, then retry.`
@@ -242,7 +242,7 @@
         <Empty title="No supported harnesses found" body="Install a supported coding harness, then reload this page to connect it." />
       {/if}
 
-      <ChatAgentPicker agents={pickerAgents} busy={switching} error={chatError} onswitch={(id) => void switchAgent(id)} />
+      <ChatAgentPicker agents={pickerAgents} busy={switching} error={chatError} onswitch={switchAgent} />
     </div>
   {/if}
 </Page>

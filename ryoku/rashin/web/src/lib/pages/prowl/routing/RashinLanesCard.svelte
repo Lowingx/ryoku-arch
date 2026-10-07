@@ -25,6 +25,7 @@
     hint: model.id,
   })));
   const chatModel = $derived(chat.state.models.find((model) => model.id === chat.state.currentModel));
+  const chatProwlPending = $derived(chat.state.prowl === "pending");
 </script>
 
 <Card title="Rashin lanes" gloss="羅針" lead="Choose how short asks and the running chat session reach a model.">
@@ -55,11 +56,19 @@
           <span class="t-label">Chat lane</span>
           <h3>{chatModel?.name || chat.state.currentModel || "Agent default"}</h3>
         </div>
-        <Chip tone={chat.connected ? "line" : "quiet"}>{chat.connected ? "Connected" : "Connecting"}</Chip>
+        <Chip tone={chatProwlPending ? "alert" : chat.connected ? "line" : "quiet"}>
+          {chatProwlPending ? "Waiting on Prowl" : chat.connected ? "Connected" : "Connecting"}
+        </Chip>
       </header>
-      {#if chatOptions.length === 0}
+      {#if chatProwlPending}
+        <p class="prowl-waiting">
+          Chat is waiting for Prowl. {chat.state.prowlReason || "Connect a provider before Prowl can route the active chat agent."}
+          <a href="#/prowl/providers">Open Providers</a>
+        </p>
+      {/if}
+      {#if chatOptions.length === 0 && !chatProwlPending}
         <Empty title="Waiting for chat models" body="Open Chat or wait for the active agent to finish starting." />
-      {:else}
+      {:else if chatOptions.length > 0}
         <p>{chatModel?.description || "This choice belongs to the running chat agent session."}</p>
         <dl>
           <div><dt>Agent</dt><dd>{chat.state.agent || "Starting"}</dd></div>
@@ -85,6 +94,8 @@
   header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s3); }
   h3 { margin-top: var(--s1); overflow: hidden; color: var(--ink); font-family: var(--display); font-size: 24px; font-weight: 400; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
   .lane > p { min-height: 42px; margin-top: var(--s2); color: var(--ink-mute); font-size: var(--f-small); line-height: 1.5; }
+  .lane > .prowl-waiting { min-height: 0; padding: var(--s3); border: 1px solid color-mix(in srgb, var(--alert) 45%, transparent); border-radius: var(--radius); color: var(--alert); }
+  .prowl-waiting a { margin-left: var(--s2); color: inherit; text-decoration: underline; text-underline-offset: 3px; }
   dl { display: grid; gap: var(--s2); margin: var(--s4) 0; padding-top: var(--s3); border-top: 1px solid var(--line-soft); }
   dl div { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: var(--s3); }
   dt { color: var(--ink-faint); font-size: var(--f-small); }
