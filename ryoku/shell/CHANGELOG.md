@@ -511,6 +511,11 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **Nomarchy draws again on Qt 6.12.** Qt 6.12 added its own `Color` type to
+  QtQuick, and it hides the bar style's theme colours, so the bar, menus and
+  panels came up blank. Nomarchy's files now import QtQuick 6.11, which keeps
+  the new name out of reach (`quickshell/shell/Commons/`, `quickshell/shell/Ui/`,
+  `quickshell/shell/modules/bar/barstyles/nomarchy/`).
 - **New cut-out models install on machines upgraded from the old depth
   tool.** Ryostage adopts the earlier `depth` environment by moving it, which
   left its `pip` pointing at the old folder, so every model download failed
