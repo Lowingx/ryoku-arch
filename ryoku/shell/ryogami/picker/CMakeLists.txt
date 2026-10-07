@@ -46,6 +46,15 @@ foreach(qml_file IN LISTS picker_qml)
     endif()
 endforeach()
 
+# Qt 6.12's qmlcachegen segfaults recording lookup signatures for its new AOT
+# validation code (PlaylistBrowsePopover.qml trips it whenever the system QML
+# path is on the import list, as Arch's cmake puts it). Skip that code: the
+# module compiles the way it did on 6.11. Older Qt has no such keyword.
+set(picker_qml_module_options)
+if(Qt6_VERSION VERSION_GREATER_EQUAL 6.12)
+    list(APPEND picker_qml_module_options NO_GENERATE_AOT_VALIDATION)
+endif()
+
 qt_add_qml_module(ryogami-picker
     URI Ryoku.Ryogami
     VERSION 1.0
@@ -53,6 +62,7 @@ qt_add_qml_module(ryogami-picker
     SOURCES ${picker_sources}
     QML_FILES ${picker_qml}
     RESOURCES ${picker_fonts} ${picker_brand}
+    ${picker_qml_module_options}
 )
 
 # qmltyperegistrar includes the QML_ELEMENT headers by bare name.
