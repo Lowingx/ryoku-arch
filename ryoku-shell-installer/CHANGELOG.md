@@ -3,6 +3,17 @@
 ## Unreleased
 
 ### Added
+- **Browser and login-shell choices now carry through the whole conversion.**
+  The plan starts with Firefox, Chromium and Zen plus Fish, Zsh and Bash
+  single-choice rows. The same picks work under `--yes` through `--browser`,
+  `--shell`, `RYOKU_BROWSER` and `RYOKU_LOGIN_SHELL`. The package transaction
+  keeps only the selected stacks, Zen forces its AUR build, the account shell
+  and browser defaults follow the picks, and omitted packages are recorded so
+  later health checks do not add them back.
+- **The installer now looks like Ryoku.** Every screen uses the warm dark
+  terminal palette, paper-and-ink contrast, quiet hairlines and one vermilion
+  力 seal instead of the old generic card and status-colour treatment. The plan
+  and live install views stay bounded at the 80 x 24 minimum terminal size.
 - **The unstable script installs onto the unstable channel.**
   `RYOKU_SHELL_REF=unstable-dev` now points `[ryoku]` at the testing channel
   its payload is built against (any other ref stays on stable) and records the
