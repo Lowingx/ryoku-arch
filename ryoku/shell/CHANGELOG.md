@@ -3,6 +3,15 @@
 ## Unreleased
 
 ### Added
+- **The mouse remapper knows more mice and plays macros.** A built-in catalogue
+  names popular Logitech, Razer, SteelSeries, Corsair, Glorious and Zowie mice
+  and labels their buttons; any other mouse still works with generic labels.
+  MMO side grids (Razer Naga, Corsair Scimitar) and keys a mouse sends through
+  its second, keyboard-class interface now show up as that mouse's buttons, and
+  the full button range is bindable. A button can run a timed sequence of key
+  taps, holds and delays with repeat and cancel-on-release, recorded or built in
+  Hub > Input > Mouse (`ipc/mousemap.go`, `ipc/mousemacro.go`,
+  `ipc/mousecatalog.json`).
 - **Depth and Parallax offer five cut-out models.** Besides U2Net Portable and
   BiRefNet General Lite, the Stage Editor's model picker lists Silueta (small
   and fast), BiRefNet General (best edges and hair) and BiRefNet Portrait
