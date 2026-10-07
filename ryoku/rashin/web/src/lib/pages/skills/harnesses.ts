@@ -11,6 +11,7 @@ export interface Skill extends SkillLike {
 export interface HarnessRouting {
   supported: boolean;
   injected: boolean;
+  connected: boolean;
   active: boolean;
   pending: boolean;
   note?: string;

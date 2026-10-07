@@ -18,7 +18,7 @@
 
   let { harness, routable, busy = "", onconnect, ondisconnect, onroute, onskills }: Props = $props();
   let disconnectOpen = $state(false);
-  const connected = $derived(harness.rashinWired || harness.injected);
+  const connected = $derived(harness.connected || harness.active);
   const stateTone = $derived(harness.state === "active" ? "plate" : harness.state === "unsupported" ? "quiet" : harness.state === "pending" ? "alert" : "line");
   const skillLabel = $derived.by(() => {
     switch (harness.skills) {

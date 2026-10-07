@@ -228,3 +228,20 @@ func TestProwlSkillClients(t *testing.T) {
 		t.Fatalf("opencode should be absent without its config home: %v", got)
 	}
 }
+
+func TestProwlHarnessConfigSetKeepsStableUniqueOrder(t *testing.T) {
+	cfg := Config{ProwlHarnesses: []string{"claude", "codex"}}
+	if cfg.AddProwlHarness("claude") {
+		t.Fatal("duplicate connection changed the set")
+	}
+	if !cfg.AddProwlHarness("omp") {
+		t.Fatal("new connection was not added")
+	}
+	if !cfg.RemoveProwlHarness("codex") || cfg.RemoveProwlHarness("missing") {
+		t.Fatal("connection removal reported the wrong result")
+	}
+	got := strings.Join(cfg.ProwlHarnesses, ",")
+	if got != "claude,omp" {
+		t.Fatalf("connected harness order = %q", got)
+	}
+}

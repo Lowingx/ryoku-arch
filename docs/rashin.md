@@ -490,6 +490,9 @@ connections, and portable skills. Every harness connected through Rashin points
 at Prowl's authenticated `/v1` gateway and uses the `auto` route. Changing a
 provider or routing set therefore applies to Rashin and every connected harness
 in one place.
+Detected harnesses keep their own models until you connect them:
+`ryoku-rashin wire` and updates re-route only harnesses you connected, and
+Disconnect is never undone by a later update.
 
 Rashin's own chat lanes follow the same rule. Choosing a chat agent connects it
 through Prowl first, and the agent answering chat cannot be disconnected until

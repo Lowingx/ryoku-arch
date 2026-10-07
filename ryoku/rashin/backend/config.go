@@ -20,7 +20,8 @@ type Config struct {
 	// ChatAgent selects which agent drives the Super+S chat's interactive
 	// session. Empty means the recommended default (hermes). Only agents with
 	// an ACP adapter present can drive it; see chatBackends.
-	ChatAgent string `json:"chatAgent,omitempty"`
+	ChatAgent      string   `json:"chatAgent,omitempty"`
+	ProwlHarnesses []string `json:"prowlHarnesses,omitempty"`
 	// Approvals is how the chat agent's tool calls are approved: "read-only"
 	// (the default when empty) runs calls that only read the machine without
 	// asking and asks for everything else; "ask" asks for every call the agent
@@ -36,6 +37,52 @@ type Config struct {
 	Habits struct {
 		History *bool `json:"history,omitempty"`
 	} `json:"habits,omitzero"`
+}
+
+func (c Config) HasProwlHarness(id string) bool {
+	id = strings.TrimSpace(id)
+	for _, connected := range c.ProwlHarnesses {
+		if connected == id {
+			return true
+		}
+	}
+	return false
+}
+
+func (c *Config) AddProwlHarness(id string) bool {
+	id = strings.TrimSpace(id)
+	if id == "" || c.HasProwlHarness(id) {
+		return false
+	}
+	c.ProwlHarnesses = append(c.ProwlHarnesses, id)
+	return true
+}
+
+func (c *Config) RemoveProwlHarness(id string) bool {
+	id = strings.TrimSpace(id)
+	for i, connected := range c.ProwlHarnesses {
+		if connected != id {
+			continue
+		}
+		copy(c.ProwlHarnesses[i:], c.ProwlHarnesses[i+1:])
+		c.ProwlHarnesses = c.ProwlHarnesses[:len(c.ProwlHarnesses)-1]
+		if len(c.ProwlHarnesses) == 0 {
+			c.ProwlHarnesses = nil
+		}
+		return true
+	}
+	return false
+}
+
+func (c *Config) normalizeProwlHarnesses() {
+	connected := c.ProwlHarnesses
+	c.ProwlHarnesses = connected[:0]
+	for _, id := range connected {
+		c.AddProwlHarness(id)
+	}
+	if len(c.ProwlHarnesses) == 0 {
+		c.ProwlHarnesses = nil
+	}
 }
 
 // HabitsHistoryEnabled: fish-history mining is opt-out.
@@ -125,6 +172,7 @@ func LoadConfig() Config {
 	} else {
 		c.Quick.Route = strings.ToLower(strings.TrimSpace(c.Quick.Route))
 	}
+	c.normalizeProwlHarnesses()
 	return c
 }
 
@@ -134,6 +182,7 @@ func SaveConfig(c Config) error {
 	} else {
 		c.Quick.Route = strings.ToLower(strings.TrimSpace(c.Quick.Route))
 	}
+	c.normalizeProwlHarnesses()
 	p := ConfigPath()
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 		return err

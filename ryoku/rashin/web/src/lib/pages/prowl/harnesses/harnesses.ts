@@ -18,6 +18,7 @@ export interface MergedHarness {
   rashinWired: boolean;
   routingSupported: boolean;
   injected: boolean;
+  connected: boolean;
   active: boolean;
   pending: boolean;
   state: HarnessConnectionState;
@@ -32,13 +33,12 @@ export interface MergedHarness {
 
 export function connectionState(input: {
   supported: boolean;
-  injected: boolean;
+  connected: boolean;
   active: boolean;
-  pending?: boolean;
 }): HarnessConnectionState {
   if (!input.supported) return "unsupported";
   if (input.active) return "active";
-  if (input.pending || input.injected) return "pending";
+  if (input.connected) return "pending";
   return "not-connected";
 }
 
@@ -52,10 +52,10 @@ export function mergeHarnesses(ledger: Harness[], setup: HarnessRow[]): MergedHa
     const remote = setupById.get(id);
     const routingSupported = id !== "gemini" && (local ? local.routing.supported : Boolean(remote));
     const injected = Boolean(remote?.injected || local?.routing.injected);
-    // A live active reading wins because pending is derived from injection state.
+    const connected = Boolean(local?.routing.connected);
     const active = Boolean(remote?.active || local?.routing.active);
-    const pending = !active && Boolean(local?.routing.pending || injected);
-    const state = connectionState({ supported: routingSupported, injected, active, pending });
+    const pending = connected && !active;
+    const state = connectionState({ supported: routingSupported, connected, active });
     return {
       id,
       name: local?.name || remote?.name || id,
@@ -63,6 +63,7 @@ export function mergeHarnesses(ledger: Harness[], setup: HarnessRow[]): MergedHa
       rashinWired: Boolean(local?.wired),
       routingSupported,
       injected,
+      connected,
       active,
       pending,
       state,

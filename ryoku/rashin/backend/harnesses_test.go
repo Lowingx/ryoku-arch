@@ -236,6 +236,9 @@ func TestConnectHarnessKeepsWirePendingWhenProwlIsNotRoutable(t *testing.T) {
 	if !fileHasBlock(filepath.Join(home, ".claude", "CLAUDE.md")) {
 		t.Fatal("Rashin pointer was not wired")
 	}
+	if !LoadConfig().HasProwlHarness("claude") {
+		t.Fatal("pending harness was not recorded as connected")
+	}
 }
 
 func TestDisconnectHarnessDeletesProwlInjection(t *testing.T) {
@@ -246,14 +249,26 @@ func TestDisconnectHarnessDeletesProwlInjection(t *testing.T) {
 	if err := Wire("codex"); err != nil {
 		t.Fatal(err)
 	}
+	cfg := LoadConfig()
+	cfg.AddProwlHarness("codex")
+	if err := SaveConfig(cfg); err != nil {
+		t.Fatal(err)
+	}
 	deleted := false
+	activated := false
 	quickGateway(t, func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodDelete && r.URL.Path == "/api/setup/harnesses/codex" {
+		switch {
+		case r.Method == http.MethodDelete && r.URL.Path == "/api/setup/harnesses/codex":
 			deleted = true
 			fmt.Fprint(w, `{}`)
-			return
+		case r.Method == http.MethodGet && r.URL.Path == "/api/setup/harnesses":
+			fmt.Fprint(w, `{"routable":true,"harnesses":[{"id":"codex","injected":false,"active":false,"skills":"current"}]}`)
+		case r.Method == http.MethodPost && r.URL.Path == "/api/setup/harnesses/codex":
+			activated = true
+			fmt.Fprint(w, `{"harness":{"active":true}}`)
+		default:
+			http.NotFound(w, r)
 		}
-		http.NotFound(w, r)
 	})
 	if err := disconnectHarness(context.Background(), "codex"); err != nil {
 		t.Fatal(err)
@@ -261,12 +276,46 @@ func TestDisconnectHarnessDeletesProwlInjection(t *testing.T) {
 	if !deleted {
 		t.Fatal("Prowl injection was not deleted")
 	}
+	if LoadConfig().HasProwlHarness("codex") {
+		t.Fatal("disconnected harness remained in the connected set")
+	}
 	if fileHasBlock(filepath.Join(home, ".codex", "AGENTS.md")) {
 		t.Fatal("Rashin pointer remained after disconnect")
 	}
+	routeConnectedHarnesses(context.Background())
+	if activated {
+		t.Fatal("a later routing pass reconnected the disconnected harness")
+	}
 }
 
-func TestRouteConnectedHarnessesOnlyActivatesConnectedRows(t *testing.T) {
+func TestDisconnectHarnessKeepsConnectionWhenGatewayDeleteFails(t *testing.T) {
+	home := quickTestEnv(t)
+	if err := os.MkdirAll(filepath.Join(home, ".codex"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := Wire("codex"); err != nil {
+		t.Fatal(err)
+	}
+	cfg := LoadConfig()
+	cfg.AddProwlHarness("codex")
+	if err := SaveConfig(cfg); err != nil {
+		t.Fatal(err)
+	}
+	quickGateway(t, func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, `{"error":{"type":"internal","message":"delete failed"}}`, http.StatusInternalServerError)
+	})
+	if err := disconnectHarness(context.Background(), "codex"); err == nil {
+		t.Fatal("failed gateway delete must fail disconnect")
+	}
+	if !LoadConfig().HasProwlHarness("codex") {
+		t.Fatal("failed disconnect removed the connected harness")
+	}
+	if !fileHasBlock(filepath.Join(home, ".codex", "AGENTS.md")) {
+		t.Fatal("failed disconnect removed the Rashin pointer")
+	}
+}
+
+func TestRouteConnectedHarnessesOnlyActivatesRecordedConnections(t *testing.T) {
 	home := quickTestEnv(t)
 	for _, dir := range []string{".claude", ".codex"} {
 		if err := os.MkdirAll(filepath.Join(home, dir), 0o755); err != nil {
@@ -276,7 +325,11 @@ func TestRouteConnectedHarnessesOnlyActivatesConnectedRows(t *testing.T) {
 	if err := Wire("claude"); err != nil {
 		t.Fatal(err)
 	}
-	resetHarnessScan()
+	cfg := LoadConfig()
+	cfg.ProwlHarnesses = []string{"codex"}
+	if err := SaveConfig(cfg); err != nil {
+		t.Fatal(err)
+	}
 	var activated []string
 	quickGateway(t, func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -285,18 +338,111 @@ func TestRouteConnectedHarnessesOnlyActivatesConnectedRows(t *testing.T) {
 		case r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/api/setup/harnesses/"):
 			activated = append(activated, strings.TrimPrefix(r.URL.Path, "/api/setup/harnesses/"))
 			fmt.Fprint(w, `{"harness":{"active":true}}`)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+	result := routeConnectedHarnesses(context.Background())
+	if len(activated) != 1 || activated[0] != "codex" {
+		t.Fatalf("activated = %v, want only recorded codex connection", activated)
+	}
+	if len(result.Routed) != 1 || result.Routed[0] != "codex" || len(result.Pending) != 0 {
+		t.Fatalf("result = %+v", result)
+	}
+}
+
+func TestWireAllDoesNotRouteDetectedHarness(t *testing.T) {
+	home := quickTestEnv(t)
+	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	activated := false
+	quickGateway(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/api/setup/harnesses":
+			fmt.Fprint(w, `{"routable":true,"harnesses":[{"id":"claude","injected":true,"active":false,"skills":"current"}]}`)
+		case r.Method == http.MethodPost && r.URL.Path == "/api/setup/harnesses/claude":
+			activated = true
+			fmt.Fprint(w, `{"harness":{"active":true}}`)
 		case r.Method == http.MethodPost && r.URL.Path == "/api/setup/skills":
 			fmt.Fprint(w, `{}`)
 		default:
 			http.NotFound(w, r)
 		}
 	})
-	result := routeConnectedHarnesses(context.Background())
-	if len(activated) != 1 || activated[0] != "claude" {
-		t.Fatalf("activated = %v", activated)
+	WireAll()
+	if activated {
+		t.Fatal("WireAll routed a detected harness the user never connected")
 	}
-	if len(result.Routed) != 1 || result.Routed[0] != "claude" || len(result.Pending) != 0 {
-		t.Fatalf("result = %+v", result)
+}
+
+func TestRouteConnectedHarnessesRecordsActiveChatAgent(t *testing.T) {
+	home := quickTestEnv(t)
+	// The chat agent is the one actually answering, so only the claude ACP
+	// adapter may resolve: a real hermes on the developer's PATH would win.
+	bin := filepath.Join(home, "bin")
+	if err := os.MkdirAll(bin, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(bin, "claude-code-acp"), []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", bin)
+	cfg := LoadConfig()
+	cfg.ChatAgent = "claude"
+	if err := SaveConfig(cfg); err != nil {
+		t.Fatal(err)
+	}
+	activated := false
+	quickGateway(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/api/setup/harnesses":
+			fmt.Fprint(w, `{"routable":true,"harnesses":[{"id":"claude","injected":false,"active":false,"skills":"current"}]}`)
+		case r.Method == http.MethodPost && r.URL.Path == "/api/setup/harnesses/claude":
+			activated = true
+			fmt.Fprint(w, `{"harness":{"injected":true,"active":true}}`)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+	result := routeConnectedHarnesses(context.Background())
+	if !activated || len(result.Routed) != 1 || result.Routed[0] != "claude" {
+		t.Fatalf("active chat agent was not routed: activated=%v result=%+v", activated, result)
+	}
+	if !LoadConfig().HasProwlHarness("claude") {
+		t.Fatal("routed chat agent was not recorded as connected")
+	}
+}
+
+func TestHarnessRoutingConnectionFlags(t *testing.T) {
+	home := quickTestEnv(t)
+	for _, dir := range []string{".claude", ".codex", ".omp"} {
+		if err := os.MkdirAll(filepath.Join(home, dir), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	cfg := LoadConfig()
+	cfg.ProwlHarnesses = []string{"claude"}
+	if err := SaveConfig(cfg); err != nil {
+		t.Fatal(err)
+	}
+	resetHarnessScan()
+	quickGateway(t, func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"routable":false,"reason":"no provider","harnesses":[{"id":"claude","injected":true,"active":false,"skills":"current"},{"id":"codex","injected":true,"active":true,"skills":"current"},{"id":"omp","injected":true,"active":false,"skills":"current"}]}`)
+	})
+	rows := HarnessesWithRouting(context.Background())
+	byID := make(map[string]Harness, len(rows))
+	for _, row := range rows {
+		byID[row.ID] = row
+	}
+	if got := byID["claude"].Routing; !got.Connected || !got.Pending || got.Active {
+		t.Fatalf("connected pending routing = %+v", got)
+	}
+	if got := byID["codex"].Routing; got.Connected || got.Pending || !got.Active {
+		t.Fatalf("manually active routing = %+v", got)
+	}
+	if got := byID["omp"].Routing; got.Connected || got.Pending || got.Active {
+		t.Fatalf("injected-only routing = %+v", got)
 	}
 }
 

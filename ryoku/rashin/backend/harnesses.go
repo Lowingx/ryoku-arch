@@ -24,6 +24,7 @@ import (
 type HarnessRouting struct {
 	Supported bool   `json:"supported"`
 	Injected  bool   `json:"injected"`
+	Connected bool   `json:"connected"`
 	Active    bool   `json:"active"`
 	Pending   bool   `json:"pending"`
 	Note      string `json:"note,omitempty"`
@@ -585,7 +586,11 @@ func HarnessesWithRouting(ctx context.Context) []Harness {
 	for _, row := range setup.Harnesses {
 		byID[row.ID] = row
 	}
+	cfg := LoadConfig()
+	chatID := activeChatAgentID(cfg)
 	for i := range rows {
+		rows[i].Routing.Connected = cfg.HasProwlHarness(rows[i].ID) || rows[i].ID == chatID
+		rows[i].Routing.Pending = rows[i].Routing.Connected
 		if rows[i].ID == "gemini" {
 			rows[i].Routing.Note = geminiRoutingReason
 			continue
@@ -603,7 +608,7 @@ func HarnessesWithRouting(ctx context.Context) []Harness {
 		}
 		rows[i].Routing.Injected = remote.Injected
 		rows[i].Routing.Active = remote.Active
-		rows[i].Routing.Pending = remote.Injected && !remote.Active
+		rows[i].Routing.Pending = rows[i].Routing.Connected && !remote.Active
 		rows[i].Routing.Note = remote.Note
 		if rows[i].Routing.Pending && rows[i].Routing.Note == "" {
 			rows[i].Routing.Note = setup.Reason
@@ -660,31 +665,37 @@ func routeConnectedHarnesses(ctx context.Context) harnessRouteResult {
 		remote[row.ID] = row
 	}
 	cfg := LoadConfig()
-	hermes := HermesStatus()
-	for _, row := range HarnessesNow() {
-		if row.ID == "gemini" {
-			continue
+	chatID := activeChatAgentID(cfg)
+	route := func(id string) {
+		if id == "" || id == "gemini" {
+			return
 		}
-		prowlRow, ok := remote[row.ID]
+		prowlRow, ok := remote[id]
 		if !ok || prowlRow.Active {
-			continue
+			return
 		}
-		connected := row.Wired
-		if row.ID == "hermes" {
-			hermesSelected := cfg.ChatAgent == "" || cfg.ChatAgent == "hermes"
-			connected = prowlRow.Injected && hermesSelected && hermes.Installed
-		}
-		if !connected {
-			continue
-		}
-		pending, reason, routeErr := routeProwlHarness(ctx, row.ID)
+		pending, reason, routeErr := routeProwlHarness(ctx, id)
 		if routeErr != nil {
-			result.Pending = append(result.Pending, harnessRoutePending{ID: row.ID, Reason: routeErr.Error()})
-		} else if pending {
-			result.Pending = append(result.Pending, harnessRoutePending{ID: row.ID, Reason: reason})
-		} else {
-			result.Routed = append(result.Routed, row.ID)
+			result.Pending = append(result.Pending, harnessRoutePending{ID: id, Reason: routeErr.Error()})
+			return
 		}
+		if id == chatID && cfg.AddProwlHarness(id) {
+			if saveErr := SaveConfig(cfg); saveErr != nil {
+				result.Pending = append(result.Pending, harnessRoutePending{ID: id, Reason: saveErr.Error()})
+				return
+			}
+		}
+		if pending {
+			result.Pending = append(result.Pending, harnessRoutePending{ID: id, Reason: reason})
+		} else {
+			result.Routed = append(result.Routed, id)
+		}
+	}
+	for _, id := range cfg.ProwlHarnesses {
+		route(id)
+	}
+	if !cfg.HasProwlHarness(chatID) {
+		route(chatID)
 	}
 	for _, id := range result.Routed {
 		if chatAgentInUse(id, cfg) {

@@ -26,10 +26,11 @@
   Code, Codex, opencode or Oh My Pi wires the Ryoku pointer and skills and makes
   Prowl's `auto` route that harness's default model; Disconnect restores the
   model it had. With no provider that can serve `auto`, the harness waits as
-  pending and routes once one connects, and `ryoku-rashin wire` keeps connected
-  harnesses routed after an update. Rashin's own chat follows suit: choosing its
-  chat agent connects it, and while routed its model picker offers only models
-  that go through Prowl (`rashin/backend/agents.go`,
+  pending and routes once one connects. Detected harnesses keep their own models:
+  `ryoku-rashin wire` and updates re-route only harnesses you connected, so
+  Disconnect is never undone by a later update. Rashin's own chat follows suit:
+  choosing its chat agent connects it. While routed, its model picker offers only
+  models that go through Prowl (`rashin/backend/agents.go`,
   `rashin/backend/harnesses.go`, `rashin/backend/chatbackend.go`).
 - **The Stage Editor is the desktop's edit mode.** Its toolbar frames one
   monitor at a time, names the edited display and cycles displays from its chip,

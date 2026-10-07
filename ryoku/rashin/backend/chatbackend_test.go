@@ -100,8 +100,8 @@ func TestSetChatAgentConnectsAndPersistsPendingChoice(t *testing.T) {
 	if !routing.Pending || routing.Active || routing.Reason != "no provider" || !activated["claude"] {
 		t.Fatalf("claude routing = %+v, activated=%v", routing, activated["claude"])
 	}
-	if got := LoadConfig().ChatAgent; got != "claude" {
-		t.Fatalf("chatAgent = %q, want claude", got)
+	if cfg := LoadConfig(); cfg.ChatAgent != "claude" || !cfg.HasProwlHarness("claude") {
+		t.Fatalf("config after selecting claude = %+v", cfg)
 	}
 	routing, err = setChatAgent(context.Background(), "auto")
 	if err != nil {
@@ -110,8 +110,8 @@ func TestSetChatAgentConnectsAndPersistsPendingChoice(t *testing.T) {
 	if !routing.Pending || !activated["hermes"] {
 		t.Fatalf("Hermes routing = %+v, activated=%v", routing, activated["hermes"])
 	}
-	if got := LoadConfig().ChatAgent; got != "" {
-		t.Fatalf("auto should clear chatAgent, got %q", got)
+	if cfg := LoadConfig(); cfg.ChatAgent != "" || !cfg.HasProwlHarness("claude") || !cfg.HasProwlHarness("hermes") {
+		t.Fatalf("config after selecting auto = %+v", cfg)
 	}
 	request := httptest.NewRequest(http.MethodPost, "/api/chat/agent?id=claude", nil)
 	response := httptest.NewRecorder()
@@ -149,6 +149,9 @@ func TestSetChatAgentDoesNotSaveGatewayFailure(t *testing.T) {
 	}
 	if got := LoadConfig().ChatAgent; got != "" {
 		t.Fatalf("chatAgent = %q after failed activation", got)
+	}
+	if LoadConfig().HasProwlHarness("claude") {
+		t.Fatal("failed activation recorded the harness as connected")
 	}
 }
 

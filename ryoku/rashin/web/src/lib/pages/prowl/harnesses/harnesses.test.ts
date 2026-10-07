@@ -11,7 +11,7 @@ function ledger(overrides: Partial<Harness> = {}): Harness {
     wired: true,
     skillCount: 3,
     sessions: 2,
-    routing: { supported: true, injected: true, active: true, pending: false },
+    routing: { supported: true, injected: true, connected: true, active: true, pending: false },
     ...overrides,
   };
 }
@@ -31,13 +31,13 @@ function setup(overrides: Partial<HarnessRow> = {}): HarnessRow {
 
 describe("connectionState", () => {
   it("covers not connected, pending, and active transitions", () => {
-    expect(connectionState({ supported: true, injected: false, active: false })).toBe("not-connected");
-    expect(connectionState({ supported: true, injected: true, active: false })).toBe("pending");
-    expect(connectionState({ supported: true, injected: true, active: true })).toBe("active");
+    expect(connectionState({ supported: true, connected: false, active: false })).toBe("not-connected");
+    expect(connectionState({ supported: true, connected: true, active: false })).toBe("pending");
+    expect(connectionState({ supported: true, connected: false, active: true })).toBe("active");
   });
 
   it("keeps unsupported harnesses out of the routing state machine", () => {
-    expect(connectionState({ supported: false, injected: true, active: true })).toBe("unsupported");
+    expect(connectionState({ supported: false, connected: true, active: true })).toBe("unsupported");
   });
 });
 
@@ -65,7 +65,7 @@ describe("mergeHarnesses", () => {
 
   it("retains rows present in only one source", () => {
     const merged = mergeHarnesses(
-      [ledger({ id: "gemini", name: "Gemini CLI", wired: false, routing: { supported: false, injected: false, active: false, pending: false, note: "No compatible endpoint" } })],
+      [ledger({ id: "gemini", name: "Gemini CLI", wired: false, routing: { supported: false, injected: false, connected: false, active: false, pending: false, note: "No compatible endpoint" } })],
       [setup({ id: "omp", name: "OMP", detected: false, injected: false, active: false, files: [], skills: "install" })],
     );
 
@@ -76,9 +76,17 @@ describe("mergeHarnesses", () => {
 
   it("uses active routing evidence from either source", () => {
     const [merged] = mergeHarnesses(
-      [ledger({ routing: { supported: true, injected: true, active: false, pending: true } })],
+      [ledger({ routing: { supported: true, injected: true, connected: true, active: false, pending: true } })],
       [setup({ active: true })],
     );
     expect(merged).toMatchObject({ active: true, pending: false, state: "active" });
+  });
+
+  it("does not treat provider injection as a Rashin connection", () => {
+    const [merged] = mergeHarnesses(
+      [ledger({ wired: true, routing: { supported: true, injected: true, connected: false, active: false, pending: false } })],
+      [setup({ injected: true, active: false })],
+    );
+    expect(merged).toMatchObject({ injected: true, connected: false, pending: false, state: "not-connected" });
   });
 });
