@@ -51,21 +51,24 @@ Singleton {
     // python: the serpantinum bar style's own settings namespace (shell.json
     // "python"), read and written by the style's own Config mirror.
     property alias python: adapter.python
+    property alias nomarchy: adapter.nomarchy
+
 
     // A folder style may draw its own notification banners and its own volume/
-    // brightness OSD (serpantinum's Python does, like Nacre before it). While it
-    // is active and does not opt out under its own `general` map, the shell's
+    // brightness OSD. While it is active and does not opt out, the shell's
     // resident banners and OSD windows hold back so exactly one of each paints.
-    readonly property bool styleOwnsBanners: barStyle === "python"
-        && !(root.python && root.python.general && root.python.general.notifications === false)
-    readonly property bool styleOwnsFeedback: barStyle === "python"
-        && !(root.python && root.python.general && root.python.general.osd === false)
+    readonly property bool styleOwnsBanners: (barStyle === "python"
+        && !(root.python && root.python.general && root.python.general.notifications === false))
+        || (barStyle === "nomarchy"
+        && !(root.nomarchy && root.nomarchy.notifications === false))
+    readonly property bool styleOwnsFeedback: (barStyle === "python"
+        && !(root.python && root.python.general && root.python.general.osd === false))
+        || (barStyle === "nomarchy"
+        && !(root.nomarchy && root.nomarchy.osd === false))
 
-    // dock: the first-class app dock surface (modules/dock). A top-level store,
-    // not a bar-style key, because the dock is now style-agnostic -- neither qsbar
-    // nor Sumi owns it. Off until the user turns it on (Hub -> Bar Studio -> Dock).
-    // Read and written through the services Dock singleton so every consumer goes
-    // through one place.
+    // dock: the universal app dock store. It is top-level because design,
+    // placement and pins survive bar-style and dock-design changes. Stage
+    // Editor writes it through the Dock singleton; every renderer reads it.
     property alias dock: adapter.dock
 
     // clipboard: geometry and corner treatment for the bottom-centred history
@@ -262,6 +265,10 @@ Singleton {
             property var qsbar: ({})
             property var kairos: ({})
             property var python: ({})
+            property var nomarchy: ({
+                "notifications": true,
+                "osd": true
+            })
             property var dock: ({
                 "enabled": false,
                 "edge": "auto",

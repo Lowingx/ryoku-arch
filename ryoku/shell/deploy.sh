@@ -323,6 +323,10 @@ say "installed $bindir/ryogami"
 
 # The picker entry the daemon spawns; the unit rewrite points RYOGAMI_SHELL_QML here.
 datadir="${XDG_DATA_HOME:-$HOME/.local/share}"
+nomarchy_source="$datadir/ryoku/nomarchy-package"
+rm -rf "$nomarchy_source"
+mkdir -p "$nomarchy_source"
+cp -a "$here/nomarchy/." "$nomarchy_source/"
 install -Dm644 "$here/ryogami/picker/shell.qml" "$datadir/ryogami/shell.qml"
 say "installed ryogami picker entry -> $datadir/ryogami/shell.qml"
 # The retired wall-ui picker ran from its own tree; the daemon restart below keeps

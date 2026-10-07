@@ -3,6 +3,18 @@
 ## Unreleased
 
 ### Added
+- **Nomarchy: Omarchy's shell as a Ryoku bar style.** Pick Nomarchy in Bar
+  Studio or the welcome tour and the Omarchy (quattro) bar runs on Ryoku, on
+  both Hyprland and niri: its panels, menu, emoji picker, reminders, Agents
+  usage, notifications and OSD. Ryoku keeps its own launcher, wallpaper,
+  clipboard, lock, idle, night light, polkit, capture, updates, Super+Esc and
+  every keybind. Omarchy plugins install as published, with
+  `omarchy plugin add <repo> --enable` into `~/.config/omarchy/plugins`; the
+  `omarchy` commands are linked only while Nomarchy is the active style, and a
+  plugin that needs Hyprland is refused on niri with the reason. Colours follow
+  the wallpaper or any of Omarchy's 22 themes
+  (`quickshell/shell/modules/bar/barstyles/nomarchy/`, `nomarchy/`,
+  `ipc/nomarchy.go`).
 - **Choose what Super+Esc shows.** Ryoku Hub > Controls draws a miniature of
   the panel: drag its blocks into the order you want, hide whole blocks, and
   pick the parts inside them (the live graph, each vital, each connection tile,
