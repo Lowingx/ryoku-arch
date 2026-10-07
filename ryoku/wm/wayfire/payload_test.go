@@ -1,0 +1,72 @@
+package main
+
+import (
+	"os"
+	"strings"
+	"testing"
+)
+
+// The shipped baseline is the first compose layer and the one file the
+// package owns outright. Three mistakes hurt here: a section whose plugin is
+// not in core.plugins (a bind that silently never fires, which is how the
+// development rig shipped for weeks), a plugin missing that the store's rows
+// or the act verbs dial (caps that lie), and leftovers from that rig riding
+// along into users' sessions. This reads the repo's payload, the exact bytes
+// the package installs, and pins all three.
+func TestShippedBaselineIsHonest(t *testing.T) {
+	raw, err := os.ReadFile("../../wayfire/wayfire.ini")
+	if err != nil {
+		t.Fatalf("read the shipped baseline: %v", err)
+	}
+	doc := parseIni(raw)
+	if len(doc.sections) == 0 {
+		t.Fatal("the shipped baseline parses to nothing")
+	}
+
+	loaded := map[string]bool{}
+	plugins, _ := doc.get("core", "plugins")
+	for _, p := range strings.Fields(plugins) {
+		loaded[p] = true
+	}
+	if len(loaded) == 0 {
+		t.Fatal("core.plugins lists no plugins")
+	}
+
+	for _, sec := range doc.sections {
+		if sec.name == "core" || strings.HasPrefix(sec.name, "output:") {
+			continue
+		}
+		if !loaded[sec.name] {
+			t.Errorf("section [%s] has no plugin in core.plugins", sec.name)
+		}
+	}
+
+	// What the rest of the desktop dials: the store's sections and gestures,
+	// the caps, and the act verbs each need their plugin already loaded.
+	for _, want := range []string{
+		"animate", "autostart", "command", "decoration", "depthdeck",
+		"ipc", "ipc-rules", "vswipe", "window-rules", "wm-actions",
+	} {
+		if !loaded[want] {
+			t.Errorf("core.plugins is missing %q", want)
+		}
+	}
+
+	// The rig's leftovers stay out: each of these sections shipped while its
+	// plugin was off, so their binds did nothing, and the depth deck's knobs
+	// belong to the store rather than to two copies of the same defaults.
+	for _, dead := range []string{
+		"alpha", "cube", "depthdeck", "expo", "fast-switcher", "fisheye",
+		"invert", "oswitch", "switcher", "wayfire-shell", "wrot",
+	} {
+		for _, sec := range doc.sections {
+			if sec.name == dead {
+				t.Errorf("section [%s] belongs to a plugin this baseline does not run", dead)
+			}
+		}
+	}
+
+	if term, _ := doc.get("command", "command_terminal"); term != "kitty" {
+		t.Errorf("command_terminal = %q, want the ryoku terminal kitty", term)
+	}
+}
