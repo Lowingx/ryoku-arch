@@ -23,6 +23,10 @@
   steps, so a stuck stable install can be finished on unstable.
 
 ### Fixed
+- **NVIDIA conversion now defaults on when nouveau currently drives the card.**
+  The hardware script keeps nouveau available unless the proprietary module is
+  built successfully, then replaces it after reboot. Unsigned Secure Boot
+  installs remain held off.
 - **The install no longer hangs at 9/15 "Wiring the login session".** A
   power-policy cutover left behind by the desktop package could keep holding
   the lock screen's locks, and `install-qylock` then waited on them forever with

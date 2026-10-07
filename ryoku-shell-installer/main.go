@@ -137,7 +137,7 @@ func buildItems(f *facts, p *plan) []planItem {
 	if f.hasNvidia {
 		d := i18n.T("installs the proprietary driver, blacklists nouveau, rebuilds the initramfs")
 		if f.nouveauLive {
-			d = i18n.T("you are on nouveau right now; switching needs a reboot to take effect")
+			d = i18n.T("the proprietary driver replaces nouveau after a reboot")
 		}
 		locked := false
 		switch {
