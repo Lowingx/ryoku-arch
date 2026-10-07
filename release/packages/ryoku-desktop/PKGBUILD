@@ -759,6 +759,13 @@ EOF
   install -Dm644 "$_repo/system/boot/mkinitcpio/install/ryoku-gpu-trim" \
     "$pkgdir/usr/lib/initcpio/install/ryoku-gpu-trim"
 
+  # The install hook gives Plymouth /etc/vconsole.conf, and the runtime hook
+  # applies Num Lock before unlock, so keys follow the user's console layout.
+  install -Dm644 "$_repo/system/boot/mkinitcpio/install/ryoku-console-keys" \
+    "$pkgdir/usr/lib/initcpio/install/ryoku-console-keys"
+  install -Dm644 "$_repo/system/boot/mkinitcpio/hooks/ryoku-console-keys" \
+    "$pkgdir/usr/lib/initcpio/hooks/ryoku-console-keys"
+
   # The boot look, shipped so `ryoku update` refreshes it on every box, not just
   # fresh installs; the ryoku-desktop scriptlet then runs ryoku-boot-apply.
   install -d "$pkgdir/usr/share/plymouth/themes/ryoku"

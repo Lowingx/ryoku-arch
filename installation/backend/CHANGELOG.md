@@ -40,6 +40,10 @@
   naming `RYOKU_ESP_MODE=dedicated` as the way around it (`lib/bootloader.sh`).
 
 ### Fixed
+- **The disk unlock prompt now uses the keyboard layout picked in the installer
+  and starts with Num Lock on.** The `ryoku-console-keys` initramfs hook carries
+  `/etc/vconsole.conf` into the image and enables Num Lock before Plymouth reads
+  the passphrase.
 - **Alongside installation no longer blocks on a nearly full Windows ESP.**
   Auto mode shares an existing ESP only with at least 8 MiB free; otherwise the
   existing 2 GiB Ryoku boot partition becomes a dedicated ESP and Windows' ESP

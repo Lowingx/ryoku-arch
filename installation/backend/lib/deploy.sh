@@ -246,23 +246,42 @@ ryoku_deploy_materialize() {
     || log "materialize: warning, ryoku materialize failed (continuing)"
 }
 
-# the HOOKS drop-in (chroot.sh) names ryoku-gpu-trim, and mkinitcpio aborts on a
-# hook it cannot find, so the file has to be there before the bootloader step
-# builds the images. ryoku-desktop owns it; this only covers the install that
-# never got that set (offline with no baked desktop payload). Seeding a packaged
-# path unowned is deliberate here -- a box with no boot image is worse -- and
-# updater.ryokuOverwriteGlob lets the package adopt the copy later.
+# The HOOKS drop-in (chroot.sh) names these Ryoku hooks, and mkinitcpio aborts
+# on a hook it cannot find, so the files have to be there before the bootloader
+# step builds the images. ryoku-desktop owns them; this only covers an install
+# that never got that set (offline with no baked desktop payload). Seeding a
+# packaged path unowned is deliberate here: a box with no boot image is worse,
+# and updater.ryokuOverwriteGlob lets the package adopt the copies later.
 ryoku_seed_initcpio_hook() {
-  local src="$RYOKU_REPO/system/boot/mkinitcpio/install/ryoku-gpu-trim"
-  local dst=/mnt/usr/lib/initcpio/install/ryoku-gpu-trim
+  local trim_src="$RYOKU_REPO/system/boot/mkinitcpio/install/ryoku-gpu-trim"
+  local trim_dst=/mnt/usr/lib/initcpio/install/ryoku-gpu-trim
+  local kind src dst seeded=
   if [[ -n ${RYOKU_DRYRUN:-} ]]; then
-    printf 'DRYRUN: install -Dm644 %s %s (only when the desktop set did not ship it)\n' "$src" "$dst"
+    printf 'DRYRUN: install -Dm644 %s %s (only when the desktop set did not ship it)\n' "$trim_src" "$trim_dst"
+    for kind in install hooks; do
+      src="$RYOKU_REPO/system/boot/mkinitcpio/$kind/ryoku-console-keys"
+      dst="/mnt/usr/lib/initcpio/$kind/ryoku-console-keys"
+      printf 'DRYRUN: install -Dm644 %s %s (only when the desktop set did not ship it)\n' "$src" "$dst"
+    done
     return 0
   fi
-  [[ -e $dst ]] && return 0            # ryoku-desktop shipped it: leave the owned file
-  [[ -f $src ]] || return 0            # nothing to seed; chroot.sh already dropped the name
-  log 'seeding the ryoku-gpu-trim initramfs hook (the desktop set did not install it)'
-  install -Dm644 "$src" "$dst"
+
+  if [[ ! -e $trim_dst && -f $trim_src ]]; then
+    log 'seeding the ryoku-gpu-trim initramfs hook (the desktop set did not install it)'
+    install -Dm644 "$trim_src" "$trim_dst"
+  fi
+
+  for kind in install hooks; do
+    src="$RYOKU_REPO/system/boot/mkinitcpio/$kind/ryoku-console-keys"
+    dst="/mnt/usr/lib/initcpio/$kind/ryoku-console-keys"
+    if [[ ! -e $dst && -f $src ]]; then
+      if [[ -z $seeded ]]; then
+        log 'seeding the ryoku-console-keys initramfs hook (the desktop set did not install it)'
+        seeded=1
+      fi
+      install -Dm644 "$src" "$dst"
+    fi
+  done
 }
 
 # seed the desktop keyboard layout into the neutral settings store, so the active
