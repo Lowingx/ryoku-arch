@@ -43,6 +43,11 @@ import (
 //
 // CapColumnFill: wayfire's tiling has no full-width column concept.
 //
+// CapLiveConfigEval: the input section carries no focus_follows_mouse for
+// the launcher to suppress and set-config-options is runtime-only with no
+// ipc path back to the file, so gameMode could strip the decorations and
+// never put the user's own back.
+//
 // CapPersistentScreenCapture: untested on a long-lived capturing surface,
 // so it stays denied until a provider test proves the surface survives an
 // output leaving under it.
@@ -54,7 +59,6 @@ var capsManifest = []wm.Capability{
 	wm.CapFocusHistory,
 	wm.CapWindowRules,
 	wm.CapAnimations,
-	wm.CapLiveConfigEval,
 	wm.CapMonitorConfig,
 	wm.CapWindowFloat,
 	wm.CapSessionExit,

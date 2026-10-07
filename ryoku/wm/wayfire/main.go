@@ -38,6 +38,8 @@ func main() {
 		err = runCaps()
 	case "state":
 		err = runState()
+	case "act":
+		err = runAct(os.Args[2:])
 	case "watch":
 		err = runWatch(os.Args[2:])
 	case "-h", "--help", "help":
