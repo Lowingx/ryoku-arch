@@ -14,6 +14,15 @@
   through Prowl (`quickshell/pages/RashinPage.qml`).
 
 ### Fixed
+- **The Add-ons page tells the truth.** Removing a bundle or one of its parts
+  now refreshes the card from the installer's own status once the terminal
+  closes, instead of showing stale counts and dead Remove buttons until you
+  pressed refresh. A failed install, removal, placement or settings write, or a
+  catalogue that cannot be read, shows a small error with Retry and keeps the
+  last good list rather than claiming nothing is installed. The sidebar card
+  placement no longer offers a Right side that never applied: Controls has one
+  host (`quickshell/pages/AddonsPage.qml`,
+  `../shell/quickshell/plugins/ryoku-plugins-place`).
 - **The Updates and Session pages open again.** The Updates page named its
   own parts (the run timeline, the log, the password prompt), but Quickshell
   only writes a type list for directories something imports, and nothing
