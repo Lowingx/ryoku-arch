@@ -89,6 +89,12 @@
   v0.56.0-beta.19") via `ryoku version --pretty` (`config.jsonc`).
 
 ### Fixed
+- `ryovm/`: **Ryoport's OS logos stop going blank.** The catalogue prefetch and
+  the logos on screen could fetch the same OS at once into one temp file, and
+  both tinted it, so the cached SVG carried `fill` twice. That is not valid XML,
+  so the Android, Alpine and similar logos drew nothing for up to two weeks.
+  Each fetch now has its own temp file, the tint is added once, and a logo
+  already broken this way is fetched again (`bin/ryovm`).
 - `ryovm/`: **opening a remote in Ghostty no longer raises the terminal's own
   config error window, and the float rule matches again.** The launches built
   `--class <name>` (kitty's form) and Ghostty wants `--class=<name>`, so it read

@@ -1311,6 +1311,9 @@ cmd_icon() {
 	mkdir -p "$icon_dir"
 	local svg="$icon_dir/$os.svg" png="$icon_dir/$os.png" miss="$icon_dir/$os.miss" f
 	for f in "$svg" "$png"; do
+		# A logo two racing fetches both tinted carries fill twice, which is not
+		# valid XML; it would sit undecodable until the TTL, so fetch it again.
+		[ "$f" = "$svg" ] && grep -q 'fill="#e6dccb" fill=' "$f" 2>/dev/null && rm -f "$f"
 		if [ -s "$f" ]; then
 			local age=$(( ( $(date +%s) - $(stat -c %Y "$f" 2>/dev/null || echo 0) ) / 86400 ))
 			[ "$age" -lt "$icon_ttl_days" ] && { printf '%s\n' "$f"; return 0; }
@@ -1341,24 +1344,26 @@ cmd_icon() {
 		lmde) si="linuxmint" ;;
 		windows|windows-server) si="" ;;   # trademarked; quickemu-icons' badge serves
 	esac
-	if [ -n "$si" ] && curl -fsSL "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/$si.svg" -o "$svg.tmp" 2>/dev/null && [ -s "$svg.tmp" ]; then
-		sed -i 's/<svg /<svg fill="#e6dccb" /' "$svg.tmp"
-		mv "$svg.tmp" "$svg"; rm -f "$png" "$miss"; printf '%s\n' "$svg"; return 0
+	# Prefetch and the on-screen icons can ask for the same OS at once, so each
+	# fetch downloads into its own temp file and the rename is the only shared step.
+	local tmp
+	tmp="$(mktemp "$icon_dir/.$os.XXXXXX")"
+	if [ -n "$si" ] && curl -fsSL "https://raw.githubusercontent.com/simple-icons/simple-icons/develop/icons/$si.svg" -o "$tmp" 2>/dev/null && [ -s "$tmp" ]; then
+		sed -i '/<svg[^>]*fill=/!s/<svg /<svg fill="#e6dccb" /' "$tmp"
+		mv "$tmp" "$svg"; rm -f "$png" "$miss"; printf '%s\n' "$svg"; return 0
 	fi
-	rm -f "$svg.tmp"
 	# fallback: the catalogue's own art URLs (quickemu-icons badges).
-	[ -s "$catalog_cache" ] || { serve_stale || true; return 0; }
+	[ -s "$catalog_cache" ] || { rm -f "$tmp"; serve_stale || true; return 0; }
 	local svgurl pngurl
 	svgurl="$(jq -r --arg os "$os" 'first(.[] | select(.OS==$os) | .SVG) // empty' "$catalog_cache" 2>/dev/null)"
 	pngurl="$(jq -r --arg os "$os" 'first(.[] | select(.OS==$os) | .PNG) // empty' "$catalog_cache" 2>/dev/null)"
-	if [ -n "$svgurl" ] && curl -fsSL "$svgurl" -o "$svg.tmp" 2>/dev/null && [ -s "$svg.tmp" ]; then
-		mv "$svg.tmp" "$svg"; rm -f "$png" "$miss"; printf '%s\n' "$svg"; return 0
+	if [ -n "$svgurl" ] && curl -fsSL "$svgurl" -o "$tmp" 2>/dev/null && [ -s "$tmp" ]; then
+		mv "$tmp" "$svg"; rm -f "$png" "$miss"; printf '%s\n' "$svg"; return 0
 	fi
-	rm -f "$svg.tmp"
-	if [ -n "$pngurl" ] && curl -fsSL "$pngurl" -o "$png.tmp" 2>/dev/null && [ -s "$png.tmp" ]; then
-		mv "$png.tmp" "$png"; rm -f "$miss"; printf '%s\n' "$png"; return 0
+	if [ -n "$pngurl" ] && curl -fsSL "$pngurl" -o "$tmp" 2>/dev/null && [ -s "$tmp" ]; then
+		mv "$tmp" "$png"; rm -f "$miss"; printf '%s\n' "$png"; return 0
 	fi
-	rm -f "$png.tmp"
+	rm -f "$tmp"
 	: > "$miss"            # record the miss so the next launch skips the network
 	serve_stale || true
 }
