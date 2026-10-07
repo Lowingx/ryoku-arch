@@ -86,7 +86,7 @@ var windowRuleActions = []string{
 var compositorPackages = []string{
 	"ryoku-desktop-wayfire",
 	"wayfire",
-	"xwayland",
+	"xorg-xwayland",
 	"xdg-desktop-portal-gnome",
 	"wlsunset",
 }
