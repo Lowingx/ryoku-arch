@@ -111,10 +111,14 @@ EOF
 }
 
 ryoku_cfg_user() {
-  log 'user: %s (wheel,video,input; shell /usr/bin/fish)' "$RYOKU_USERNAME"
+  local login_shell="/usr/bin/$RYOKU_LOGIN_SHELL"
+  if [[ -z ${RYOKU_DRYRUN:-} && ! -x /mnt$login_shell ]]; then
+    die "login shell %s is missing from the target; refusing to create %s with an unusable shell" "$login_shell" "$RYOKU_USERNAME"
+  fi
+  log 'user: %s (wheel,video,input; shell %s)' "$RYOKU_USERNAME" "$login_shell"
   # video -> write panel backlight (with 90-ryoku-backlight.rules); input ->
   # read game controllers / input devices without a per-login logind grant.
-  run arch-chroot /mnt useradd -m -G wheel,video,input -s /usr/bin/fish "$RYOKU_USERNAME"
+  run arch-chroot /mnt useradd -m -G wheel,video,input -s "$login_shell" "$RYOKU_USERNAME"
   # same password on the user + root, so sudo (wheel) and su both work
   # with what the installer collected. hashes go in on stdin (chpasswd -e
   # reads name:hash) and never hit the logs.

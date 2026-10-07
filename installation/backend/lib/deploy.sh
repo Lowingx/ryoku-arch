@@ -27,8 +27,8 @@ ryoku_deploy() {
   ryoku_deploy_chown "$u"        # the store seed creates ~/.config as root; hand
                                  # it to the user before materialize writes in it
   ryoku_deploy_materialize "$u"  # `ryoku materialize` as the user
-  ryoku_seed_provisioned "$u"    # tell the doctor the dropped apps are the user's call
-  ryoku_deploy_seed "$h"         # unpackaged: brand, wallpapers, ~/.npmrc
+  ryoku_seed_provisioned "$u"    # tell the doctor every dropped package is intentional
+  ryoku_deploy_seed "$h"         # unpackaged assets and first-login rice marker
   ryoku_deploy_chown "$u"        # own root-seeded files before the user steps
   ryoku_deploy_qylock            # qylock writes user files as the now-owning user
 }
@@ -292,20 +292,25 @@ ryoku_seed_keymap() {
   log 'seeded keyboard layout into the store: %s%s' "$xkbl" "${xkbv:+ ($xkbv)}"
 }
 
-# seed the user-data nothing else owns: brand assets + wallpapers (shell
-# reads them from $HOME), ~/.npmrc prefix. from the repo payload; missing
-# sources are fine.
+# seed the user data nothing else owns: brand assets, wallpapers, ~/.npmrc, and
+# the one-shot first-login marker. Missing payload sources are fine.
 ryoku_deploy_seed() {
-  local h=$1
+  local h=$1 u=$RYOKU_USERNAME
+  local state="/home/$u/.local/state/ryoku"
+  local marker="/mnt$state/default-rice-pending"
   log 'seeding brand assets, wallpapers, decor art, and ~/.npmrc into %s' "$h"
   deploy_dir "$RYOKU_REPO/ryoku/assets/brand" "$h/.local/share/ryoku/assets/brand"
-  # ship a wallpaper set so a fresh install has something to pick from;
-  # ryoku-shell picks one at random on first start.
+  # The first session applies one shipped rice and chooses a wallpaper from this
+  # set. The marker is user-owned before that session starts.
   deploy_dir "$RYOKU_REPO/ryoku/assets/wallpapers" "$h/Pictures/Wallpapers"
-  # the decor art the Decor/Placard components render, beside Wallpapers and
-  # livewalls so a user can see and swap it. `ryoku doctor` keeps it current.
   deploy_dir "$RYOKU_REPO/ryoku/assets/ryodecors" "$h/Pictures/ryodecors"
   deploy_file "$RYOKU_REPO/ryoku/apps/npm/npmrc" "$h/.npmrc"
+  run arch-chroot /mnt install -d -o "$u" -g "$u" \
+    "/home/$u/.local" "/home/$u/.local/state" "$state"
+  write_file "$marker" <<'EOF'
+default
+EOF
+  run arch-chroot /mnt chown "$u:$u" "$state/default-rice-pending"
 }
 
 # seed_provisioned: the installer's drop list is recorded in the doctor's
@@ -330,8 +335,9 @@ ryoku_seed_provisioned() {
   for p in ${RYOKU_DROP_PACKAGES//,/ }; do
     [[ " ${seen[*]-} " == *" $p "* ]] && continue
     printf '%s\n' "$p" >>"$ledger"
+    seen+=("$p")
   done
-  log 'recorded the dropped apps in the provisioning ledger (ryoku doctor will not reinstall them)'
+  log 'recorded the dropped packages in the provisioning ledger (ryoku doctor will not reinstall them)'
 }
 
 # qylock: install the lockscreen bundle + the SDDM clockwork theme. not yet

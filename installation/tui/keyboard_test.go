@@ -82,6 +82,9 @@ func TestStepsOmitKeyboardOnPreset(t *testing.T) {
 	if len(s) != full-1 {
 		t.Errorf("with preset, step count = %d, want %d (one fewer)", len(s), full-1)
 	}
+	if b, sh := flowIndex(s, "browser"), flowIndex(s, "login-shell"); b < 0 || sh != b+1 {
+		t.Errorf("keyboard relaunch changed product-step order: browser=%d login-shell=%d", b, sh)
+	}
 }
 
 // A Belgian keyboard (be-latin1) must float the Belgian locales to the top of the

@@ -1102,19 +1102,25 @@ func (m model) installEnv() []string {
 	comp := m.picks["compositor"]
 	env = append(env, "RYOKU_COMPOSITOR="+comp, "RYOKU_COMPOSITOR_CONFIG_DIR="+wm.ConfigDir(comp),
 		"RYOKU_COMPOSITOR_GPU_PIN="+wm.GpuPinFile(comp))
-	// The browser and app choices reach the backend as one drop list: every
-	// package the picker removed, plus the two browsers that lost. The backend
-	// filters these out of the pacstrap/AUR sets, skips them in the desktop
-	// seed, and points the desktop's browser role at RYOKU_BROWSER.
-	br := def(m.picks["browser"], "zen")
+	// Product choices reach the backend as one drop list: every package removed
+	// in Apps & tools, the two browsers that lost, and the two unchosen shell
+	// stacks. The backend filters this list from every package source and records
+	// it in the provisioning ledger.
+	br := def(m.picks["browser"], "firefox")
+	brPkg := br
+	if br == "zen" {
+		brPkg = "zen-browser-bin"
+	}
+	sh := def(m.picks["login-shell"], "fish")
 	var drop []string
 	drop = append(drop, deselectedPkgs(m.selectedApps())...)
-	for _, b := range browserPackages() {
-		if b != br && !(br == "zen" && b == "zen-browser-bin") {
-			drop = append(drop, b)
+	for _, pkg := range browserPackages() {
+		if pkg != brPkg {
+			drop = append(drop, pkg)
 		}
 	}
-	env = append(env, "RYOKU_BROWSER="+br)
+	drop = append(drop, loginShellDropPackages(sh)...)
+	env = append(env, "RYOKU_BROWSER="+br, "RYOKU_LOGIN_SHELL="+sh)
 	if len(drop) > 0 {
 		env = append(env, "RYOKU_DROP_PACKAGES="+strings.Join(drop, ","))
 	}
