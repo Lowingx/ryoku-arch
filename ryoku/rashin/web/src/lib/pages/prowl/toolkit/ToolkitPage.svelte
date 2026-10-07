@@ -44,9 +44,9 @@
 
 <Page title="Toolkit" gloss="道具" lead="The Prowl command crib, ready to copy into a terminal.">
   <div class="toolkit-grid">
-    {#if copyError}<p class="copy-error wide" role="alert">{copyError}</p>{/if}
+    {#if copyError}<p class="copy-error" role="alert">{copyError}</p>{/if}
 
-    <Card title="How Prowl indexes" gloss="索引" class="wide explainer">
+    <Card title="How Prowl indexes" gloss="索引">
       <div class="pipeline" aria-label="Prowl indexing pipeline">
         <span>tree-sitter</span><i aria-hidden="true"></i>
         <span>SQLite FTS5</span><i aria-hidden="true"></i>
@@ -62,7 +62,7 @@
       </p>
     </Card>
 
-    <Card title="Command crib" gloss="早見" class="wide" pad={false}>
+    <Card title="Command crib" gloss="早見" pad={false}>
       <div class="command-table" role="table" aria-label="Prowl commands">
         <div class="command-head" role="row">
           <span role="columnheader">Function</span>
@@ -89,7 +89,6 @@
 
 <style>
   .toolkit-grid { display: grid; grid-template-columns: 1fr; gap: var(--s4); align-content: start; }
-  .wide { width: 100%; }
   .copy-error { color: var(--alert); padding: var(--s2) var(--s3); border-left: 1px solid var(--alert); }
   .explainer-copy { max-width: var(--measure); color: var(--ink-dim); line-height: 1.6; }
   .pipeline { display: grid; grid-template-columns: auto minmax(18px, 1fr) auto minmax(18px, 1fr) auto minmax(18px, 1fr) auto minmax(18px, 1fr) auto; align-items: center; gap: var(--s2); margin-bottom: var(--s4); }
@@ -107,7 +106,7 @@
   .command-row code { overflow-wrap: anywhere; color: var(--ink-dim); font-size: var(--f-small); }
   .command-description { color: var(--ink-mute); font-size: var(--f-small); }
 
-  @media (max-width: 900px) {
+  @media (max-width: 1160px) {
     .pipeline { grid-template-columns: 1fr; align-items: stretch; }
     .pipeline i { width: 1px; height: 14px; margin-left: var(--s5); }
     .pipeline i::after { right: -2px; top: auto; bottom: 0; transform: rotate(135deg); }

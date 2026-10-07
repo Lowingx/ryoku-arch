@@ -331,7 +331,7 @@
 
 <style>
   .overview-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s4); align-content: start; }
-  .wide { grid-column: 1 / -1; }
+  .overview-grid > :global(.wide) { grid-column: 1 / -1; }
   .notice { display: flex; align-items: center; gap: var(--s3); min-height: 44px; padding: var(--s2) var(--s3); border: 1px solid var(--line); border-radius: var(--radius); color: var(--ink-dim); }
   .notice span:nth-child(2) { flex: 1; }
   .notice.starting { border-style: dashed; }
@@ -372,7 +372,6 @@
 
   @media (max-width: 1100px) {
     .overview-grid { grid-template-columns: 1fr; }
-    .wide { grid-column: auto; }
     .traffic { grid-template-columns: repeat(3, minmax(90px, 1fr)); }
     .trace-row { grid-template-columns: 54px minmax(64px, .5fr) 24px minmax(72px, .6fr) 18px minmax(100px, 1fr) 58px; }
     .trace-latency { display: none; }

@@ -714,7 +714,7 @@
       {#if notice}<div class="wide notice-block"><Lamp state="ok" /><span>{notice}</span><Button size="sm" variant="quiet" onclick={() => (notice = "")}>Dismiss</Button></div>{/if}
       {#if actionError}<p class="wide action-error" role="alert">{actionError}</p>{/if}
 
-      <Card title="Connected" gloss="接続" lead={`${groups.connected.length} provider${groups.connected.length === 1 ? "" : "s"} currently hold a credential or browser login.`} class="wide" pad={false}>
+      <Card title="Connected" gloss="接続" lead={`${groups.connected.length} provider${groups.connected.length === 1 ? "" : "s"} currently hold a credential or browser login.`} pad={false}>
         {#if groups.connected.length === 0}
           <div class="card-pad"><Empty title="No providers connected" body="Choose a provider from the directory below. Keyless providers can start without an API key." /></div>
         {:else}
@@ -786,7 +786,7 @@
         onsignin={(platform) => void startSignIn(platform)}
       />
 
-      <Card title="Provider directory" gloss="一覧" lead="Free tiers lead the list. Search by provider, modality, or setup note." class="wide">
+      <Card title="Provider directory" gloss="一覧" lead="Free tiers lead the list. Search by provider, modality, or setup note.">
         <div class="directory-tools">
           <Field label="Search providers" type="search" bind:value={query} placeholder="Provider, modality, or note" />
           <div class="filter-chips" aria-label="Filter provider directory">

@@ -92,6 +92,7 @@
   .lane { min-width: 0; }
   .lane + .lane { padding-left: var(--s5); border-left: 1px solid var(--line-soft); }
   header { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s3); }
+  header > div { min-width: 0; }
   h3 { margin-top: var(--s1); overflow: hidden; color: var(--ink); font-family: var(--display); font-size: 24px; font-weight: 400; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
   .lane > p { min-height: 42px; margin-top: var(--s2); color: var(--ink-mute); font-size: var(--f-small); line-height: 1.5; }
   .lane > .prowl-waiting { min-height: 0; padding: var(--s3); border: 1px solid color-mix(in srgb, var(--alert) 45%, transparent); border-radius: var(--radius); color: var(--alert); }
@@ -100,7 +101,7 @@
   dl div { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: var(--s3); }
   dt { color: var(--ink-faint); font-size: var(--f-small); }
   dd { margin: 0; overflow: hidden; color: var(--ink-dim); font-family: var(--mono); font-size: var(--f-micro); text-overflow: ellipsis; white-space: nowrap; }
-  @media (max-width: 900px) {
+  @media (max-width: 1100px) {
     .lanes { grid-template-columns: 1fr; }
     .lane + .lane { padding: var(--s5) 0 0; border-left: 0; border-top: 1px solid var(--line-soft); }
   }

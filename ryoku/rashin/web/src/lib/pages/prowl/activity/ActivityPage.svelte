@@ -211,7 +211,7 @@
   .notice-inline { color: var(--ink-dim); font-size: var(--f-small); }
   .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(110px, 1fr)); gap: var(--s5); }
   .kpi small { color: var(--ink-faint); font-size: var(--f-small); }
-  .rollups { display: grid; grid-template-columns: minmax(280px, .7fr) minmax(440px, 1.3fr); gap: var(--s4); align-items: start; }
+  .rollups { display: grid; grid-template-columns: minmax(440px, .7fr) minmax(670px, 1.3fr); gap: var(--s4); align-items: start; }
   .table-wrap { overflow-x: auto; }
   .models { min-width: 620px; }
   .route { max-width: 260px; }
@@ -219,6 +219,7 @@
   .route strong { color: var(--ink); font-weight: 500; text-transform: capitalize; }
   .route span { margin-top: 2px; color: var(--ink-mute); font-family: var(--mono); font-size: var(--f-tiny); }
   .dialog-copy { color: var(--ink-dim); max-width: var(--measure); }
-  @media (max-width: 1050px) { .summary-grid { grid-template-columns: repeat(2, minmax(110px, 1fr)); } .rollups { grid-template-columns: 1fr; } }
+  @media (max-width: 1500px) { .rollups { grid-template-columns: 1fr; } }
+  @media (max-width: 1050px) { .summary-grid { grid-template-columns: repeat(2, minmax(110px, 1fr)); } }
   @media (max-width: 620px) { .summary-grid { grid-template-columns: 1fr 1fr; gap: var(--s4); } }
 </style>

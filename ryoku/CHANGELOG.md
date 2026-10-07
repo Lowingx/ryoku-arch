@@ -196,6 +196,15 @@
   `hub/quickshell/schema/DesktopScenePage.js`, `shell/ipc/control.go`).
 
 ### Fixed
+- **The Prowl pages fit their window.** Overview's traffic and live-route cards
+  span the page again instead of squeezing into half of it, where numbers ran
+  past the card edge and left a tall empty card. Activity stacks its platform
+  and model tables while they would be cut off, and the Toolkit and Rashin-lanes
+  cards switch to their compact layout before they overflow
+  (`rashin/web/src/lib/pages/prowl/`).
+- **Console card headings keep their kanji gloss beside the title.** Long
+  descriptions no longer let the gloss drift into the middle of the card
+  (`rashin/web/src/lib/ui/Card.svelte`).
 - **Visualizers drag like every other widget in the Stage Editor.** The frame
   owns the move, so the look follows the pointer one to one, snaps to the same
   guides, moves in a group, nudges with the arrows, and writes
