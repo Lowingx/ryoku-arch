@@ -453,6 +453,16 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **The wallpaper picker's download browser no longer tears into shards.**
+  Switching between Wallhaven, MoeWalls, MotionBGs and YouTube while results
+  loaded could draw the new card count from the previous frame's buffer; on
+  GPUs that do not clear fresh memory (most NVIDIA cards) that came out as
+  giant textured triangles and a shredded header. The card renderer now draws
+  only what it uploaded that frame, clears every offscreen target before it is
+  sampled, drops the old provider's transitions on a reset, keys thumbnails by
+  provider, and clamps layout values. `RYOGAMI_POISON_GPU=1` fills new GPU
+  memory with garbage so this class of bug shows on any GPU
+  (`ryogami/picker/src/render/cardrendernode.cpp`, `src/scene/cardfield.cpp`).
 - **The Stage Editor's toolbar and catalogue answer clicks on Hyprland.** While
   the editor was open the desktop held the keyboard exclusively, and Hyprland
   hands a surface holding that grab every click too, so only the desktop's own

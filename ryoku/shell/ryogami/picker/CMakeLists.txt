@@ -15,6 +15,8 @@ qt_standard_project_setup(REQUIRES 6.6)
 file(GLOB_RECURSE picker_sources CONFIGURE_DEPENDS
     RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
     src/*.cpp src/*.h)
+set(picker_test_source "src/tests/cardinstancesanitize_test.cpp")
+list(REMOVE_ITEM picker_sources "${picker_test_source}")
 file(GLOB_RECURSE picker_qml CONFIGURE_DEPENDS
     RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}"
     qml/*.qml qml/*.js)
@@ -59,6 +61,16 @@ target_include_directories(ryogami-picker PRIVATE ${picker_source_dirs})
 
 # QRhi sits behind the GuiPrivate include path; only its exported classes are used.
 target_link_libraries(ryogami-picker PRIVATE Qt6::Quick Qt6::Multimedia Qt6::GuiPrivate)
+
+option(RYOGAMI_PICKER_TESTS "Build Ryogami picker CPU invariant tests" OFF)
+if(RYOGAMI_PICKER_TESTS)
+    enable_testing()
+    add_executable(ryogami-cardinstancesanitize-test
+        "${picker_test_source}"
+        src/render/cardinstancesanitize.cpp)
+    target_include_directories(ryogami-cardinstancesanitize-test PRIVATE src/render)
+    add_test(NAME ryogami-cardinstancesanitize COMMAND ryogami-cardinstancesanitize-test)
+endif()
 
 # Relocatable: the plugin finds its backing library through an $ORIGIN rpath.
 set_target_properties(ryogami-picker ryogami-pickerplugin PROPERTIES
