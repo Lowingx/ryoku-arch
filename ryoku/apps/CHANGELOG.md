@@ -3,6 +3,23 @@
 ## Unreleased
 
 ### Added
+- `ryostore/`: **Ryostore looks like the Hub and shows products properly.** The
+  store moves to the Hub's rail, page head and action bar, with Discover,
+  categories, search and Library in the rail. An opened product leads with its
+  media: screenshots are decoded at the size they are shown, never stretched
+  or cropped, GIFs and animated WebP play only while visible and focused, video
+  previews play muted, and the lightbox switches between Fit and 100% with
+  panning. Products with a newer version show UPDATE, and a preview that is
+  missing or fails falls back to the product's initials instead of an endless
+  placeholder (`ryostore/quickshell/ProductDetail.qml`,
+  `ryostore/quickshell/ProductMedia.qml`).
+- `ryostore/`: **The Omarchy plugin market, inside Ryostore.** While Nomarchy is
+  the bar style, an Omarchy plugins category lists the plugins.omarchy.org
+  catalogue (cached, with Popular, New and Verified orders and search), shows
+  each plugin's preview, licence, repository and verification state with an
+  unsandboxed-code warning, and installs, updates, enables or removes through
+  the `omarchy` CLI. A plugin the running compositor cannot host is refused
+  with the reason (`ryostore/backend/provider_omarchy_plugins.go`).
 - `ryovm/`: **Ryoport reads as a fleet dashboard.** The Dashboard puts local
   VMs and remotes in one resource list with a fleet summary strip, and the
   selected machine gets CPU, memory, disk and network graphs that show the

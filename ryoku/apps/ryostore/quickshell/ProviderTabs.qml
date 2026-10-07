@@ -2,8 +2,8 @@ import QtQuick
 import Ryoku.Ui
 import Ryoku.Ui.Singletons
 
-// A subtab strip under the app bar. Themes uses it to browse colour schemes per
-// provider; the Decor tab uses it to switch between its picture catalogues.
+// A subtab strip under the page head. Themes uses it to browse colour schemes
+// per provider; the Decor category switches between its picture catalogues.
 // Entries are plain names, or {key, label} pairs when the label and the value
 // differ. The leading All plate and the trailing plate are optional, so a strip
 // can be just its entries.

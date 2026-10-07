@@ -17,6 +17,19 @@ Item {
     property bool reducedMotion: false
     property real artworkReveal: 1
 
+    function safeAccent(value) {
+        const raw = String(value || "").trim().toLowerCase();
+        if (/^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/.test(raw))
+            return Qt.color(raw);
+        if (raw !== "") {
+            var hash = 0;
+            for (var i = 0; i < raw.length; i++)
+                hash = ((hash << 5) - hash + raw.charCodeAt(i)) | 0;
+            return Qt.hsla(Math.abs(hash % 360) / 360, 0.52, 0.42, 1);
+        }
+        return Tokens.sun;
+    }
+
     signal installRequested(var item)
     signal detailsRequested(var item)
     signal settingsRequested(var item)
@@ -32,26 +45,29 @@ Item {
     readonly property string secondaryLabel: StoreLogic.secondaryAction(actionItem)
     readonly property bool hasActionItem: item !== null && item !== undefined
     readonly property color stageSurface: displayItem.surface || Tokens.paper
+    readonly property color stageAccent: safeAccent(displayItem.accent)
     readonly property var coverItem: ({
         id: displayItem.id,
         name: displayItem.name || displayItem.id,
         art: displayItem.art || "",
+        artRaw: displayItem.artRaw || "",
         category: displayItem.category,
         categoryName: displayItem.categoryName,
         accent: displayItem.accent,
         surface: displayItem.surface,
-        installed: displayItem.installed,
-        active: displayItem.active,
-        enabled: displayItem.enabled,
-        installedCount: displayItem.installedCount,
-        totalCount: displayItem.totalCount,
-        updateAvailable: displayItem.updateAvailable
+        installed: actionItem.installed,
+        active: actionItem.active,
+        enabled: actionItem.enabled,
+        installedCount: actionItem.installedCount,
+        totalCount: actionItem.totalCount,
+        updateAvailable: actionItem.updateAvailable
     })
 
     clip: true
 
     function triggerInstall() {
-        if (hasActionItem && StoreLogic.primaryAction(actionItem) !== "INSTALLED" && busyKey === "" && !StoreLogic.isDownloadPaused(actionItem))
+        if (hasActionItem && StoreLogic.primaryAction(actionItem) !== "INSTALLED" && busyKey === ""
+                && !StoreLogic.isDownloadPaused(actionItem) && !StoreLogic.isUnavailable(actionItem))
             installRequested(actionItem);
     }
 
@@ -157,9 +173,8 @@ Item {
             orientation: Gradient.Horizontal
             GradientStop {
                 position: 0
-                color: Qt.rgba((stage.displayItem.accent ? Qt.color(stage.displayItem.accent) : Tokens.sun).r,
-                               (stage.displayItem.accent ? Qt.color(stage.displayItem.accent) : Tokens.sun).g,
-                               (stage.displayItem.accent ? Qt.color(stage.displayItem.accent) : Tokens.sun).b, 0.16)
+                color: Qt.rgba(stage.stageAccent.r, stage.stageAccent.g,
+                               stage.stageAccent.b, 0.16)
             }
             GradientStop { position: 0.5; color: "#00000000" }
             GradientStop { position: 1; color: "#00000000" }
@@ -225,7 +240,7 @@ Item {
 
         StatusReadout {
             objectName: "ryostore-stage-status"
-            item: stage.displayItem
+            item: stage.actionItem
             busyKey: stage.busyKey
             installStage: stage.installStage
             installErrorKey: stage.installErrorKey
@@ -263,7 +278,8 @@ Item {
             elide: Text.ElideRight
         }
 
-        Row {
+        Flow {
+            width: parent.width
             spacing: Tokens.s2
 
             Btn {
@@ -274,6 +290,7 @@ Item {
                         && StoreLogic.primaryAction(stage.actionItem) !== "INSTALLED"
                         && stage.busyKey === ""
                         && !StoreLogic.isDownloadPaused(stage.actionItem)
+                        && !StoreLogic.isUnavailable(stage.actionItem)
                 Accessible.role: Accessible.Button
                 Accessible.name: text
                 onAct: stage.triggerInstall()
