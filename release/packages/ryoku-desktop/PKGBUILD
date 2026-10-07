@@ -513,6 +513,11 @@ EOF
   install -d "$pkgdir/usr/share/ryoku/ryodecors"
   cp -a "$_repo/ryoku/assets/ryodecors/." "$pkgdir/usr/share/ryoku/ryodecors/"
 
+  # packaged rices are immutable source looks; the Hub copies one into the
+  # user's rice library on first apply so later edits stay user-owned.
+  install -d "$pkgdir/usr/share/ryoku/rices"
+  cp -a "$_repo/ryoku/assets/rices/." "$pkgdir/usr/share/ryoku/rices/"
+
   # cp -a kept source mode bits; normalize so hypr/scripts stays executable
   # and the rest is world-readable data.
   chmod -R u=rwX,go=rX "$pkgdir/usr/share/ryoku"

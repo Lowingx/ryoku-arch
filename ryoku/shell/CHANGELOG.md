@@ -9,6 +9,13 @@
   essential shortcuts into useful actions. It follows the wallpaper palette,
   respects reduced motion and low-power mode, and fits smaller screens
   (`quickshell/welcome/`).
+- **New installs land on Ryoku's default rice.** On the first login after a
+  fresh install, the session intro applies the packaged default look (QS Bar
+  with the shipped settings, matched on both compositors), picks a random
+  wallpaper from the seeded set, and only then opens the welcome. A failed
+  apply keeps the installer's marker and retries on the next login; existing
+  accounts never carry the marker and are untouched
+  (`scripts/ryoku-session-intro`).
 - **Clipboard history supports keyboard selection.** The up and down arrows
   move through the entries and Enter copies the selected one and closes the
   panel, so the history is usable without reaching for the mouse
@@ -767,11 +774,6 @@
 - **The old wall-ui picker.** Replaced by the new picker; its day/night
   rotation lives on as two schedule rules, migrated automatically
   (`ryogami/wall-ui/`).
-- **The QS Bar settings rail ends at its routes.** The footer block under the
-  Community route (the Search hint, the QS BAR / QUICK SETTINGS switch, the
-  OPEN THE HUB link and the RYOKU barcode) is gone. Ctrl+K still opens search,
-  and the brand logo keeps opening QS Bar Settings
-  (`quickshell/shell/modules/bar/barstyles/qsbar/controlcenter/CcRail.qml`).
 - **The QS Bar settings rail ends at its routes.** The footer block under the
   Community route (the Search hint, the QS BAR / QUICK SETTINGS switch, the
   OPEN THE HUB link and the RYOKU barcode) is gone. Ctrl+K still opens search,

@@ -1,6 +1,13 @@
 # Changelog: ryoku/hub/
 
+## Unreleased
+
 ### Changed
+- **Rices can ship with Ryoku.** The picker merges packaged looks from
+  `/usr/share/ryoku/rices` with the user's library, prefers a user rice when
+  slugs match, and copies a packaged rice into the user library before applying
+  it. A rice can also carry provider-specific window sections while its shared
+  look continues to apply everywhere (`backend/rice.go`).
 - **The Rashin page shows Prowl.** Beside the master switch the page reports
   Prowl's gateway (running and its address, or why it is not) instead of
   Hermes's model, and connecting an agent now says it routes that agent's models
