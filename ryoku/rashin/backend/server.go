@@ -49,6 +49,8 @@ func Serve(cfg Config) error {
 	}
 	defer os.Remove(pidfile)
 
+	go func() { _ = ensureGateway() }()
+
 	if err := EnsureVault(); err != nil {
 		return err
 	}
@@ -171,29 +173,65 @@ func Serve(cfg Config) error {
 		}
 		writeJSON(w, map[string]bool{"ok": true})
 	})
+	migrationCtx, migrationCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	if err := migrateQuickProviderKeys(migrationCtx); err != nil {
+		fmt.Fprintln(os.Stderr, "ryoku-rashin: quick key migration:", err)
+	}
+	migrationCancel()
 	mux.HandleFunc("GET /api/agents", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, DetectAgents())
 	})
 	mux.HandleFunc("GET /api/harnesses", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, map[string]any{"harnesses": HarnessesNow()})
+		writeJSON(w, map[string]any{"harnesses": HarnessesWithRouting(r.Context())})
 	})
-	mux.HandleFunc("POST /api/agents/wire", agentMutation(func(id string) error {
-		if err := Wire(id); err != nil {
-			return err
+	mux.HandleFunc("POST /api/agents/wire", func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			ID string `json:"id"`
 		}
-		wireProwlSkills() // parity with `ryoku-rashin wire`: pointer + skill + prowl
-		return nil
-	}))
-	mux.HandleFunc("POST /api/agents/unwire", agentMutation(Unwire))
-	mux.HandleFunc("GET /api/quick", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, quickInfo(LoadConfig()))
-	})
-	mux.HandleFunc("POST /api/quick", func(w http.ResponseWriter, r *http.Request) {
-		if err := cmdBackend([]string{r.URL.Query().Get("provider")}); err != nil {
+		if json.NewDecoder(r.Body).Decode(&body) != nil || body.ID == "" {
+			http.Error(w, "missing agent id", http.StatusBadRequest)
+			return
+		}
+		pending, reason, err := connectHarness(r.Context(), body.ID)
+		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
-		writeJSON(w, quickInfo(LoadConfig()))
+		writeJSON(w, map[string]any{"ok": true, "pending": pending, "reason": reason})
+	})
+	mux.HandleFunc("POST /api/agents/unwire", func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			ID string `json:"id"`
+		}
+		if json.NewDecoder(r.Body).Decode(&body) != nil || body.ID == "" {
+			http.Error(w, "missing agent id", http.StatusBadRequest)
+			return
+		}
+		if err := disconnectHarness(r.Context(), body.ID); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		writeJSON(w, map[string]bool{"ok": true})
+	})
+	mux.HandleFunc("POST /api/harnesses/route", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, routeConnectedHarnesses(r.Context()))
+	})
+	mux.HandleFunc("GET /api/quick", func(w http.ResponseWriter, r *http.Request) {
+		writeJSON(w, quickInfo(r.Context(), LoadConfig()))
+	})
+	mux.HandleFunc("POST /api/quick", func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Route string `json:"route"`
+		}
+		if json.NewDecoder(r.Body).Decode(&body) != nil {
+			http.Error(w, "missing route", http.StatusBadRequest)
+			return
+		}
+		if err := setQuickRoute(r.Context(), body.Route); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		writeJSON(w, quickInfo(r.Context(), LoadConfig()))
 	})
 	mux.HandleFunc("GET /api/manifest", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, BuildManifest(LoadConfig()))
@@ -218,41 +256,7 @@ func Serve(cfg Config) error {
 	mux.HandleFunc("GET /api/hermes/memory", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, MemoryReportNow())
 	})
-	mux.HandleFunc("GET /api/prowl", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, ProwlReportNow())
-	})
-	mux.HandleFunc("GET /api/prowl/search", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, map[string]any{"hits": ProwlSearch(r.URL.Query().Get("q"))})
-	})
-	// The prowl code-intelligence proxy: the dashboard keeps one origin;
-	// /api/code/* forwards to `prowl api` on its own loopback port, and
-	// /api/providers answers the consolidated free/paid/subscription
-	// directory from the same service.
-	mux.HandleFunc("GET /api/code/status", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, prowlAPIStatus())
-	})
-	mux.HandleFunc("GET /api/code/", func(w http.ResponseWriter, r *http.Request) {
-		sub := "/api" + strings.TrimPrefix(r.URL.Path, "/api/code")
-		if r.URL.RawQuery != "" {
-			sub += "?" + r.URL.RawQuery
-		}
-		body, err := prowlAPIGet(sub)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadGateway)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(body)
-	})
-	mux.HandleFunc("GET /api/providers", func(w http.ResponseWriter, r *http.Request) {
-		body, err := prowlAPIGet("/api/providers")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadGateway)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write(body)
-	})
+	registerProwlProxy(mux, cfg.Port)
 	mux.HandleFunc("GET /api/about", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, AboutReportNow(cfg))
 	})
@@ -317,29 +321,6 @@ func Serve(cfg Config) error {
 func writeJSON(w http.ResponseWriter, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(v)
-}
-
-func agentMutation(f func(string) error) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		var body struct {
-			ID string `json:"id"`
-		}
-		if json.NewDecoder(r.Body).Decode(&body) != nil || body.ID == "" {
-			http.Error(w, "missing agent id", http.StatusBadRequest)
-			return
-		}
-		if err := f(body.ID); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-		for _, a := range DetectAgents() {
-			if a.ID == body.ID {
-				writeJSON(w, a)
-				return
-			}
-		}
-		http.Error(w, "unknown agent", http.StatusBadRequest)
-	}
 }
 
 // loopbackOrigin reports whether a browser request came from this machine's
@@ -423,6 +404,9 @@ func cmdEnable(atBoot bool) error {
 		if err := systemctlUser("enable", "--now", rashinUnit); err != nil {
 			return err
 		}
+		if err := ensureGateway(); err != nil {
+			return err
+		}
 		if atBoot {
 			// Lingering starts the user manager (and this unit) at BOOT,
 			// before login. Needs polkit auth or root once.
@@ -455,6 +439,9 @@ func cmdEnable(atBoot bool) error {
 		}
 		_ = cmd.Process.Release()
 	}
+	if err := ensureGateway(); err != nil {
+		return err
+	}
 	fmt.Println("rashin enabled")
 	return nil
 }
@@ -466,10 +453,16 @@ func cmdDisable() error {
 	if err := SaveConfig(cfg); err != nil {
 		return err
 	}
+	var stopErr error
 	if haveSystemd() && unitKnown() {
-		_ = systemctlUser("disable", "--now", rashinUnit)
+		stopErr = systemctlUser("disable", "--now", rashinUnit)
+	} else {
+		stopErr = stopGateway()
 	}
 	stopSpawnedDaemon()
+	if stopErr != nil {
+		return stopErr
+	}
 	fmt.Println("rashin disabled")
 	return nil
 }
@@ -483,7 +476,7 @@ func cmdEnsure() error {
 		return nil
 	}
 	if cfg.Enabled && rashinActive() {
-		return nil
+		return ensureGateway()
 	}
 	return cmdEnable(true)
 }

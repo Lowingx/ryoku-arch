@@ -9,7 +9,10 @@ package main
 // only, never values). Nothing here mutates a harness or reads a secret.
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
@@ -18,23 +21,32 @@ import (
 	"time"
 )
 
+type HarnessRouting struct {
+	Supported bool   `json:"supported"`
+	Injected  bool   `json:"injected"`
+	Active    bool   `json:"active"`
+	Pending   bool   `json:"pending"`
+	Note      string `json:"note,omitempty"`
+}
+
 // Harness is one detected coding agent and everything rashin can see about it.
 type Harness struct {
-	ID         string       `json:"id"`
-	Name       string       `json:"name"`
-	Present    bool         `json:"present"`
-	Home       string       `json:"home,omitempty"`
-	Version    string       `json:"version,omitempty"`
-	Model      string       `json:"model,omitempty"`
-	Provider   string       `json:"provider,omitempty"`
-	Wired      bool         `json:"wired"`
-	SkillCount int          `json:"skillCount"`
-	Skills     []Skill      `json:"skills,omitempty"`
-	Memories   []MemoryNote `json:"memories"`
-	SessionsN  int          `json:"sessions"`
-	LastActive string       `json:"lastActive,omitempty"`
-	Creds      []CredSource `json:"creds"`
-	Note       string       `json:"note,omitempty"`
+	ID         string         `json:"id"`
+	Name       string         `json:"name"`
+	Present    bool           `json:"present"`
+	Home       string         `json:"home,omitempty"`
+	Version    string         `json:"version,omitempty"`
+	Model      string         `json:"model,omitempty"`
+	Provider   string         `json:"provider,omitempty"`
+	Wired      bool           `json:"wired"`
+	SkillCount int            `json:"skillCount"`
+	Skills     []Skill        `json:"skills,omitempty"`
+	Memories   []MemoryNote   `json:"memories"`
+	SessionsN  int            `json:"sessions"`
+	LastActive string         `json:"lastActive,omitempty"`
+	Creds      []CredSource   `json:"creds"`
+	Note       string         `json:"note,omitempty"`
+	Routing    HarnessRouting `json:"routing"`
 }
 
 // MemoryNote is one durable-memory artifact a harness owns.
@@ -550,10 +562,125 @@ var harnessCache struct {
 func HarnessesNow() []Harness {
 	harnessCache.mu.Lock()
 	defer harnessCache.mu.Unlock()
-	if harnessCache.data != nil && time.Since(harnessCache.at) < harnessTTL {
-		return harnessCache.data
+	if harnessCache.data == nil || time.Since(harnessCache.at) >= harnessTTL {
+		harnessCache.data = ScanHarnesses()
+		harnessCache.at = time.Now()
 	}
-	harnessCache.data = ScanHarnesses()
-	harnessCache.at = time.Now()
-	return harnessCache.data
+	return append([]Harness(nil), harnessCache.data...)
+}
+
+func invalidateHarnessCache() {
+	harnessCache.mu.Lock()
+	harnessCache.data = nil
+	harnessCache.at = time.Time{}
+	harnessCache.mu.Unlock()
+}
+
+const geminiRoutingReason = "Gemini CLI has no OpenAI- or Anthropic-compatible endpoint, so it cannot route through Prowl"
+
+func HarnessesWithRouting(ctx context.Context) []Harness {
+	rows := HarnessesNow()
+	setup, err := gatewayRouting(ctx)
+	byID := make(map[string]prowlSetupHarness, len(setup.Harnesses))
+	for _, row := range setup.Harnesses {
+		byID[row.ID] = row
+	}
+	for i := range rows {
+		if rows[i].ID == "gemini" {
+			rows[i].Routing.Note = geminiRoutingReason
+			continue
+		}
+		rows[i].Routing.Supported = true
+		if err != nil {
+			rows[i].Routing.Note = quickGatewayError(err).Error()
+			continue
+		}
+		remote, ok := byID[rows[i].ID]
+		if !ok {
+			rows[i].Routing.Supported = false
+			rows[i].Routing.Note = "Prowl does not support this harness"
+			continue
+		}
+		rows[i].Routing.Injected = remote.Injected
+		rows[i].Routing.Active = remote.Active
+		rows[i].Routing.Pending = remote.Injected && !remote.Active
+		rows[i].Routing.Note = remote.Note
+		if rows[i].Routing.Pending && rows[i].Routing.Note == "" {
+			rows[i].Routing.Note = setup.Reason
+		}
+	}
+	return rows
+}
+
+type harnessRoutePending struct {
+	ID     string `json:"id"`
+	Reason string `json:"reason"`
+}
+
+type harnessRouteResult struct {
+	Routed  []string              `json:"routed"`
+	Pending []harnessRoutePending `json:"pending"`
+}
+
+func routeConnectedHarnesses(ctx context.Context) harnessRouteResult {
+	result := harnessRouteResult{Routed: []string{}, Pending: []harnessRoutePending{}}
+	setup, err := gatewayRouting(ctx)
+	if err != nil {
+		return result
+	}
+	remote := make(map[string]prowlSetupHarness, len(setup.Harnesses))
+	for _, row := range setup.Harnesses {
+		remote[row.ID] = row
+	}
+	cfg := LoadConfig()
+	hermes := HermesStatus()
+	for _, row := range HarnessesNow() {
+		if row.ID == "gemini" {
+			continue
+		}
+		prowlRow, ok := remote[row.ID]
+		if !ok || prowlRow.Active {
+			continue
+		}
+		connected := row.Wired
+		if row.ID == "hermes" {
+			hermesSelected := cfg.ChatAgent == "" || cfg.ChatAgent == "hermes"
+			connected = prowlRow.Injected && hermesSelected && hermes.Installed
+		}
+		if !connected {
+			continue
+		}
+		pending, reason, routeErr := routeProwlHarness(ctx, row.ID)
+		if routeErr != nil {
+			result.Pending = append(result.Pending, harnessRoutePending{ID: row.ID, Reason: routeErr.Error()})
+		} else if pending {
+			result.Pending = append(result.Pending, harnessRoutePending{ID: row.ID, Reason: reason})
+		} else {
+			result.Routed = append(result.Routed, row.ID)
+		}
+	}
+	return result
+}
+
+func routeProwlHarness(ctx context.Context, id string) (bool, string, error) {
+	var routed struct {
+		Harness prowlSetupHarness `json:"harness"`
+	}
+	path := "/api/setup/harnesses/" + id
+	err := prowlGatewayJSON(ctx, http.MethodPost, path, map[string]bool{"activate": true}, &routed)
+	if err == nil {
+		return false, "", nil
+	}
+	var gatewayErr *prowlGatewayError
+	if !errors.As(err, &gatewayErr) || gatewayErr.Status != http.StatusConflict || gatewayErr.Code != "not_routable" {
+		return false, "", err
+	}
+	if injectErr := prowlGatewayJSON(ctx, http.MethodPost, path, map[string]bool{"activate": false}, &routed); injectErr != nil {
+		return false, "", injectErr
+	}
+	reason := gatewayErr.Message
+	if reason == "" {
+		reason = "Prowl has no provider connected; open Prowl > Providers in Rashin"
+	}
+	return true, reason, nil
 }

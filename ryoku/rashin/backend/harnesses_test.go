@@ -1,9 +1,15 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 )
 
 func putFile(t *testing.T, p, body string) {
@@ -159,4 +165,155 @@ func TestScanHarnessesShape(t *testing.T) {
 	if !rows[0].Present {
 		t.Fatal("present rows must sort first")
 	}
+}
+
+func resetHarnessScan() {
+	harnessCache.mu.Lock()
+	harnessCache.data = nil
+	harnessCache.at = time.Time{}
+	harnessCache.mu.Unlock()
+}
+
+func TestHarnessCacheIsCopiedAndInvalidatedAfterWire(t *testing.T) {
+	home := quickTestEnv(t)
+	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	resetHarnessScan()
+	first := HarnessesNow()
+	if len(first) == 0 {
+		t.Fatal("harness list is empty")
+	}
+	first[0].Name = "corrupted caller copy"
+	again := HarnessesNow()
+	if again[0].Name == "corrupted caller copy" {
+		t.Fatal("caller mutation changed the cached harness list")
+	}
+	if err := Wire("claude"); err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range HarnessesNow() {
+		if row.ID == "claude" && !row.Wired {
+			t.Fatal("cached harness wiring did not refresh")
+		}
+	}
+}
+
+func TestConnectHarnessKeepsWirePendingWhenProwlIsNotRoutable(t *testing.T) {
+	home := quickTestEnv(t)
+	if err := os.MkdirAll(filepath.Join(home, ".claude"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	var activate, inject bool
+	quickGateway(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/api/setup/harnesses":
+			fmt.Fprint(w, `{"routable":false,"reason":"no provider","harnesses":[{"id":"claude","skills":"current"}]}`)
+		case r.Method == http.MethodPost && r.URL.Path == "/api/setup/harnesses/claude":
+			var body map[string]bool
+			_ = json.NewDecoder(r.Body).Decode(&body)
+			if body["activate"] {
+				activate = true
+				w.WriteHeader(http.StatusConflict)
+				fmt.Fprint(w, `{"error":{"type":"conflict","code":"not_routable","message":"no provider"}}`)
+				return
+			}
+			inject = true
+			fmt.Fprint(w, `{"harness":{"id":"claude","injected":true,"skills":"current"}}`)
+		case r.Method == http.MethodPost && r.URL.Path == "/api/setup/skills":
+			fmt.Fprint(w, `{}`)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+	pending, reason, err := connectHarness(context.Background(), "claude")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !pending || reason != "no provider" || !activate || !inject {
+		t.Fatalf("pending=%v reason=%q activate=%v inject=%v", pending, reason, activate, inject)
+	}
+	if !fileHasBlock(filepath.Join(home, ".claude", "CLAUDE.md")) {
+		t.Fatal("Rashin pointer was not wired")
+	}
+}
+
+func TestDisconnectHarnessDeletesProwlInjection(t *testing.T) {
+	home := quickTestEnv(t)
+	if err := os.MkdirAll(filepath.Join(home, ".codex"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := Wire("codex"); err != nil {
+		t.Fatal(err)
+	}
+	deleted := false
+	quickGateway(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete && r.URL.Path == "/api/setup/harnesses/codex" {
+			deleted = true
+			fmt.Fprint(w, `{}`)
+			return
+		}
+		http.NotFound(w, r)
+	})
+	if err := disconnectHarness(context.Background(), "codex"); err != nil {
+		t.Fatal(err)
+	}
+	if !deleted {
+		t.Fatal("Prowl injection was not deleted")
+	}
+	if fileHasBlock(filepath.Join(home, ".codex", "AGENTS.md")) {
+		t.Fatal("Rashin pointer remained after disconnect")
+	}
+}
+
+func TestRouteConnectedHarnessesOnlyActivatesConnectedRows(t *testing.T) {
+	home := quickTestEnv(t)
+	for _, dir := range []string{".claude", ".codex"} {
+		if err := os.MkdirAll(filepath.Join(home, dir), 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := Wire("claude"); err != nil {
+		t.Fatal(err)
+	}
+	resetHarnessScan()
+	var activated []string
+	quickGateway(t, func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.Method == http.MethodGet && r.URL.Path == "/api/setup/harnesses":
+			fmt.Fprint(w, `{"routable":true,"harnesses":[{"id":"claude","injected":true,"active":false,"skills":"current"},{"id":"codex","injected":true,"active":false,"skills":"current"}]}`)
+		case r.Method == http.MethodPost && strings.HasPrefix(r.URL.Path, "/api/setup/harnesses/"):
+			activated = append(activated, strings.TrimPrefix(r.URL.Path, "/api/setup/harnesses/"))
+			fmt.Fprint(w, `{"harness":{"active":true}}`)
+		case r.Method == http.MethodPost && r.URL.Path == "/api/setup/skills":
+			fmt.Fprint(w, `{}`)
+		default:
+			http.NotFound(w, r)
+		}
+	})
+	result := routeConnectedHarnesses(context.Background())
+	if len(activated) != 1 || activated[0] != "claude" {
+		t.Fatalf("activated = %v", activated)
+	}
+	if len(result.Routed) != 1 || result.Routed[0] != "claude" || len(result.Pending) != 0 {
+		t.Fatalf("result = %+v", result)
+	}
+}
+
+func TestGeminiRoutingIsUnsupported(t *testing.T) {
+	quickTestEnv(t)
+	resetHarnessScan()
+	quickGateway(t, func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, `{"routable":true,"harnesses":[{"id":"gemini","injected":true,"active":true,"skills":"unsupported"}]}`)
+	})
+	rows := HarnessesWithRouting(context.Background())
+	for _, row := range rows {
+		if row.ID == "gemini" {
+			if row.Routing.Supported || row.Routing.Note != geminiRoutingReason {
+				t.Fatalf("routing = %+v", row.Routing)
+			}
+			return
+		}
+	}
+	t.Fatal("Gemini row missing")
 }

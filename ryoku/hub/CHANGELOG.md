@@ -1,5 +1,11 @@
 # Changelog: ryoku/hub/
 
+### Changed
+- **The Rashin page shows Prowl.** Beside the master switch the page reports
+  Prowl's gateway (running and its address, or why it is not) instead of
+  Hermes's model, and connecting an agent now says it routes that agent's models
+  through Prowl (`quickshell/pages/RashinPage.qml`).
+
 ### Fixed
 - **Vesktop colours follow the Ryoku theme, not Midnight.** The palette
   bridge's Vesktop integration wrote a competing Midnight theme file and could

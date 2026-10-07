@@ -13,16 +13,10 @@ type Config struct {
 	// default-on convergence leaves it off. Cleared by `enable`.
 	OptedOut bool `json:"optedOut,omitempty"`
 	Port     int  `json:"port"`
-	// Quick overrides the launcher fast lane's model connection. Empty means
-	// derive it from hermes's own provider config. Provider names one of the
-	// built-in openai-compatible providers (see quickProviders); BaseURL/KeyEnv
-	// override it for anything else.
+	// Quick selects a Prowl gateway route for launcher asks.
 	Quick struct {
-		Provider string `json:"provider,omitempty"`
-		Model    string `json:"model,omitempty"`
-		BaseURL  string `json:"baseUrl,omitempty"`
-		KeyEnv   string `json:"keyEnv,omitempty"`
-	} `json:"quick,omitzero"`
+		Route string `json:"route"`
+	} `json:"quick"`
 	// ChatAgent selects which agent drives the Super+S chat's interactive
 	// session. Empty means the recommended default (hermes). Only agents with
 	// an ACP adapter present can drive it; see chatBackends.
@@ -107,9 +101,11 @@ func (c Config) IntroPreamble() string {
 }
 
 // defaultConfig: rashin is on by default (opt-out via `disable`, which records
-// OptedOut). LoadConfig starts here, so a box with no config reads as enabled.
+// OptedOut). The fast lane follows Prowl's active routing set.
 func defaultConfig() Config {
-	return Config{Enabled: true, Port: 3600}
+	c := Config{Enabled: true, Port: 3600}
+	c.Quick.Route = "auto"
+	return c
 }
 
 func LoadConfig() Config {
@@ -124,10 +120,20 @@ func LoadConfig() Config {
 	if c.Port <= 0 || c.Port > 65535 {
 		c.Port = 3600
 	}
+	if strings.TrimSpace(c.Quick.Route) == "" {
+		c.Quick.Route = "auto"
+	} else {
+		c.Quick.Route = strings.ToLower(strings.TrimSpace(c.Quick.Route))
+	}
 	return c
 }
 
 func SaveConfig(c Config) error {
+	if strings.TrimSpace(c.Quick.Route) == "" {
+		c.Quick.Route = "auto"
+	} else {
+		c.Quick.Route = strings.ToLower(strings.TrimSpace(c.Quick.Route))
+	}
 	p := ConfigPath()
 	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
 		return err

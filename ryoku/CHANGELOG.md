@@ -3,6 +3,26 @@
 ## Unreleased
 
 ### Added
+- **Prowl lives inside Rashin.** The console's Prowl section (Overview,
+  Providers, Routing, Activity, Projects, Harnesses, Toolkit) is the one place
+  to run Prowl, Ryoku's model gateway and code index: add API keys, keyless free
+  tiers, browser sign-ins and custom endpoints; build routing sets from presets
+  and order their models; read traffic, failures and gateway logs; register and
+  reindex projects; connect coding harnesses. It replaces the Agents and Models
+  sheets. The daemon proxies the gateway's management API under `/api/prowl/`
+  with the machine token and answers only its own console
+  (`rashin/web/src/lib/pages/prowl/`, `rashin/backend/prowlgw.go`).
+- **Prowl ships off and starts with Rashin.** `ryoku-prowl.service` (port 8788)
+  has no install target: `ryoku-rashin.service` wants it and it is bound to
+  Rashin, so enabling Rashin brings both up and disabling Rashin stops both
+  (`rashin/systemd/`).
+- **Every harness you connect routes through Prowl.** Connecting Hermes, Claude
+  Code, Codex, opencode or Oh My Pi wires the Ryoku pointer and skills and makes
+  Prowl's `auto` route that harness's default model; Disconnect restores the
+  model it had. With no provider that can serve `auto`, the harness waits as
+  pending and routes once one connects, and `ryoku-rashin wire` keeps connected
+  harnesses routed after an update (`rashin/backend/agents.go`,
+  `rashin/backend/harnesses.go`).
 - **The Stage Editor is the desktop's edit mode.** Its toolbar frames one
   monitor at a time, names the edited display and cycles displays from its chip,
   while the drawer keeps the active catalogue instead of repeating those tabs.
@@ -144,7 +164,20 @@
   physical pixels instead of guessing from the reported height
   (`ui/Singletons/Wm.qml`).
 
+### Changed
+- **The fast lane asks Prowl.** Quick asks post to Prowl's
+  `/v1/chat/completions` on a route (`auto`, an axis such as `auto:fast`, or one
+  of your sets) instead of calling a provider directly. `ryoku-rashin backend
+  <route>` and the Ask bar pick it, and keys left in `~/.config/ryoku/rashin.env`
+  are imported into Prowl once (`rashin/backend/quick.go`).
+
 ### Removed
+- **Gemini is no longer a chat agent.** Gemini CLI speaks neither the OpenAI nor
+  the Anthropic API, so it cannot route through Prowl
+  (`rashin/backend/chatbackend.go`).
+- **Rashin no longer knows prowl-agent.** It runs only the `prowl` binary, and
+  the standalone `prowl api` server it used to spawn is replaced by the
+  gateway's own code routes.
 - **Desktop composition no longer has a second settings page in the Hub.**
   Depth, visualizer, and widget editing live only in the Stage Editor. The
   retired `desktop-scene`, `desktop-scene-visualizer`,

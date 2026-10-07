@@ -13,7 +13,6 @@ func TestPickBackend(t *testing.T) {
 	backs := []chatBackend{
 		{ID: "hermes", Name: "Hermes", Recommended: true},
 		{ID: "claude", Name: "Claude Code"},
-		{ID: "gemini", Name: "Gemini"},
 	}
 	only := func(ids ...string) func(chatBackend) bool {
 		set := map[string]bool{}
@@ -32,7 +31,7 @@ func TestPickBackend(t *testing.T) {
 		{"default falls to hermes", "", only("hermes", "claude"), "hermes", true},
 		{"explicit available pick wins", "claude", only("hermes", "claude"), "claude", true},
 		{"unavailable pick falls back to hermes", "claude", only("hermes"), "hermes", true},
-		{"gemini when only gemini is present", "gemini", only("gemini"), "gemini", true},
+		{"retired gemini pick falls back to hermes", "gemini", only("hermes"), "hermes", true},
 		{"nothing available", "claude", only(), "", false},
 		{"default with only a non-hermes agent", "", only("claude"), "claude", true},
 	}
@@ -44,6 +43,11 @@ func TestPickBackend(t *testing.T) {
 			}
 		})
 	}
+	for _, backend := range chatBackends() {
+		if backend.ID == "gemini" {
+			t.Fatal("Gemini must not be offered as a chat backend")
+		}
+	}
 }
 
 // setChatAgent must reject an unknown agent (so the chat never tries to spawn a
@@ -54,6 +58,9 @@ func TestSetChatAgent(t *testing.T) {
 
 	if err := setChatAgent("bogus"); err == nil {
 		t.Fatal("unknown chat agent must error")
+	}
+	if err := setChatAgent("gemini"); err == nil {
+		t.Fatal("Gemini must not be accepted as a chat agent")
 	}
 	if err := setChatAgent("claude"); err != nil {
 		t.Fatalf("valid agent: %v", err)

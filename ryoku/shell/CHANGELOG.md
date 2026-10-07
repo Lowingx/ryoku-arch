@@ -315,6 +315,11 @@
   Ryoku's seams (`../inir/`).
 
 ### Changed
+- **The Ask bar's Fast lane lists Prowl routes.** Its model drawer offers the
+  active set, the capability axes and your routing sets instead of provider
+  names (`quickshell/shell/modules/ask/AskSurface.qml`,
+  `quickshell/shell/services/Needle.qml`). `deploy.sh` installs
+  `ryoku-prowl.service` beside the Rashin unit.
 - **The visualiser's deep settings moved onto the desktop editor.** The
   placement bar grew a gear that opens a square drawer of everything it has no
   room for: playback (enabled, idle wave, frame rate, adaptive quality), shape
