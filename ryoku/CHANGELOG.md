@@ -18,10 +18,10 @@
   sheets. The daemon proxies the gateway's management API under `/api/prowl/`
   with the machine token and answers only its own console
   (`rashin/web/src/lib/pages/prowl/`, `rashin/backend/prowlgw.go`).
-- **Rashin's chat picker lists your Prowl routing sets.** While chat routes
-  through Prowl, it shows one Active set entry instead of the same route three
-  times. Picking a set runs that chat on it without changing Prowl's active set
-  (`rashin/backend/acp.go`).
+- **Rashin's chat picker lists Prowl once and keeps the agent's own models.**
+  Prowl's route takes one Active set entry instead of three, the models from the
+  agent's other providers stay available, and picking Active set switches back
+  to Prowl from any of them (`rashin/backend/acp.go`).
 - **Prowl ships off and starts with Rashin.** `ryoku-prowl.service` (port 8788)
   has no install target: `ryoku-rashin.service` wants it and it is bound to
   Rashin, so enabling Rashin brings both up and disabling Rashin stops both
@@ -33,8 +33,8 @@
   pending and routes once one connects. Detected harnesses keep their own models:
   `ryoku-rashin wire` and updates re-route only harnesses you connected, so
   Disconnect is never undone by a later update. Rashin's own chat follows suit:
-  choosing its chat agent connects it. While routed, its model picker offers only
-  models that go through Prowl (`rashin/backend/agents.go`,
+  choosing its chat agent connects it. New chats start on Prowl's `auto`, and
+  the agent's other models stay one pick away (`rashin/backend/agents.go`,
   `rashin/backend/harnesses.go`, `rashin/backend/chatbackend.go`).
 - **The Stage Editor is the desktop's edit mode.** Its toolbar frames one
   monitor at a time, names the edited display and cycles displays from its chip,
