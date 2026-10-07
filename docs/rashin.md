@@ -497,12 +497,14 @@ Disconnect is never undone by a later update.
 Rashin's own chat lanes follow the same rule. Choosing a chat agent connects it
 through Prowl first, and the agent answering chat cannot be disconnected until
 another one takes over. While the agent routes through Prowl, its model picker
-offers only Prowl-routed models: every Claude Code model (its whole endpoint
-points at Prowl), and for Hermes, Oh My Pi and opencode the `prowl` provider's
-models plus the one the session started on. A remembered model from another
-provider is dropped rather than re-applied. Until a provider can serve `auto`,
-the agent stays pending, chat keeps answering on its previous model, and the
-console says why.
+offers only what goes through Prowl: Claude Code keeps every model (its whole
+endpoint points at Prowl); for Hermes, Oh My Pi and opencode, models from the
+agent's other providers are hidden and Prowl's aliases merge into one
+**Active set** entry. Hermes also lists every non-empty Prowl routing set, so
+a chat can run on another set without changing Prowl's active set. A remembered
+pick from another provider is dropped rather than re-applied. Until a provider
+can serve `auto`, the agent stays pending, chat keeps answering on its previous
+model, and the console says why.
 
 Rashin proxies the gateway's management API under `/api/prowl/`, adding the
 machine-local token itself. The browser never receives that token and cannot

@@ -107,7 +107,7 @@ func TestValidateQuickRoute(t *testing.T) {
 	quickGateway(t, func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case "/api/profiles":
-			fmt.Fprint(w, `[{"id":7,"name":"Work"},{"id":8,"name":"Personal"}]`)
+			fmt.Fprint(w, `[{"id":7,"name":"Work","modelCount":2},{"id":8,"name":"Personal","modelCount":1},{"id":9,"name":"Empty","modelCount":0}]`)
 		case "/api/profiles/active":
 			fmt.Fprint(w, `{"activeProfileId":7}`)
 		default:
@@ -127,7 +127,9 @@ func TestValidateQuickRoute(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(routes) < 9 || routes[0] != (quickRouteJSON{ID: "auto", Label: "Active set", Sub: "Work"}) {
+	if len(routes) != 9 || routes[0] != (quickRouteJSON{ID: "auto", Label: "Active set", Sub: "Work"}) ||
+		routes[7] != (quickRouteJSON{ID: "auto:personal", Label: "Personal", Sub: "Routing set"}) ||
+		routes[8] != (quickRouteJSON{ID: "auto:work", Label: "Work", Sub: "Routing set"}) {
 		t.Fatalf("routes = %+v", routes)
 	}
 	if _, err := validateQuickRoute(context.Background(), "auto:missing"); err == nil {

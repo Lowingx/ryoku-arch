@@ -108,20 +108,21 @@ func resolveQuickTarget(cfg Config) (quickTarget, error) {
 	return target, nil
 }
 
-func quickRoutes(ctx context.Context) ([]quickRouteJSON, error) {
+func prowlProfileSets(ctx context.Context) (string, []string, error) {
 	type profile struct {
-		ID   int64  `json:"id"`
-		Name string `json:"name"`
+		ID         int64  `json:"id"`
+		Name       string `json:"name"`
+		ModelCount int    `json:"modelCount"`
 	}
 	var profiles []profile
 	if err := prowlGatewayJSON(ctx, http.MethodGet, "/api/profiles", nil, &profiles); err != nil {
-		return append([]quickRouteJSON{{ID: "auto", Label: "Active set", Sub: "Unavailable"}}, quickAxes...), err
+		return "", nil, err
 	}
 	var active struct {
 		ID *int64 `json:"activeProfileId"`
 	}
 	if err := prowlGatewayJSON(ctx, http.MethodGet, "/api/profiles/active", nil, &active); err != nil {
-		return append([]quickRouteJSON{{ID: "auto", Label: "Active set", Sub: "Unavailable"}}, quickAxes...), err
+		return "", nil, err
 	}
 	activeName := "No active set"
 	if active.ID != nil {
@@ -132,21 +133,47 @@ func quickRoutes(ctx context.Context) ([]quickRouteJSON, error) {
 			}
 		}
 	}
-	routes := append([]quickRouteJSON{{ID: "auto", Label: "Active set", Sub: activeName}}, quickAxes...)
-	sort.Slice(profiles, func(i, j int) bool {
-		return strings.ToLower(profiles[i].Name) < strings.ToLower(profiles[j].Name)
+	sort.SliceStable(profiles, func(i, j int) bool {
+		left := strings.ToLower(strings.TrimSpace(profiles[i].Name))
+		right := strings.ToLower(strings.TrimSpace(profiles[j].Name))
+		return left < right
 	})
+	names := make([]string, 0, len(profiles))
+	seen := map[string]bool{}
+	for _, p := range profiles {
+		if p.ModelCount == 0 {
+			continue
+		}
+		id := strings.ToLower(strings.TrimSpace(p.Name))
+		if id == "" || seen[id] {
+			continue
+		}
+		seen[id] = true
+		names = append(names, p.Name)
+	}
+	return activeName, names, nil
+}
+
+// Tests replace this seam so a chat session never reaches the live gateway.
+var chatProwlProfileSets = prowlProfileSets
+
+func quickRoutes(ctx context.Context) ([]quickRouteJSON, error) {
+	activeName, names, err := prowlProfileSets(ctx)
+	if err != nil {
+		return append([]quickRouteJSON{{ID: "auto", Label: "Active set", Sub: "Unavailable"}}, quickAxes...), err
+	}
+	routes := append([]quickRouteJSON{{ID: "auto", Label: "Active set", Sub: activeName}}, quickAxes...)
 	seen := map[string]bool{}
 	for _, route := range routes {
 		seen[route.ID] = true
 	}
-	for _, p := range profiles {
-		id := "auto:" + strings.ToLower(strings.TrimSpace(p.Name))
-		if id == "auto:" || seen[id] {
+	for _, name := range names {
+		id := "auto:" + strings.ToLower(strings.TrimSpace(name))
+		if seen[id] {
 			continue
 		}
 		seen[id] = true
-		routes = append(routes, quickRouteJSON{ID: id, Label: p.Name, Sub: "Routing set"})
+		routes = append(routes, quickRouteJSON{ID: id, Label: name, Sub: "Routing set"})
 	}
 	return routes, nil
 }

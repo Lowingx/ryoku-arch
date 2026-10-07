@@ -18,6 +18,10 @@
   sheets. The daemon proxies the gateway's management API under `/api/prowl/`
   with the machine token and answers only its own console
   (`rashin/web/src/lib/pages/prowl/`, `rashin/backend/prowlgw.go`).
+- **Rashin's chat picker lists your Prowl routing sets.** While chat routes
+  through Prowl, it shows one Active set entry instead of the same route three
+  times. Picking a set runs that chat on it without changing Prowl's active set
+  (`rashin/backend/acp.go`).
 - **Prowl ships off and starts with Rashin.** `ryoku-prowl.service` (port 8788)
   has no install target: `ryoku-rashin.service` wants it and it is bound to
   Rashin, so enabling Rashin brings both up and disabling Rashin stops both
