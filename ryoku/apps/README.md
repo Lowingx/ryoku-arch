@@ -8,15 +8,15 @@ maps to a place under `~/.config` (except the small helper script noted below).
 - `kitty/` The terminal. JetBrains Mono Nerd Font, a beam cursor, and fish as the
   shell. `kitty.conf` includes `current-theme.conf`, which carries the Ryoku dark
   palette (background `#171717`, foreground `#CCD0CF`, accent `#F25623`).
-- `fastfetch/` The branded system readout. `config.jsonc` draws the 力 logo and a
-  short list of facts (host, OS, kernel, WM, CPU, GPU, memory, disk, terminal,
-  uptime). `ryoku-fastfetch` is a launcher that uses kitty's graphics protocol in
-  kitty and falls back to chafa elsewhere.
+- `fastfetch/` The branded system readout. `config.jsonc` owns its emblem,
+  content and fixed colours. `ryoku-fastfetch` can merge the Matugen palette
+  sibling into a cached effective config, leaving the user's file untouched.
 - `fish/` The shell. The greeting is turned off so the login terminal stays
   clean, then it runs `ryoku-fastfetch` and wires up starship, zoxide, fzf, and a
   few eza listing aliases (each guarded so a missing tool is harmless).
-- `starship/` The prompt: current directory, git branch, and command duration on
-  a fixed Ryoku palette.
+- `starship/` The prompt. Five layouts share one active `starship.toml`: Pill,
+  Minimal, Two line, Powerline and Lean. The Hub chooses the layout and whether
+  its named palette stays fixed or follows the wallpaper.
 - `nvim/` The editor (LazyVim seed) plus `ryoku-nvim.desktop`, which registers
   neovim as the default text handler.
 - `yazi/` The terminal file manager (`yazi.toml`).
@@ -119,9 +119,9 @@ in `window_rules.lua` (see `float-ryostore`).
 | Folder          | Destination                               |
 | --------------- | ----------------------------------------- |
 | `kitty/`        | `~/.config/kitty/`                        |
-| `fastfetch/`    | `~/.config/fastfetch/` (config + wrapper) |
+| `fastfetch/`    | `~/.config/fastfetch/` (user config + generated palette); wrapper on `PATH` |
 | `fish/`         | `~/.config/fish/config.fish`              |
-| `starship/`     | `~/.config/starship.toml`                 |
+| `starship/`     | active `~/.config/starship.toml`; catalogue under `~/.config/starship/` |
 | `nvim/`         | `~/.config/nvim/`                         |
 | `yazi/`         | `~/.config/yazi/`                         |
 | `npm/`          | `~/.npmrc`                                 |

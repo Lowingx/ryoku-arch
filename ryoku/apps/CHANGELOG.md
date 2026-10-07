@@ -3,6 +3,14 @@
 ## Unreleased
 
 ### Added
+- `starship/`, `fastfetch/`: **Prompt layouts, and colours that follow the
+  wallpaper.** Starship ships five layouts (Pill, Minimal, Two line, Powerline,
+  Lean), picked in Ryoku Hub > Keybinds with rendered previews, and either keeps
+  its fixed palette or follows the wallpaper through matugen. Fastfetch can
+  follow the wallpaper too: matugen writes `fastfetch/ryoku-colors.json` and
+  `ryoku-fastfetch` merges it into a cached copy of your config, so Hub and
+  store edits to `config.jsonc` are never overwritten. Both choices survive
+  updates (`../hub/backend/starship.go`, `../hub/backend/fastfetch.go`).
 - `rashin-app/`: **The window opens on the Ryoku lane.** The first sheet is the
   machine agent; Chat and the new Wiki sheet sit beside it.
 - `rashin-app/`: **The window carries Rashin's own icon.** `logo.svg` links to
