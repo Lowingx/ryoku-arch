@@ -3,6 +3,12 @@
 ## Unreleased
 
 ### Added
+- **First run is a live tour instead of a static slideshow.** Welcome now opens
+  with the compact Ryoku artwork, lets a new user try all five shipped bar
+  styles immediately, introduces wallpaper and Ryostore, and turns the
+  essential shortcuts into useful actions. It follows the wallpaper palette,
+  respects reduced motion and low-power mode, and fits smaller screens
+  (`quickshell/welcome/`).
 - **Clipboard history supports keyboard selection.** The up and down arrows
   move through the entries and Enter copies the selected one and closes the
   panel, so the history is usable without reaching for the mouse
@@ -761,6 +767,11 @@
 - **The old wall-ui picker.** Replaced by the new picker; its day/night
   rotation lives on as two schedule rules, migrated automatically
   (`ryogami/wall-ui/`).
+- **The QS Bar settings rail ends at its routes.** The footer block under the
+  Community route (the Search hint, the QS BAR / QUICK SETTINGS switch, the
+  OPEN THE HUB link and the RYOKU barcode) is gone. Ctrl+K still opens search,
+  and the brand logo keeps opening QS Bar Settings
+  (`quickshell/shell/modules/bar/barstyles/qsbar/controlcenter/CcRail.qml`).
 - **The QS Bar settings rail ends at its routes.** The footer block under the
   Community route (the Search hint, the QS BAR / QUICK SETTINGS switch, the
   OPEN THE HUB link and the RYOKU barcode) is gone. Ctrl+K still opens search,
