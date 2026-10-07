@@ -205,6 +205,9 @@
 - **Console card headings keep their kanji gloss beside the title.** Long
   descriptions no longer let the gloss drift into the middle of the card
   (`rashin/web/src/lib/ui/Card.svelte`).
+- **Project cards keep each number under its label.** Values no longer push
+  across the column divider, and harness details line up the same way
+  (`rashin/web/src/app.css`).
 - **Visualizers drag like every other widget in the Stage Editor.** The frame
   owns the move, so the look follows the pointer one to one, snaps to the same
   guides, moves in a group, nudges with the arrows, and writes
