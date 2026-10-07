@@ -48,16 +48,19 @@ A shell *surface* is a fourth thing and does not live here. `ryoshot` and
 
 - Wallpaper browsing, grading, sources and the theme surface now live in the
   shell's wallpaper picker (Super+W), not here; ryowalls was sunset.
-- `ryovm/` **Ryoport**, the machine hub: one console for local virtual machines,
-  remote VPS, and SSH connections. Three plates behind a nav rail (Super+Shift+V,
-  still `qs -c ryovm`): a **Dashboard** fleet overview, a **Machines** yard built
-  on quickemu/quickget (a Library of your machines and a Catalog of ~700
-  downloadable systems, in-app downloads via the `ryovm-fetch` Go helper, per-VM
-  cores/memory, snapshots, Window / SPICE / Headless, and live pause/balloon/pin
-  through the `ryovm-mon` helper), and a **Remotes** fleet that reads `~/.ssh/config`,
-  shows live reachability and agentless health probes, and connects in a tap
-  (the `ryossh` Go helper). Engines: `ryovm` (VMs) and `ryossh` (remotes). The
-  GPU-passthrough gaming VM is still configured from Ryoku Settings > GPU, not here.
+- `ryovm/` **Ryoport**, the fleet dashboard for local virtual machines, remote
+  servers and SSH connections. Open it with Super+Shift+V or `qs -c ryovm`.
+  The runtime name stays `ryovm` for launch and single-instance compatibility;
+  the visible application identity is Ryoport.
+  The dashboard keeps a single resource list beside a fleet summary, live
+  CPU, memory, disk-I/O and network-I/O history, facts and activity. Machine
+  and remote details split overview, access, networking, snapshots or
+  workloads, settings and activity into focused tabs. The **Machines** page
+  uses quickemu/quickget for create, import, launch, console, snapshots, USB
+  and port forwarding. **Remotes** reads `~/.ssh/config`, adds health probes,
+  tunnels, web apps and Proxmox controls through `ryossh`. **Looking Glass**
+  manages GPU-passthrough guests and reads their live libvirt metrics. Sampling
+  stops when its plate is hidden. Engines: `ryovm`, `ryovm-mon` and `ryossh`.
 - `ryostore/` The store: discover and install lockscreens, rices, bar styles,
   plugins and bundles. Engine: the `ryostore` Go backend.
 

@@ -3,6 +3,16 @@
 ## Unreleased
 
 ### Added
+- `ryovm/`: **Ryoport reads as a fleet dashboard.** The Dashboard puts local
+  VMs and remotes in one resource list with a fleet summary strip, and the
+  selected machine gets CPU, memory, disk and network graphs that show the
+  current value, the time span and the peak, beside its facts and recent
+  activity. VM and remote details are tabbed (Overview, Access, Networking,
+  Snapshots or Workloads, Settings, Activity), the empty Machines and
+  Passthrough plates lead with their setup action, and sampling runs only while
+  a plate is on screen. `ryovm-mon` reports disk, network and uptime, `ryossh`
+  samples CPU and I/O, and `ryovm lg stats` covers passthrough VMs
+  (`ryovm/quickshell/Dashboard.qml`, `ryovm/quickshell/MetricGraph.qml`).
 - `starship/`, `fastfetch/`: **Prompt layouts, and colours that follow the
   wallpaper.** Starship ships five layouts (Pill, Minimal, Two line, Powerline,
   Lean), picked in Ryoku Hub > Keybinds with rendered previews, and either keeps

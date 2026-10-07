@@ -21,8 +21,11 @@ Singleton {
     // alias -> { up, rttMs, sshUp } and alias -> full probe object.
     property var reach: ({})
     property var health: ({})
+    property var metricHistory: ({})
+    property var metricPrevious: ({})
     property int reachRev: 0
     property int healthRev: 0
+    property int metricsRevision: 0
     function reachOf(a) { void reachRev; return reach[a] || null; }
     function healthOf(a) { void healthRev; return health[a] || null; }
 
@@ -132,7 +135,7 @@ Singleton {
         if (a.length > 0) { root.probe(a); root.appCheck(a); root.loadGuests(a); }
     }
     function pingAll() { if (hosts.length > 0) pingProc.running = true; }
-    function probeAll() { if (hosts.length > 0) { probing = true; probeProc.running = true; } }
+    function probeAll() { if (hosts.length > 0 && !probeProc.running) { probing = true; probeProc.running = true; } }
     function probe(a) {
         if (!a || a.length === 0) return;
         oneProbe.command = ["ryossh", "probe", a];
@@ -140,6 +143,49 @@ Singleton {
     }
     function appCheckAll() { if (hosts.length > 0) appCheckProc.running = true; }
     function appCheck(a) { if (a && a.length > 0) { appCheckOne.command = ["ryossh", "appcheck", a]; appCheckOne.running = true; } }
+
+    function _rate(now, previous, sample, key) {
+        if (!previous || !previous.sample || previous.sample[key] === undefined || sample[key] === undefined)
+            return 0;
+        var seconds = Math.max(0.001, (now - previous.at) / 1000);
+        return Math.max(0, (+sample[key] - +previous.sample[key]) / seconds);
+    }
+    function _recordMetrics(alias, sample) {
+        if (!sample || sample.ok !== true)
+            return;
+        var now = Date.now();
+        var previous = metricPrevious[alias] || null;
+        var memPct = sample.memTotalKb > 0
+            ? 100 * (sample.memTotalKb - sample.memAvailKb) / sample.memTotalKb : 0;
+        var point = {
+            at: now,
+            cpu: Math.max(0, +sample.cpuPercent || 0),
+            ram: Math.max(0, Math.min(100, memPct)),
+            disk: _rate(now, previous, sample, "diskReadBytes") + _rate(now, previous, sample, "diskWriteBytes"),
+            net: _rate(now, previous, sample, "netRxBytes") + _rate(now, previous, sample, "netTxBytes")
+        };
+        var histories = metricHistory;
+        var history = (histories[alias] || []).slice();
+        history.push(point);
+        if (history.length > 60)
+            history = history.slice(history.length - 60);
+        histories[alias] = history;
+        metricHistory = histories;
+        var prior = metricPrevious;
+        prior[alias] = { at: now, sample: sample };
+        metricPrevious = prior;
+        metricsRevision++;
+    }
+    function historyFor(alias) {
+        void metricsRevision;
+        return metricHistory[alias] || [];
+    }
+    function series(alias, key) {
+        var history = historyFor(alias), values = [];
+        for (var i = 0; i < history.length; i++)
+            values.push(+history[i][key] || 0);
+        return values;
+    }
     function loadGuests(a) {
         if (!a || a.length === 0) return;
         var h = null;
@@ -223,7 +269,10 @@ Singleton {
     }
     function _mergeHealth(arr) {
         var m = health;
-        for (var i = 0; i < arr.length; i++) m[arr[i].alias] = arr[i];
+        for (var i = 0; i < arr.length; i++) {
+            m[arr[i].alias] = arr[i];
+            root._recordMetrics(arr[i].alias, arr[i]);
+        }
         health = m;
         healthRev++;
     }
@@ -390,9 +439,10 @@ Singleton {
         onTriggered: { root.pingAll(); root.loadTunnels(); root.appCheckAll(); root.loadGuests(root.selectedAlias); }
     }
     Timer {
-        interval: 60000
+        interval: 15000
         repeat: true
         running: root.active
+        triggeredOnStart: true
         onTriggered: root.probeAll()
     }
 }
