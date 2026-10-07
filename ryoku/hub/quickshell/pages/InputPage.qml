@@ -127,6 +127,7 @@ Item {
     property bool macroKeyCapture: false
     property bool macroRecording: false
     property string macroAction: "tap"
+    property string macroModifierOnly: ""
     property double macroLastAt: 0
     readonly property bool capturing: pg.captureFor !== null || pg.macroKeyCapture || pg.macroRecording
 
@@ -214,6 +215,12 @@ Item {
                 return pg.mouseDevices[i];
         return null;
     }
+    function mouseDisplayName(device) {
+        var dev = pg.mouseDevice(device);
+        if (!dev) return device;
+        if (dev.brand && dev.model) return dev.brand + " · " + dev.model;
+        return dev.name || device;
+    }
     function buttonLabel(code, device) {
         var dev = device ? pg.mouseDevice(device) : null;
         if (dev && dev.labels && dev.labels[String(code)])
@@ -279,6 +286,13 @@ Item {
         if (["minus", "equal", "bracketleft", "bracketright", "comma", "period",
              "slash", "semicolon", "apostrophe", "backslash", "grave"].indexOf(t) >= 0)
             return t;
+        return "";
+    }
+    function modifierKeyToken(key) {
+        if (key === Qt.Key_Shift) return "SHIFT";
+        if (key === Qt.Key_Control) return "CTRL";
+        if (key === Qt.Key_Alt) return "ALT";
+        if (key === Qt.Key_Meta) return "SUPER";
         return "";
     }
     function chordToKeys(chord) {
@@ -384,6 +398,7 @@ Item {
         pg.macroKeyCapture = true;
         pg.macroRecording = false;
         pg.captureForming = "";
+        pg.macroModifierOnly = "";
         pg.enterRecordSubmap();
         recordTimeout.restart();
     }
@@ -395,6 +410,7 @@ Item {
         pg.macroKeyCapture = false;
         pg.captureForming = "";
         pg.macroLastAt = Date.now();
+        pg.macroModifierOnly = "";
         pg.enterRecordSubmap();
         recordTimeout.restart();
     }
@@ -404,8 +420,10 @@ Item {
         pg.macroKeyCapture = false;
         pg.macroRecording = false;
         pg.captureForming = "";
+        pg.macroModifierOnly = "";
     }
     function acceptMacroChord(chord) {
+        pg.macroModifierOnly = "";
         var keys = pg.chordToKeys(chord);
         if (keys === null) {
             pg.mouseError = I18n.tr("That key is outside the bindable set.");
@@ -1589,7 +1607,7 @@ Item {
                         ? pg.buttonLabel(pg.macroEditor.button, pg.macroEditor.device)
                         : ""
                     desc: I18n.tr("Runs these steps in order without holding up pointer input.")
-                    value: pg.macroEditor ? pg.macroEditor.device : ""
+                    value: pg.macroEditor ? pg.mouseDisplayName(pg.macroEditor.device) : ""
                     changed: false
                 }
                 SettingRow {
@@ -1826,10 +1844,24 @@ Item {
                                         }
                                     }
                                     HoverHandler { id: sideHover; cursorShape: Qt.PointingHandCursor }
-                                    TapHandler {
-                                        onTapped: pg.startBind(devCard.modelData.id, modelData)
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onPressed: mouse => {
+                                            var macroPoint = sideMacro.mapFromItem(parent, mouse.x, mouse.y);
+                                            var clearPoint = sideClear.mapFromItem(parent, mouse.x, mouse.y);
+                                            var overMacro = macroPoint.x >= 0 && macroPoint.x <= sideMacro.width
+                                                && macroPoint.y >= 0 && macroPoint.y <= sideMacro.height;
+                                            var overClear = sideClear.visible
+                                                && clearPoint.x >= 0 && clearPoint.x <= sideClear.width
+                                                && clearPoint.y >= 0 && clearPoint.y <= sideClear.height;
+                                            if (overMacro || overClear)
+                                                mouse.accepted = false;
+                                        }
+                                        onClicked: pg.startBind(devCard.modelData.id, modelData)
                                     }
                                     Btn {
+                                        id: sideMacro
                                         anchors {
                                             left: parent.left; bottom: parent.bottom
                                             margins: Tokens.s1
@@ -1839,6 +1871,7 @@ Item {
                                         onAct: pg.openMacro(devCard.modelData.id, modelData)
                                     }
                                     Btn {
+                                        id: sideClear
                                         visible: !!pg.mapFor(devCard.modelData.id, modelData)
                                         anchors {
                                             right: parent.right; bottom: parent.bottom
@@ -2030,12 +2063,14 @@ Item {
             color: Tokens.paper
             opacity: 0.55
             TapHandler {
-                onTapped: {
+                onTapped: Qt.callLater(function() {
+                    if (!pg.capturing)
+                        return;
                     if (pg.macroKeyCapture || pg.macroRecording)
                         pg.stopMacroCapture();
                     else
                         pg.stopBind(false, "");
-                }
+                })
             }
         }
 
@@ -2058,12 +2093,29 @@ Item {
                     return;
                 pg.captureForming = Combos.formingChord(event);
                 var chord = Combos.chordFrom(event);
-                if (chord === "")
+                if (chord === "") {
+                    if (pg.macroKeyCapture || pg.macroRecording) {
+                        var modifier = pg.modifierKeyToken(event.key);
+                        pg.macroModifierOnly = modifier !== "" && pg.captureForming === modifier
+                            ? modifier : "";
+                    }
                     return;
+                }
+                pg.macroModifierOnly = "";
                 if (pg.macroKeyCapture || pg.macroRecording)
                     pg.acceptMacroChord(chord);
                 else
                     pg.stopBind(true, chord);
+            }
+            Keys.onReleased: (event) => {
+                if (!(pg.macroKeyCapture || pg.macroRecording) || event.isAutoRepeat)
+                    return;
+                event.accepted = true;
+                var modifier = pg.modifierKeyToken(event.key);
+                if (modifier !== "" && modifier === pg.macroModifierOnly) {
+                    pg.captureForming = "";
+                    pg.acceptMacroChord(modifier);
+                }
             }
         }
 

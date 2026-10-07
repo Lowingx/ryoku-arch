@@ -14,6 +14,13 @@
   through Prowl (`quickshell/pages/RashinPage.qml`).
 
 ### Fixed
+- **Mouse macros take a lone Shift, Ctrl, Alt or Super, and the side grid
+  stops double-acting.** Holding just a modifier while recording a macro showed
+  it but never added the step; it now commits when you let go. The MACRO and
+  CLEAR buttons on a side-grid key no longer also open the key-chord prompt,
+  clicking outside the prompt to cancel no longer starts a bind on the key
+  underneath, and the macro editor names the mouse (Razer · Naga V2 / Pro)
+  instead of its device id (`quickshell/pages/InputPage.qml`).
 - **The Add-ons page tells the truth.** Removing a bundle or one of its parts
   now refreshes the card from the installer's own status once the terminal
   closes, instead of showing stale counts and dead Remove buttons until you
