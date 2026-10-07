@@ -885,11 +885,15 @@ func applyKeymap(code string) { _ = exec.Command("loadkeys", code).Run() }
 
 // validXkbLayout reports whether l is a real X11/XKB layout, from
 // `localectl list-x11-keymap-layouts` (probed once, cached). A bogus layout would
-// make cage/Hyprland fail to start, so xkbFromKeymap falls back on this. When
-// localectl is unavailable the check trusts the input rather than forcing "us".
+// make the graphical session fail to start, so xkbFromKeymap falls back on this.
+// When localectl is unavailable the check trusts the input rather than forcing
+// "us".
 var (
 	xkbLayouts map[string]bool
 	xkbProbed  bool
+
+	xkbVariants       = map[string]map[string]bool{}
+	xkbVariantsProbed = map[string]bool{}
 )
 
 func validXkbLayout(l string) bool {
@@ -910,19 +914,64 @@ func validXkbLayout(l string) bool {
 	return xkbLayouts[l]
 }
 
+// validXkbVariant is the variant counterpart to validXkbLayout. Results are
+// cached per layout because localectl needs a separate query for each one. A
+// failed probe does not accept the suffix: many console suffixes, such as
+// "latin1", are not XKB variants.
+func validXkbVariant(layout, variant string) bool {
+	if variant == "" {
+		return false
+	}
+	if !xkbVariantsProbed[layout] {
+		xkbVariantsProbed[layout] = true
+		if out, ok := run("localectl", "list-x11-keymap-variants", layout); ok {
+			variants := map[string]bool{}
+			for _, line := range strings.Split(out, "\n") {
+				if s := strings.TrimSpace(line); s != "" {
+					variants[s] = true
+				}
+			}
+			xkbVariants[layout] = variants
+		}
+	}
+	variants, ok := xkbVariants[layout]
+	if !ok {
+		return false
+	}
+	return variants[variant]
+}
+
 // xkbFromKeymap maps a console keymap (what the picker offers, from
-// `localectl list-keymaps`) to the X11/XKB layout the graphical stack needs: the
-// installer's cage session, the greeter's /etc/X11 keymap, and Hyprland's
-// kb_layout. Console and XKB names coincide for most layouts; a suffix (de-latin1
-// -> de) or alias (uk -> gb) needs translating. Anything that is not a real XKB
-// layout falls back to "us" so a pick can never break the compositor.
+// `localectl list-keymaps`) to the XKB layout and variant the graphical stack
+// needs. Console and XKB names coincide for most layouts; aliases and console
+// naming conventions need translating. Anything that is not a real XKB layout
+// falls back to "us" so a pick can never break the graphical session.
 func xkbFromKeymap(code string) (layout, variant string) {
 	if code == "" {
 		return "us", ""
 	}
-	base := code
+	switch code {
+	case "dvorak", "ANSI-dvorak":
+		return "us", "dvorak"
+	case "colemak":
+		return "us", "colemak"
+	case "dvorak-programmer":
+		return "us", "dvp"
+	case "dvorak-l":
+		return "us", "dvorak-l"
+	case "dvorak-r":
+		return "us", "dvorak-r"
+	case "dvorak-uk":
+		return "gb", "dvorak"
+	case "fr-bepo":
+		return "fr", "bepo"
+	case "fr-bepo-latin9":
+		return "fr", "bepo_latin9"
+	}
+
+	base, suffix := code, ""
 	if i := strings.IndexByte(code, '-'); i > 0 {
-		base = code[:i]
+		base, suffix = code[:i], code[i+1:]
 	}
 	switch base {
 	case "uk":
@@ -931,6 +980,9 @@ func xkbFromKeymap(code string) (layout, variant string) {
 		base = "tr"
 	}
 	if validXkbLayout(base) {
+		if validXkbVariant(base, suffix) {
+			return base, suffix
+		}
 		return base, ""
 	}
 	if validXkbLayout(code) {
@@ -943,8 +995,8 @@ func xkbFromKeymap(code string) (layout, variant string) {
 // in cage (Wayland), whose keyboard layout is fixed at launch, so a password typed
 // after the keyboard pick would still be captured in cage's launch layout (us) and
 // then fail at a login prompt on the user's real layout. When the picked layout
-// differs from cage's active one, write it for ryoku-installer-session and return
-// true so the caller quits; the session relaunches cage under the chosen layout
+// or variant differs from cage's active pair, write it for the installer session
+// and return true so the caller quits; the session relaunches cage under the pair
 // and the wizard resumes past the keyboard step (RYOKU_KB_PRESET). Console path
 // (no cage): loadkeys already applies to the VT, so this is a no-op.
 func keymapRelaunch(code string) bool {
@@ -952,11 +1004,11 @@ func keymapRelaunch(code string) bool {
 		return false
 	}
 	lay, varnt := xkbFromKeymap(code)
-	active := os.Getenv("RYOKU_XKB")
-	if active == "" {
-		active = "us" // cage's default when the session set nothing
+	activeLayout := os.Getenv("RYOKU_XKB")
+	if activeLayout == "" {
+		activeLayout = "us" // cage's default when the session set nothing
 	}
-	if lay == active {
+	if lay == activeLayout && varnt == os.Getenv("XKB_DEFAULT_VARIANT") {
 		return false
 	}
 	_ = os.WriteFile("/tmp/ryoku-xkb", []byte(code+"\n"+lay+"\n"+varnt+"\n"), 0o644)
