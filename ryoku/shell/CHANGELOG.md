@@ -3,6 +3,13 @@
 ## Unreleased
 
 ### Added
+- **Depth and Parallax offer five cut-out models.** Besides U2Net Portable and
+  BiRefNet General Lite, the Stage Editor's model picker lists Silueta (small
+  and fast), BiRefNet General (best edges and hair) and BiRefNet Portrait
+  (people). Each quality tier keeps its own model choice in `stage.json`, the
+  picker shows size, licence and download state, and changing a tier's model
+  recuts the wallpaper with it (`scripts/ryostage`, `ipc/stage.go`,
+  `quickshell/shell/modules/stage/StageDepthOptions.qml`).
 - **Each workspace can keep its own wallpaper.** The picker's target choice
   now offers All, This monitor and This workspace, and the Stage Editor's
   wallpaper page has Use for this workspace and Clear workspace wallpaper.
