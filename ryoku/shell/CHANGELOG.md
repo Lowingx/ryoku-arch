@@ -3,6 +3,17 @@
 ## Unreleased
 
 ### Added
+- **One dock for every bar style, in any design.** The dock is no longer tied
+  to a bar style: pick the Ryoku, Python or Shima dock (or none) and it runs
+  the same under QS Bar, Kairos, Shima, Python, Sumi and Nomarchy, on both
+  compositors, with never two docks at once. Every dock setting now lives in
+  the Stage Editor's Dock section: the design cards, placement, autohide,
+  size, magnify, each design's own options, and one pinned-app list that all
+  three designs and Sumi's rail share. QS Bar Settings, the Python guide,
+  Shima's settings and Bar Studio link there, and `ryoku doctor` moves old
+  per-style pins and dock options into the shared store in order
+  (`quickshell/shell/modules/dock/UniversalDockHost.qml`,
+  `quickshell/shell/services/Dock.qml`, `../cli/internal/doctor/doctor.go`).
 - **Nomarchy: Omarchy's shell as a Ryoku bar style.** Pick Nomarchy in Bar
   Studio or the welcome tour and the Omarchy (quattro) bar runs on Ryoku, on
   both Hyprland and niri: its panels, menu, emoji picker, reminders, Agents

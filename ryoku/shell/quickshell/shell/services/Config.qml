@@ -271,14 +271,40 @@ Singleton {
             })
             property var dock: ({
                 "enabled": false,
+                "design": "ryoku",
                 "edge": "auto",
                 "autohide": true,
+                "size": 44,
                 "pinned": [],
                 "magnify": true,
+                "style": "islands",
                 "frost": true,
                 "shadow": true,
                 "labels": true,
-                "media": false
+                "media": false,
+                "python": {
+                    "onTop": true,
+                    "floating": false,
+                    "opacity": 100,
+                    "exclusive": false,
+                    "smartAutohide": true,
+                    "autohideTimeout": 1000,
+                    "overrideBoundsCorrection": false,
+                    "enableScrolling": false,
+                    "visibleElements": 7,
+                    "hoverScale": 120,
+                    "cascadeScale": false
+                },
+                "shima": {
+                    "shape": "auto",
+                    "notch": true,
+                    "material": "inherit",
+                    "magnifySize": 150,
+                    "launcher": true,
+                    "reserveSpace": true,
+                    "revealOnEmpty": true,
+                    "badges": true
+                }
             })
             property var clipboard: ({
                 "widthPercent": 65,
