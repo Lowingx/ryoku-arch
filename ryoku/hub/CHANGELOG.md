@@ -69,6 +69,14 @@
   (`quickshell/Hub.qml`)
 
 ### Added
+- **Import config reads niri.** Point the Import page at a niri config folder
+  or a dotfiles checkout and it follows the `include` tree, maps input, layout,
+  animations, environment, startup apps, cursor, binds and window rules onto
+  Ryoku's settings, lists conflicts with Ryoku's shortcuts, and keeps anything
+  it cannot map in a marked `niri/user.kdl` block instead of dropping it. A niri
+  config imported while another desktop runs is saved for the switch and
+  nothing changes live; Undo restores every touched file
+  (`backend/import_provider.go`, `quickshell/pages/ImportPage.qml`).
 - **Credits name ii-p3drovfx.** The Stage Editor is ported from the Edit Mode
   of P3DROVFX's ii-p3drovfx shell; the Credits page now lists it beside the
   other shells Ryoku grows from, and NOTICE records where the ported code comes
