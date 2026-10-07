@@ -516,6 +516,13 @@
   panels came up blank. Nomarchy's files now import QtQuick 6.11, which keeps
   the new name out of reach (`quickshell/shell/Commons/`, `quickshell/shell/Ui/`,
   `quickshell/shell/modules/bar/barstyles/nomarchy/`).
+- **Omarchy plugins draw their colours on Qt 6.12 too.** A third-party
+  plugin's QML imports plain QtQuick, which now hides the shell's `Color`, so
+  its panels came up without theme colours. Nomarchy loads each plugin from a
+  cached copy whose QML carries the same QtQuick 6.11 pin as its own files;
+  everything else in the copy links back to the plugin folder, which is never
+  changed, and editing or removing a plugin refreshes or clears its copy
+  (`quickshell/shell/modules/bar/barstyles/nomarchy/services/PluginRegistry.qml`).
 - **New cut-out models install on machines upgraded from the old depth
   tool.** Ryostage adopts the earlier `depth` environment by moving it, which
   left its `pip` pointing at the old folder, so every model download failed
