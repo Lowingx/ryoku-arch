@@ -68,6 +68,14 @@ var capsManifest = []wm.Capability{
 	wm.CapKeyboardLayoutSwitch,
 }
 
+// windowRuleActions are the neutral window-rule action ids the wayfire rule
+// writer honours, in the order the Hub offers them. wayfire's rule language is
+// its own (a signal, a condition, an action), so only the ids with a wayfire
+// spelling appear; apply reports a stored row outside this set as unhonored.
+var windowRuleActions = []string{
+	"pin", "maximize", "opacity", "workspace",
+}
+
 // The packages ryoku-desktop-wayfire is made of: the variant package itself,
 // wayfire, the X11 bridge wayfire runs natively, the GNOME portal backend its
 // caps report, and wlsunset, which holds the warm gamma while the night light
@@ -102,6 +110,7 @@ func runCaps() error {
 		PortalBackend:     "gnome",
 		NightLightProcess: "wlsunset",
 		Packages:          compositorPackages,
+		WindowRuleActions: windowRuleActions,
 	}
 	enc := json.NewEncoder(stdout)
 	enc.SetIndent("", "  ")

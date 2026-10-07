@@ -476,6 +476,7 @@ func TestTouchpadAct(t *testing.T) {
 func TestBorderColors(t *testing.T) {
 	t.Run("pushes both colours as runtime values", func(t *testing.T) {
 		calls := stubAct(t, stageReplies())
+		wayfireHome(t)
 		if err := runAct([]string{"decoration.borderColors", "#AABBCC", "112233"}); err != nil {
 			t.Fatal(err)
 		}
@@ -496,6 +497,59 @@ func TestBorderColors(t *testing.T) {
 		err := runAct([]string{"decoration.borderColors"})
 		if err == nil || !strings.Contains(err.Error(), "missing active colour") {
 			t.Errorf("got %v, want a missing-argument error", err)
+		}
+	})
+
+	t.Run("a fixed border colour wins over the wallpaper", func(t *testing.T) {
+		calls := stubAct(t, stageReplies())
+		wayfireHome(t)
+		if err := os.MkdirAll(filepath.Join(configHome(), "ryoku"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		store := filepath.Join(configHome(), "ryoku", "desktop.json")
+		body := `{"desktop":{"appearance":{"borderFollowsPalette":false}}}`
+		if err := os.WriteFile(store, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := runAct([]string{"decoration.borderColors", "#AABBCC", "112233"}); err != nil {
+			t.Fatal(err)
+		}
+		if len(*calls) != 0 {
+			t.Errorf("gate off must not push, got %v", *calls)
+		}
+		if _, err := os.Stat(borderPalettePath()); !os.IsNotExist(err) {
+			t.Errorf("gate off must not write the palette file, got err %v", err)
+		}
+	})
+
+	t.Run("the palette file hands the composer both colours", func(t *testing.T) {
+		stubAct(t, stageReplies())
+		wayfireHome(t)
+		if err := runAct([]string{"decoration.borderColors", "#AABBCC", "112233"}); err != nil {
+			t.Fatal(err)
+		}
+		active, inactive, ok := borderPaletteColors()
+		if !ok || active != "#aabbcc" || inactive != "#112233" {
+			t.Errorf("palette file = %q/%q, %v; want #aabbcc/#112233, true", active, inactive, ok)
+		}
+	})
+
+	t.Run("one unusable side keeps the stored one", func(t *testing.T) {
+		stubAct(t, stageReplies())
+		wayfireHome(t)
+		prev := `{"active":"#111111","inactive":"#222222"}`
+		if err := os.MkdirAll(filepath.Dir(borderPalettePath()), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(borderPalettePath(), []byte(prev), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := runAct([]string{"decoration.borderColors", "#AABBCC", "salad"}); err != nil {
+			t.Fatal(err)
+		}
+		active, inactive, ok := borderPaletteColors()
+		if !ok || active != "#aabbcc" || inactive != "#222222" {
+			t.Errorf("palette file = %q/%q, %v; want #aabbcc/#222222, true", active, inactive, ok)
 		}
 	})
 }

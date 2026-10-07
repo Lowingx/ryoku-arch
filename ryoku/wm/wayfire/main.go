@@ -42,6 +42,10 @@ func main() {
 		err = runAct(os.Args[2:])
 	case "watch":
 		err = runWatch(os.Args[2:])
+	case "apply":
+		err = runApply(os.Args[2:])
+	case "defaults":
+		err = runDefaults()
 	case "-h", "--help", "help":
 		usage()
 	default:

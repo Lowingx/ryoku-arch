@@ -771,6 +771,17 @@ func setBorderPalette(args []string) error {
 	if !aok && !iok {
 		return fmt.Errorf("act %s: no usable colour in %q/%q", wm.ActionBorderColors, active, inactive)
 	}
+	// A fixed border colour is the user's own choice; a wallpaper change must
+	// not override it, the store gate the sibling acts share.
+	if !loadStore(storePath()).Appearance.BorderFollowsPalette {
+		return nil
+	}
+	// The palette file is what the composer reads: wayfire reloads its config
+	// on any write, so the colours have to land in the file as well as on the
+	// wire or the next apply would snap back to the store colours.
+	if err := writeBorderPalette(na, ni, aok, iok); err != nil {
+		return err
+	}
 	colors := map[string]any{}
 	if aok {
 		colors["decoration/active_color"] = na + "ff"
@@ -779,6 +790,30 @@ func setBorderPalette(args []string) error {
 		colors["decoration/inactive_color"] = ni + "ff"
 	}
 	return perform("wayfire/set-config-options", colors)
+}
+
+// writeBorderPalette records the live palette's colours for the composer. A
+// colour that failed normalisation keeps the file's previous value rather than
+// blanking it, so one bad wallpaper hex cannot clear an otherwise good palette.
+func writeBorderPalette(active, inactive string, aok, iok bool) error {
+	prevA, prevI, _ := borderPaletteColors()
+	if !aok {
+		active = prevA
+	}
+	if !iok {
+		inactive = prevI
+	}
+	body, err := json.Marshal(struct {
+		Active   string `json:"active"`
+		Inactive string `json:"inactive"`
+	}{Active: active, Inactive: inactive})
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(borderPalettePath()), 0o755); err != nil {
+		return err
+	}
+	return atomicWrite(borderPalettePath(), body, 0o644)
 }
 
 // normBorderHex normalises a colour to "#rrggbb", accepting the same
