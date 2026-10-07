@@ -116,6 +116,7 @@ func reconcilers() []reconciler {
 		{i18n.T("boot partition headroom"), reconcileBootSpace},
 		{i18n.T("boot volume writability"), reconcileBootRW},
 		{i18n.T("initramfs GPU trim"), reconcileInitramfsGPUTrim},
+		{i18n.T("initramfs console keys"), reconcileInitramfsConsoleKeys},
 		{i18n.T("limine autoboot"), reconcileLimineAutoboot},
 		{i18n.T("limine snapshot sync"), reconcileLimineOSName},
 		{i18n.T("updatedb snapshot prune"), reconcileUpdatedbPrune},

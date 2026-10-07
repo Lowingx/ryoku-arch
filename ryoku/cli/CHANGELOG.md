@@ -97,6 +97,13 @@
   `internal/sys/release.go`, `internal/updater/release.go`).
 
 ### Fixed
+- **Existing installs use their console layout at the disk unlock prompt.** The
+  doctor adds the `ryoku-console-keys` initramfs hook right after `udev` in
+  `/etc/mkinitcpio.conf.d/ryoku.conf` once ryoku-desktop ships it, and rebuilds
+  the boot images. The prompt then reads keys in the user's console layout with
+  Num Lock on instead of falling back to a US layout with Num Lock off and
+  rejecting a passphrase set in the installer
+  (`internal/doctor/reconcile_initramfs.go`).
 - **A fresh install's first niri login starts.** The installer runs
   `ryoku materialize` before a neutral store exists on a box with the default
   keyboard layout, and materialize skipped rendering a compositor's generated
