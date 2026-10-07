@@ -3,6 +3,14 @@
 ## Unreleased
 
 ### Added
+- **The window-manager seam can vet plugins and read foreign configs.** Each
+  provider declares which foreign shell interfaces it serves, and
+  `ryoku wm compat <dir>` scans a plugin folder for the ones it needs and says
+  whether the running compositor can run it. Providers also answer
+  `import metadata|scan`, so the niri provider can read a niri config tree and
+  hand back a neutral mapping. `ryoku wm outputs <file>` applies a neutral output
+  layout through the same seam (`wm/compat.go`, `wm/niri/import_*.go`,
+  `cli/wm.go`).
 - **New accounts start with the Ryoku default rice.** The packaged look carries
   the maintainer's current QS Bar, window styling, visualizer, input and brand
   choices without machine-specific paths, keyboard layout, app pins or a fixed
