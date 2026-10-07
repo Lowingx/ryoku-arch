@@ -453,6 +453,14 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **The Stage Editor's toolbar and catalogue answer clicks on Hyprland.** While
+  the editor was open the desktop held the keyboard exclusively, and Hyprland
+  hands a surface holding that grab every click too, so only the desktop's own
+  widgets moved: the catalogue rows, the tabs and Done did nothing. The seam
+  now says whether a compositor keeps the pointer apart from a keyboard grab
+  (`keyboardGrabSharesPointer`, claimed by niri), and where it does not, the
+  desktop asks for the keyboard on demand, taking it as the pointer crosses the
+  desktop (`quickshell/shell/modules/desktop/Desktop.qml`, `../wm/caps.go`).
 - **A shell reload no longer brings back an old live wallpaper.** The Stage
   Editor kept its own copy of the wallpaper and, at every shell start, replayed
   it through ryogami whenever that copy was a video. The copy only changes when

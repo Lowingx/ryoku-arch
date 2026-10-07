@@ -87,7 +87,8 @@ Hyprland only:
 
 niri only:
 
-    columnFill  nativeOverview  overviewBackdrop  overviewState
+    columnFill  keyboardGrabSharesPointer  nativeOverview  overviewBackdrop
+    overviewState
 
 The absences are each compositor's design, not gaps to fill later. The ones
 that change what a user sees:
@@ -108,6 +109,12 @@ that change what a user sees:
   and recreates them on a config reload or a mode change. A one-shot capture is
   fine; a long-lived whole-screen capture can race an output leaving and crash
   the Qt client. The launcher therefore uses a solid drawer on niri.
+- **`keyboardGrabSharesPointer`** is absent on Hyprland because a layer surface
+  holding the keyboard exclusively takes every pointer event too. The Stage
+  Editor's canvas holds the keyboard on niri, so Escape and the arrows reach it
+  from the moment it opens; on Hyprland it asks on demand and takes the keyboard
+  as the pointer crosses the desktop, which keeps the editor's toolbar and
+  catalogue clickable.
 - **`submap`**, **`specialWorkspace`**, **`screenShader`**, **`plugins`** and
   **`cursorSet`** have no niri equivalent, so the binds and settings that need
   them are reported by `apply` rather than silently dropped.
