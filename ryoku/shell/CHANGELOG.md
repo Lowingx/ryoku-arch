@@ -453,6 +453,14 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **A shell reload no longer brings back an old live wallpaper.** The Stage
+  Editor kept its own copy of the wallpaper and, at every shell start, replayed
+  it through ryogami whenever that copy was a video. The copy only changes when
+  a wallpaper is picked inside the editor, so after a switch through Super+W,
+  random or a rice, `ryoku reload` put the replaced clip back. Ryogami already
+  restores what it last applied, so the editor no longer replays anything on
+  start or when its video backend option changes
+  (`quickshell/stage/services/Wallpapers.qml`).
 - **Region recordings no longer come out tiled.** The screenshot tool's Record
   action (including Capture this monitor) and the capture card's Window and
   Region targets scaled the box to physical pixels before handing it to GPU
