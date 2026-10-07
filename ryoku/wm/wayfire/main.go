@@ -46,6 +46,8 @@ func main() {
 		err = runApply(os.Args[2:])
 	case "defaults":
 		err = runDefaults()
+	case "session":
+		err = runSession()
 	case "schema":
 		err = runSchema()
 	case "environment":
