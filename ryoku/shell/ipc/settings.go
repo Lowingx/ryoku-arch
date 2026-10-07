@@ -21,15 +21,15 @@ import (
 // setting silently reverting was the hazard of the Hub and the daemon both
 // writing it directly).
 //
-// The daemon owns a typed schema for six top-level namespaces (general, theme,
-// bars, menus, notifications, wallpaper). Those are validated: enum membership
-// and integer ranges are rejected, the float strength/contrast/opacity values
-// clamp into range. Every other top-level key in the file (the Ryoku-native look
-// knobs frameRadius, frameBars, weatherLocation, language, and the rest) is
-// carried through verbatim as passthrough: echoed in the frame and merged on
-// patch, but not validated, because the daemon has no schema for them.
-// Passthrough keeps the daemon the sole writer without having to model keys other
-// surfaces own.
+// The daemon owns a typed schema for the reference namespaces plus Ryoku's Ask
+// and Controls state. Those are validated: enum membership and integer ranges
+// are rejected, float strength/contrast/opacity values clamp into range, and
+// Controls drops unknown or duplicate layout identifiers. Every other top-level
+// key in the file (the Ryoku-native look knobs frameRadius, frameBars,
+// weatherLocation, language, and the rest) is carried through verbatim as
+// passthrough: echoed in the frame and merged on patch, but not validated,
+// because the daemon has no schema for them. Passthrough keeps the daemon the
+// sole writer without having to model keys other surfaces own.
 //
 // The frame is the whole file as one JSON object, so a subscriber sees both the
 // validated schema and the passthrough keys and can drop its own file reader.
@@ -51,6 +51,7 @@ var contractKeys = map[string]bool{
 	"notifications": true,
 	"wallpaper":     true,
 	"ask":           true,
+	"controls":      true,
 }
 
 // Value domains, in the display order of contract 14 section 8. Stored as stable
@@ -70,6 +71,15 @@ var (
 	matugenModeValues     = []string{"Light", "Dark"}
 	orientationValues     = []string{"Horizontal", "Vertical"}
 	locQueryTypeValues    = []string{"Coordinates", "City"}
+	controlSectionIDs     = []string{"vitals", "connections", "powerProfile", "media", "levels", "bottomControls"}
+	controlElementIDs     = []string{
+		"identity", "cpu", "cpuTemperature", "liveGraph", "memory", "gpu", "network", "disk", "battery",
+		"wifi", "bluetooth", "ethernet", "vpn",
+		"mediaArtwork", "mediaTrack", "mediaTransport",
+		"volume", "brightness",
+		"lock", "sleep", "logout", "restart", "powerOff",
+		"nightLight", "keepAwake", "doNotDisturb", "micMute", "gamingMode", "panelSettings", "pluginCards",
+	}
 
 	// 23 bar widgets, all unit variants (no per-item config).
 	barWidgetValues = []string{
@@ -101,7 +111,7 @@ var (
 
 // settings mirrors the reference configuration schema (contract 14), minus the
 // icon-theme group, custom-CSS file, and app-launcher menu that Ryoku does not
-// consume. Ask holds the shell's persistent chat-bubble placement.
+// consume. Ask and Controls are Ryoku's typed shell state.
 type settings struct {
 	General       generalSettings       `json:"general"`
 	Theme         themeSettings         `json:"theme"`
@@ -110,6 +120,7 @@ type settings struct {
 	Notifications notificationsSettings `json:"notifications"`
 	Wallpaper     wallpaperSettings     `json:"wallpaper"`
 	Ask           askSettings           `json:"ask"`
+	Controls      controlsSettings      `json:"controls"`
 }
 
 type generalSettings struct {
@@ -265,6 +276,15 @@ type askBubbleSettings struct {
 	Y       float64 `json:"y"`
 	Screen  string  `json:"screen"`
 }
+type controlsSettings struct {
+	Sections []controlsSection `json:"sections"`
+	Hidden   []string          `json:"hidden"`
+}
+
+type controlsSection struct {
+	ID      string `json:"id"`
+	Visible bool   `json:"visible"`
+}
 
 func ip(n int) *int { return &n }
 
@@ -280,6 +300,14 @@ func qa(actions ...string) menuWidget { return menuWidget{Type: "QuickActions", 
 func defaultSettings() *settings {
 	menu := func(pos string, width int, widgets ...menuWidget) menuConfig {
 		return menuConfig{Position: pos, MinimumWidth: width, Widgets: widgets}
+	}
+	controls := []controlsSection{
+		{ID: "vitals", Visible: true},
+		{ID: "connections", Visible: true},
+		{ID: "powerProfile", Visible: true},
+		{ID: "media", Visible: false},
+		{ID: "levels", Visible: true},
+		{ID: "bottomControls", Visible: true},
 	}
 	return &settings{
 		General: generalSettings{
@@ -332,6 +360,7 @@ func defaultSettings() *settings {
 		Notifications: notificationsSettings{NotificationPosition: "Right", PopupWindowMargins: 0},
 		Wallpaper:     wallpaperSettings{ContentFit: "Cover", TransitionPreset: "random", VideoEngine: "ryogami", VideoEnabled: true, VideoTranscodeFps: 24, VideoTranscodeWidth: 1920},
 		Ask:           askSettings{Bubble: askBubbleSettings{Enabled: false, X: 0.94, Y: 0.68, Screen: ""}},
+		Controls:      controlsSettings{Sections: controls, Hidden: []string{}},
 	}
 }
 
@@ -414,6 +443,7 @@ func (s *settings) normalize(strict bool) error {
 	s.Notifications.normalize(v)
 	s.Wallpaper.normalize(v)
 	s.Ask.normalize(v)
+	s.Controls.normalize()
 	return v.err
 }
 
@@ -562,6 +592,42 @@ func (a *askSettings) normalize(v *validator) {
 	v.clampF(&a.Bubble.X, 0, 1)
 	v.clampF(&a.Bubble.Y, 0, 1)
 }
+func (c *controlsSettings) normalize() {
+	defaults := defaultSettings().Controls.Sections
+	allowedSections := make(map[string]bool, len(controlSectionIDs))
+	for _, id := range controlSectionIDs {
+		allowedSections[id] = true
+	}
+	seenSections := make(map[string]bool, len(defaults))
+	sections := make([]controlsSection, 0, len(defaults))
+	for _, section := range c.Sections {
+		if !allowedSections[section.ID] || seenSections[section.ID] {
+			continue
+		}
+		seenSections[section.ID] = true
+		sections = append(sections, section)
+	}
+	for _, section := range defaults {
+		if !seenSections[section.ID] {
+			sections = append(sections, section)
+		}
+	}
+	c.Sections = sections
+
+	allowedElements := make(map[string]bool, len(controlElementIDs))
+	for _, id := range controlElementIDs {
+		allowedElements[id] = true
+	}
+	seenElements := make(map[string]bool, len(c.Hidden))
+	hidden := make([]string, 0, len(c.Hidden))
+	for _, id := range c.Hidden {
+		if allowedElements[id] && !seenElements[id] {
+			seenElements[id] = true
+			hidden = append(hidden, id)
+		}
+	}
+	c.Hidden = hidden
+}
 
 // splitPath breaks a dotted patch path into segments, rejecting an empty path or
 // any empty segment (a malformed path such as "a." or "a..b").
@@ -689,8 +755,8 @@ func settingsToMap(s *settings) map[string]any {
 	return m
 }
 
-// writeContract overlays the seven schema namespaces of ns onto full, so a clamped
-// value from normalize is what gets persisted.
+// writeContract overlays the typed schema namespaces of ns onto full, so a
+// clamped or normalized value is what gets persisted.
 func writeContract(full map[string]any, ns *settings) {
 	for k, v := range settingsToMap(ns) {
 		full[k] = v
@@ -719,10 +785,10 @@ func resolveThemePalette(full map[string]any, themeName string) {
 	full["themePalette"] = m
 }
 
-// buildSettings reads the seven schema namespaces out of a decoded file, defaulting
-// any that are absent, then normalises. A namespace whose shape does not fit the
-// schema, or a value that fails normalisation, is an error the caller treats as a
-// malformed file (lenient) or a rejected patch (strict).
+// buildSettings reads the typed schema namespaces out of a decoded file,
+// defaulting any that are absent, then normalises. A namespace whose shape does
+// not fit the schema, or a value that fails normalisation, is an error the caller
+// treats as a malformed file (lenient) or a rejected patch (strict).
 func buildSettings(raw map[string]any, strict bool) (*settings, error) {
 	s := defaultSettings()
 	dst := map[string]any{
@@ -733,6 +799,7 @@ func buildSettings(raw map[string]any, strict bool) (*settings, error) {
 		"notifications": &s.Notifications,
 		"wallpaper":     &s.Wallpaper,
 		"ask":           &s.Ask,
+		"controls":      &s.Controls,
 	}
 	for k, ptr := range dst {
 		raw, ok := raw[k]

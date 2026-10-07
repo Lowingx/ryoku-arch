@@ -3,6 +3,15 @@
 ## Unreleased
 
 ### Added
+- **Choose what Super+Esc shows.** Ryoku Hub > Controls draws a miniature of
+  the panel: drag its blocks into the order you want, hide whole blocks, and
+  pick the parts inside them (the live graph, each vital, each connection tile,
+  the sliders, session actions, plugin cards, and a new Now playing block). The
+  layout is shared by every bar style and both compositors, applies live on
+  every display, and anything hidden is never created, so a hidden graph or
+  brightness probe costs nothing. If the shell cannot save the change, the page
+  says so and offers Retry (`quickshell/shell/modules/sidebar/ControlsBoard.qml`,
+  `ipc/settings.go`, `../hub/quickshell/pages/ControlsPage.qml`).
 - **The mouse remapper knows more mice and plays macros.** A built-in catalogue
   names popular Logitech, Razer, SteelSeries, Corsair, Glorious and Zowie mice
   and labels their buttons; any other mouse still works with generic labels.
