@@ -286,3 +286,100 @@ func reportStrings(report []wm.Unhonored) []string {
 	}
 	return out
 }
+
+// The legend leads with the shipped catalogue, in the order the sheet presents
+// it, then wayfire's own shipped binds under wayfire's name. A behaviour
+// without a wayfire expression keeps its chord and carries the reason, and is
+// not rebindable: recording a chord over something that does not exist would
+// move nothing. A media key stays fixed the way every provider fixes it.
+func TestBindRowsCatalogueAndExclusives(t *testing.T) {
+	rows := bindRows(defaultStore())
+	cat := wm.ShippedBinds()
+	if len(rows) < len(cat)+len(wayfireExclusives()) {
+		t.Fatalf("got %d rows, want catalogue plus exclusives at least", len(rows))
+	}
+	for i, cb := range cat {
+		if rows[i].ID != cb.ID {
+			t.Fatalf("row %d = %s, want %s", i, rows[i].ID, cb.ID)
+		}
+	}
+
+	byID := map[string]wm.BindRow{}
+	for _, r := range rows {
+		byID[r.ID] = r
+	}
+	if r := byID["focus.left"]; r.Unhonored == "" || r.Rebindable {
+		t.Errorf("focus.left = unhonored %q, rebindable %v; it has no wayfire expression", r.Unhonored, r.Rebindable)
+	}
+	if r := byID["window.close"]; r.Unhonored != "" || !r.Rebindable || r.Chord != "SUPER + Q" {
+		t.Errorf("window.close = %+v", r)
+	}
+	if r := byID["workspace.focus"]; r.Chord != "SUPER + {n}" || !r.Rebindable {
+		t.Errorf("workspace.focus keeps the family chord: %+v", r)
+	}
+	// The row renders a ten-key range, so the hint has to say the emission
+	// stops at nine, the same story apply's report tells.
+	for _, id := range []string{"workspace.focus", "workspace.moveWindow", "workspace.moveWindowSilent"} {
+		if r := byID[id]; !strings.Contains(r.Hint, "no tenth") && !strings.Contains(r.Hint, "nine") {
+			t.Errorf("%s hint = %q; the tenth member has nowhere to go", id, r.Hint)
+		}
+	}
+	if r := byID["media.volumeUp"]; r.Rebindable {
+		t.Error("a dedicated media key must stay fixed")
+	}
+	// A rebind reaches the row the Hub will show.
+	rebound := defaultStore()
+	rebound.KeybindRebinds = map[string]string{"SUPER + L": "SUPER + SHIFT + P"}
+	for _, r := range bindRows(rebound) {
+		if r.ID == "shell.lock" && r.Chord != "SUPER + SHIFT + P" {
+			t.Errorf("rebound shell.lock chord = %q", r.Chord)
+		}
+	}
+
+	// wayfire's own rows follow the catalogue, fixed, with the second chord of
+	// a multi-chord option noted rather than hidden.
+	if rows[len(cat)].Category != "Wayfire" {
+		t.Errorf("the first wayfire exclusive sits at %d with category %q", len(cat), rows[len(cat)].Category)
+	}
+	got := byID["wayfire.grid.slot_l"]
+	if got.Label != "Tile left" || got.Rebindable || !strings.Contains(got.Hint, "also SUPER + KP_4") {
+		t.Errorf("wayfire.grid.slot_l = %+v", got)
+	}
+	if strings.Contains(byID["wayfire.zoom.modifier"].Hint, "also") {
+		t.Errorf("zoom hint = %q, it takes one modifier", byID["wayfire.zoom.modifier"].Hint)
+	}
+}
+
+// A custom row is honoured only where wayfire can act on it, and the reason it
+// shows is the same one apply reports, through the one keybindWhy. An empty
+// chord is not a row at all.
+func TestBindRowsCustoms(t *testing.T) {
+	s := defaultStore()
+	s.Keybinds = []Keybind{
+		{Keys: "SUPER + T", Action: "exec", Value: "alacritty"},
+		{Keys: "SUPER + Q", Action: "close"},
+		{Keys: "mouse_up", Action: "exec", Value: "wheel"},
+		{Keys: "SUPER + Y", Action: "exec", Value: ""},
+		{Keys: "  ", Action: "exec", Value: "ghost"},
+	}
+	rows := bindRows(s)
+	var customs []wm.BindRow
+	for _, r := range rows {
+		if strings.HasPrefix(r.ID, "custom.") {
+			customs = append(customs, r)
+		}
+	}
+	if len(customs) != 4 {
+		t.Fatalf("got %d custom rows, want the four with a chord", len(customs))
+	}
+	switch {
+	case customs[0].Label != "Run: alacritty" || customs[0].Unhonored != "":
+		t.Errorf("exec row = %+v", customs[0])
+	case !strings.Contains(customs[1].Unhonored, `cannot bind the "close" action`):
+		t.Errorf("non-exec row unhonored = %q", customs[1].Unhonored)
+	case !strings.Contains(customs[2].Unhonored, "cannot bind the chord"):
+		t.Errorf("wheel row unhonored = %q", customs[2].Unhonored)
+	case !strings.Contains(customs[3].Unhonored, "needs a command"):
+		t.Errorf("empty command row unhonored = %q", customs[3].Unhonored)
+	}
+}

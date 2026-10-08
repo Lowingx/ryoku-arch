@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -160,13 +161,15 @@ func keybindWhy(k Keybind) string {
 // [command] as binding_<key> plus command_<key> (repeatable_binding_<key> when
 // a held key should repeat it). A row with section and key is a native option
 // wayfire already understands. extra is a second activator the shipped config
-// carried on the same option and keeps.
+// carried on the same option and keeps. hint replaces the catalogue's own copy
+// in the legend when the emission differs from what the id promises.
 type wayfireBind struct {
 	section, key string
 	cmd          string
 	repeatable   bool
 	extra        string
 	reason       string
+	hint         string
 }
 
 // defaultBinds is the whole catalogue mapped onto wayfire's vocabulary: what
@@ -217,9 +220,9 @@ func defaultBinds() map[string]wayfireBind {
 
 		// Workspaces. The grid's nine cells take the number keys natively; the
 		// number pad stays the grid's, so the keypad families report instead.
-		"workspace.focus":                   {section: "vswitch", key: "binding_{n}"},
-		"workspace.moveWindow":              {section: "vswitch", key: "with_win_{n}"},
-		"workspace.moveWindowSilent":        {section: "vswitch", key: "send_win_{n}"},
+		"workspace.focus":                   {section: "vswitch", key: "binding_{n}", hint: "Focus workspace 1 to 9; wayfire's grid holds nine, so the 0 key has no tenth to focus"},
+		"workspace.moveWindow":              {section: "vswitch", key: "with_win_{n}", hint: "Send the window to workspace 1 to 9; there is no tenth to send it to"},
+		"workspace.moveWindowSilent":        {section: "vswitch", key: "send_win_{n}", hint: "Send the window to workspace 1 to 9 without focusing it; there is no tenth"},
 		"workspace.focus.numpad":            {reason: "wayfire's number pad snaps window regions; the digit keys focus workspaces."},
 		"workspace.moveWindow.numpad":       {reason: "wayfire's number pad snaps window regions; Super, Alt and a digit sends the window."},
 		"workspace.moveWindowSilent.numpad": {reason: "wayfire's number pad snaps window regions; Super, Shift and a digit sends it quietly."},
@@ -595,4 +598,137 @@ func applyBinds(d *iniDoc, s wayfireStore) {
 		}
 		d.set(o.section, o.option, value)
 	}
+}
+
+// bindRows is the legend apply claims: the shipped catalogue resolved against
+// the user's rebinds, wayfire's own shipped binds under wayfire's name, then
+// the store's custom rows. A row wayfire cannot perform keeps its chord and
+// carries its reason, so the sheet can never promise a bind the session does
+// not have; a behaviour with no wayfire expression is also not rebindable,
+// since recording a new chord over something that does not exist would move
+// nothing.
+func bindRows(s wayfireStore) []wm.BindRow {
+	defs := defaultBinds()
+	rows := make([]wm.BindRow, 0, 128)
+
+	for _, cb := range wm.ShippedBinds() {
+		wb := defs[cb.ID]
+		// A family keeps its {n} and resolves through its family-level rebind,
+		// so the row carries the effective {n} chord and DisplayKeys renders
+		// the range. A plain bind takes the user's rebind when set.
+		eff, _ := effectiveChord(cb.Chord, s.KeybindRebinds)
+		if cb.Family {
+			eff, _ = wm.FamilyRebind(cb.Chord, s.KeybindRebinds)
+		}
+		hint := cb.Hint
+		if wb.hint != "" {
+			hint = wb.hint
+		}
+		row := wm.BindRow{
+			ID:         cb.ID,
+			Category:   cb.Category,
+			Label:      cb.Label,
+			Hint:       hint,
+			Keys:       wm.DisplayKeys(eff),
+			Default:    cb.Chord,
+			Chord:      eff,
+			Kind:       cb.Kind,
+			Rebindable: wb.reason == "" && rebindable(cb),
+			Locked:     cb.Locked,
+		}
+		if wb.reason != "" {
+			row.Unhonored = wb.reason
+		}
+		rows = append(rows, row)
+	}
+
+	// wayfire's own shipped binds, titled with wayfire's name: the grid and
+	// its workspace navigation, the zoom modifier and the reverse window
+	// cycle. They belong to the baseline, so they rebind nowhere. An option
+	// that takes a second chord on top of its own carries it as a note.
+	for _, ex := range wayfireExclusives() {
+		hint := ex.hint
+		if len(ex.also) > 0 {
+			note := "also " + strings.Join(ex.also, ", ")
+			if hint == "" {
+				hint = note
+			} else {
+				hint += "; " + note
+			}
+		}
+		rows = append(rows, wm.BindRow{
+			ID:         "wayfire." + ex.section + "." + ex.key,
+			Category:   "Wayfire",
+			Label:      ex.label,
+			Hint:       hint,
+			Keys:       wm.DisplayKeys(ex.chord),
+			Default:    ex.chord,
+			Chord:      ex.chord,
+			Kind:       wm.BindCustom,
+			Rebindable: false,
+		})
+	}
+
+	for i, k := range s.Keybinds {
+		chord := strings.TrimSpace(k.Keys)
+		if chord == "" {
+			continue // an empty row is not a bind, the way apply treats it
+		}
+		// The same question keybindWhy asks apply's report, so the legend and
+		// the switch cost can never disagree on a custom row.
+		rows = append(rows, wm.BindRow{
+			ID:         fmt.Sprintf("custom.%d", i),
+			Category:   "Custom",
+			Label:      customLabel(k),
+			Keys:       wm.DisplayKeys(chord),
+			Default:    chord,
+			Chord:      chord,
+			Kind:       wm.BindCustom,
+			Rebindable: false,
+			Unhonored:  keybindWhy(k),
+		})
+	}
+
+	return rows
+}
+
+// customLabel names a store row for the legend. wayfire's only expressible
+// custom is a command, so an exec row names what it runs; any other action
+// keeps its own name beside the reason it has no wayfire spelling.
+func customLabel(k Keybind) string {
+	if k.Action == "exec" || k.Action == "" {
+		if v := strings.TrimSpace(k.Value); v != "" {
+			return "Run: " + v
+		}
+		return "Run command"
+	}
+	return "Action: " + k.Action
+}
+
+// rebindable reports whether the Hub may let a user record a new chord over
+// this bind. A workspace family is rebindable as a unit: the Hub records one
+// chord and the store keeps the {n} placeholder, so all nine members move
+// together. A media or hardware chord rides a dedicated key, so it stays
+// fixed.
+func rebindable(cb wm.CatalogBind) bool {
+	for _, tok := range strings.Split(cb.Chord, " + ") {
+		if strings.HasPrefix(tok, "mouse") || strings.HasPrefix(tok, "XF86") {
+			return false
+		}
+	}
+	return true
+}
+
+// runBinds prints the effective bind legend as a JSON array of wm.BindRow,
+// read through the store so the chords reflect what the session actually
+// emits.
+func runBinds(args []string) error {
+	storePath := ""
+	if len(args) > 0 {
+		storePath = args[0]
+	}
+	rows := bindRows(loadStore(storePath))
+	enc := json.NewEncoder(stdout)
+	enc.SetIndent("", "  ")
+	return enc.Encode(rows)
 }

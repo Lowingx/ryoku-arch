@@ -52,6 +52,8 @@ func main() {
 		err = runOutputs(os.Args[2:])
 	case "schema":
 		err = runSchema()
+	case "binds":
+		err = runBinds(os.Args[2:])
 	case "environment":
 		err = runEnvironment(os.Args[2:])
 	case "-h", "--help", "help":
