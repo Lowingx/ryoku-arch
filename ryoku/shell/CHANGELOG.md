@@ -260,6 +260,25 @@
   own seconds so the shell no longer ticks per second for nobody. Orbit,
   upstream's on-screen keyboard and lock-screen work, and its niri-only pages
   stay out (`quickshell/inir/`).
+- **Shima takes iNiR 2.33's independent work.** A curated sync of upstream's
+  2.33 line, keeping every change that stands on its own and leaving the parts
+  Ryoku cannot ship: an empty player now offers to open the music app you use
+  most (ranked by listening time and Screen Time), the battery bubble draws a
+  real battery with its charge, widget faces rest while nothing moves so idle
+  desktops stop redrawing, settings sliders preview live and write once on
+  release, glass dithers instead of banding, tiles light their top edge and
+  chips fit large text, the Discord-overlay row only shows where it is
+  installed, a notification action sent without a label reads Open, the update
+  check keeps its last count when a check fails, Spotlight keeps up while you
+  type, day and month names follow the shell's language, widgets keep their
+  places across a scale change, blur keeps up with an opening body, the power
+  menu blurs the whole wallpaper, and a busy I2C bus at login no longer loses
+  the monitor. The package-manager probes now also read XBPS, and battery,
+  network and Bluetooth gained simulate verbs for testing. What stays out is
+  upstream's washi palette solver and Afterglow texture (they drive the app
+  theming Ryoku owns through matugen), the iRiS login screen, Void distro
+  support, the settings-as-window host, Orbit, and the lock and niri-only
+  pages (`quickshell/inir/`).
 - **Per-widget Depth: in front or behind.** Right-clicking a desktop widget or
   a store tile, and the visualiser's own editor, now offer a Depth control
   that lifts just that widget above the subject cut-out or drops it behind

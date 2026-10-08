@@ -108,7 +108,7 @@ QtObject {
         return negated ? !on : on
     }
     function resettable(spec: var): bool {
-        return spec.fallback !== undefined && String(spec.path ?? "").startsWith("iris.")
+        return spec.fallback !== undefined && (spec.bundle ?? [String(spec.path ?? "")]).every(path => String(path).startsWith("iris."))
     }
     // A range reads in its display unit, with as many decimals as its step needs there.
     function rangeText(spec: var, value: var): string {
@@ -658,7 +658,7 @@ QtObject {
         { section: "gaming", group: "Game mode", label: "Stop glass and blur", path: "gameMode.disableEffects", kind: "switch", fallback: true },
         { section: "gaming", group: "Game mode", label: "Hold notifications", description: "Banners wait until you are done; they still collect in Today.", path: "gameMode.suppressNotifications", kind: "switch", fallback: true },
         { section: "gaming", group: "Game mode", label: "Stop audio visualizers", path: "gameMode.disableVisualizers", kind: "switch", fallback: true },
-        { section: "gaming", group: "Game mode", label: "Close the Discord overlay", path: "gameMode.disableDiscoverOverlay", kind: "switch", fallback: true },
+        { section: "gaming", group: "Game mode", label: "Close the Discord overlay", path: "gameMode.disableDiscoverOverlay", kind: "switch", fallback: true, showIf: () => GameMode.discoverOverlayInstalled, keywords: ["discover", "discord", "overlay"] },
         { section: "gaming", group: "Game mode", label: "Hide reload notices", description: "The small notice when your config reloads stays away while you play.", path: "gameMode.disableReloadToasts", kind: "switch", fallback: true, keywords: ["toast", "reload"] },
 
     ]
