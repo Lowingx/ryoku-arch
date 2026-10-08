@@ -386,6 +386,16 @@
   Ryoku's seams (`../inir/`).
 
 ### Changed
+- **The picker's Download browser is a store.** Providers sit in a rail on the
+  left with the selected provider's filters under them; the results fill the
+  whole height in a grid that sizes its columns to the width, with a real
+  scrollbar and a page strip (page N of M, Previous, Next, Load more) instead
+  of invisible auto-paging. Loading more no longer jumps the grid back to the
+  top. Opening a result slides in a side pane sized to the picture, with the
+  live clip for video sources, the metadata, and Save, Apply and Copy id
+  right under it; the grid reflows beside it. Hover actions are a bar on the
+  card (`ryogami/picker/qml/browser/`, `ryogami/picker/src/layouts/walllayout.cpp`,
+  `ryogami/picker/src/scene/cardfield.cpp`).
 - **The Ask bar's Fast lane lists Prowl routes.** Its model drawer offers the
   active set, the capability axes and your routing sets instead of provider
   names (`quickshell/shell/modules/ask/AskSurface.qml`,
