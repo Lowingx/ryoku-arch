@@ -74,4 +74,22 @@ func TestShippedBaselineIsHonest(t *testing.T) {
 	if cmd := defaultBinds()["app.terminal"].cmd; cmd != "ryoku-app terminal" {
 		t.Errorf("app.terminal = %q, want the ryoku app verb", cmd)
 	}
+
+	// The login bootstrap: nothing else brings the session up, so a wayfire
+	// login without this row is a bare compositor with no shell, no portals
+	// restart and no depthdeck, and every other row here would be config for
+	// a desktop that never starts.
+	session, _ := doc.get("autostart", "0_session")
+	for _, want := range []string{
+		"dbus-update-activation-environment --systemd --all",
+		"ryoku-power-cutover session-start-logged",
+		"xdg-desktop-portal-gnome.service",
+	} {
+		if !strings.Contains(session, want) {
+			t.Errorf("autostart.0_session is missing %q", want)
+		}
+	}
+	if wf, _ := doc.get("autostart", "autostart_wf_shell"); wf != "false" {
+		t.Errorf("autostart_wf_shell = %q; the session's shell is Quickshell, not wf-panel", wf)
+	}
 }
