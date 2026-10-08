@@ -511,6 +511,13 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **The wallpaper picker stops scrambling its text and drawing shards.** On
+  NVIDIA, the picker reloaded compiled GPU programs from the shader cache that
+  every Quickshell window shares, and those drew wrong: provider names and
+  icons in the Download menu turned into stray letters, and the browser could
+  break into shards while you hovered or switched providers. Ryogami now starts
+  the picker without Qt's disk shader cache, so it compiles its own once per
+  start (`ryogami/daemon/process.go`).
 - **The wallpaper picker draws all of itself again on Qt 6.12.** Its card
   renderer only issues commands through Qt's own graphics layer but never said
   so, so Qt fenced it off as raw OpenGL on every frame. On Qt 6.12 with OpenGL
