@@ -67,11 +67,10 @@ Singleton {
     property string faultDetail: ""      // full engine stderr, un-truncated
 
     // ---- the yard log (the flight recorder) ---------------------------------
-    // Every receipt and fault already funnels through info()/raiseFault(); the
-    // log is those two functions growing memory instead of evaporating after
-    // 4.5s. Session-scoped, capped at 200, tagged with the machine in focus so
-    // the detail sheet can show one machine's history.
+    // Receipts, faults, and observed machine state changes stay in memory for
+    // the dashboard and detail activity views.
     property var events: []
+    property var observedRunning: ({})
     function _log(kind, text, detail, focus) {
         var s = ("" + text).trim();
         if (s.length === 0)
@@ -84,6 +83,19 @@ Singleton {
         if (e.length > 200)
             e = e.slice(e.length - 200);
         events = e;
+    }
+    function _recordRunningStates(rows) {
+        var next = {};
+        for (var i = 0; i < rows.length; i++) {
+            var name = rows[i].name;
+            var running = rows[i].running === true;
+            next[name] = running;
+            if (observedRunning[name] === undefined)
+                _log("status", running ? I18n.tr("Machine is running") : I18n.tr("Machine is stopped"), "", name);
+            else if (observedRunning[name] !== running)
+                _log("status", running ? I18n.tr("Machine started") : I18n.tr("Machine stopped"), "", name);
+        }
+        observedRunning = next;
     }
 
     function raiseFault(text, focus) {
@@ -552,6 +564,7 @@ Singleton {
                 listProc.last = this.text;
                 try {
                     var arr = JSON.parse(this.text);
+                    root._recordRunningStates(arr);
                     root.vms = arr;
                     if (root.pendingSelect.length > 0) {
                         var want = root.pendingSelect;

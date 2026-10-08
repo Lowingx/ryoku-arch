@@ -24,7 +24,7 @@ Item {
     readonly property var activity: {
         var rows = [];
         for (var i = Remotes.events.length - 1; i >= 0; i--)
-            if (!Remotes.events[i].alias || Remotes.events[i].alias === alias) rows.push(Remotes.events[i]);
+            if (Remotes.events[i].alias === alias) rows.push(Remotes.events[i]);
         return rows;
     }
 
@@ -364,7 +364,15 @@ Item {
                 spacing: Tokens.s2
                 visible: detail.tab === "activity"
                 Head { text: I18n.tr("Activity") }
-                Text { visible: detail.activity.length === 0; text: I18n.tr("No activity yet."); color: Tokens.inkMuted; font.family: Tokens.ui; font.pixelSize: 11 }
+                Text {
+                    width: parent.width
+                    wrapMode: Text.WordWrap
+                    text: I18n.tr("Status changes, connections, tunnels, and remote actions recorded in this session.")
+                    color: Tokens.inkMuted
+                    font.family: Tokens.ui
+                    font.pixelSize: Tokens.fSmall
+                }
+                Text { visible: detail.activity.length === 0; text: I18n.tr("Nothing has been recorded for this remote yet."); color: Tokens.inkMuted; font.family: Tokens.ui; font.pixelSize: 11 }
                 Repeater {
                     model: detail.activity
                     Item {

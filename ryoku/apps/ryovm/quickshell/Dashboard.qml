@@ -74,13 +74,18 @@ Item {
     readonly property var selectedRemote: selectedKind === "remote" ? Remotes.healthOf(selectedKey) : null
     readonly property var activity: {
         var rows = [], i, event;
-        for (i = 0; i < Vm.events.length; i++) {
-            event = Vm.events[i];
-            rows.push({ at: event.at || 0, time: event.time, resource: event.vm || "", text: event.text, kind: event.kind });
-        }
-        for (i = 0; i < Remotes.events.length; i++) {
-            event = Remotes.events[i];
-            rows.push({ at: event.at || 0, time: event.time, resource: event.alias || "", text: event.text, kind: event.kind });
+        if (selectedKind === "vm") {
+            for (i = 0; i < Vm.events.length; i++) {
+                event = Vm.events[i];
+                if (event.vm === selectedKey)
+                    rows.push({ at: event.at || 0, time: event.time, text: event.text, kind: event.kind });
+            }
+        } else if (selectedKind === "remote") {
+            for (i = 0; i < Remotes.events.length; i++) {
+                event = Remotes.events[i];
+                if (event.alias === selectedKey)
+                    rows.push({ at: event.at || 0, time: event.time, text: event.text, kind: event.kind });
+            }
         }
         rows.sort(function(a, b) { return b.at - a.at; });
         return rows.slice(0, 20);
@@ -365,9 +370,21 @@ Item {
                 onChose: (tab) => dash.detailTab = tab === I18n.tr("ACTIVITY") ? "activity" : "overview"
             }
 
+            Text {
+                id: overviewBlurb
+                anchors { top: tabs.bottom; topMargin: Tokens.s3; left: parent.left; right: parent.right }
+                visible: dash.detailTab === "overview" && dash.selectedRow !== null
+                text: dash.selectedKind === "remote"
+                    ? I18n.tr("Live reachability, health, and resource use for this remote.")
+                    : I18n.tr("Live resource use and configuration for this machine.")
+                color: Tokens.inkMuted
+                font.family: Tokens.ui
+                font.pixelSize: Tokens.fSmall
+            }
+
             MetricsPanel {
                 id: charts
-                anchors { top: tabs.bottom; topMargin: Tokens.s3; left: parent.left; right: parent.right }
+                anchors { top: overviewBlurb.bottom; topMargin: Tokens.s2; left: parent.left; right: parent.right }
                 height: Math.min(306, Math.max(230, overview.height * 0.54))
                 visible: dash.detailTab === "overview" && dash.selectedRow !== null
                 cpuValues: dash.selectedKind === "vm" ? Vm.series(dash.selectedKey, "cpu") : Remotes.series(dash.selectedKey, "cpu")
@@ -406,23 +423,42 @@ Item {
 
             Flickable {
                 anchors { top: tabs.bottom; topMargin: Tokens.s3; left: parent.left; right: parent.right; bottom: parent.bottom }
-                visible: dash.detailTab === "activity"
+                visible: dash.detailTab === "activity" && dash.selectedRow !== null
                 clip: true
                 contentHeight: activityTable.implicitHeight
+                boundsBehavior: Flickable.StopAtBounds
                 ScrollBar.vertical: ScrollRail { policy: ScrollBar.AsNeeded }
                 Column {
                     id: activityTable
                     width: parent.width
+                    spacing: Tokens.s2
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        text: dash.selectedKind === "remote"
+                            ? I18n.tr("Status changes, connections, tunnels, and remote actions recorded in this session.")
+                            : I18n.tr("Starts, stops, snapshots, configuration changes, and other machine actions recorded in this session.")
+                        color: Tokens.inkMuted
+                        font.family: Tokens.ui
+                        font.pixelSize: Tokens.fSmall
+                    }
+                    Rectangle { width: parent.width; height: 1; color: Tokens.line }
+                    Empty {
+                        width: parent.width
+                        visible: dash.activity.length === 0
+                        caption: I18n.tr("Nothing has been recorded for this resource yet.")
+                    }
                     Repeater {
                         model: dash.activity
                         Item {
+                            id: activityRow
                             required property var modelData
                             width: activityTable.width
                             height: 38
                             Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Tokens.lineSoft }
-                            Text { anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; width: 60; text: modelData.time; color: Tokens.inkFaint; font.family: Tokens.mono; font.pixelSize: 9 }
-                            Text { anchors.left: parent.left; anchors.leftMargin: 68; anchors.verticalCenter: parent.verticalCenter; width: 120; elide: Text.ElideRight; text: modelData.resource; color: Tokens.inkMuted; font.family: Tokens.mono; font.pixelSize: 9 }
-                            Text { anchors.left: parent.left; anchors.leftMargin: 196; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; elide: Text.ElideRight; text: modelData.text; color: Tokens.ink; font.family: Tokens.ui; font.pixelSize: 11 }
+                            Text { anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; width: 60; text: activityRow.modelData.time; color: Tokens.inkFaint; font.family: Tokens.mono; font.pixelSize: 9 }
+                            Text { anchors.left: parent.left; anchors.leftMargin: 68; anchors.verticalCenter: parent.verticalCenter; width: 112; elide: Text.ElideRight; text: (activityRow.modelData.kind || I18n.tr("event")).toUpperCase(); color: Tokens.inkMuted; font.family: Tokens.mono; font.pixelSize: 9 }
+                            Text { anchors.left: parent.left; anchors.leftMargin: 188; anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter; elide: Text.ElideRight; text: activityRow.modelData.text; color: Tokens.ink; font.family: Tokens.ui; font.pixelSize: 11 }
                         }
                     }
                 }

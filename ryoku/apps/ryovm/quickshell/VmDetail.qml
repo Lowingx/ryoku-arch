@@ -518,7 +518,15 @@ Item {
                     spacing: Tokens.s2
                     visible: pane.tab === "activity"
                     Head { text: I18n.tr("Activity") }
-                    Text { visible: pane.events.length === 0; text: I18n.tr("No activity yet."); color: Tokens.inkMuted; font.family: Tokens.ui; font.pixelSize: 11 }
+                    Text {
+                        width: parent.width
+                        wrapMode: Text.WordWrap
+                        text: I18n.tr("Starts, stops, snapshots, configuration changes, and other machine actions recorded in this session.")
+                        color: Tokens.inkMuted
+                        font.family: Tokens.ui
+                        font.pixelSize: Tokens.fSmall
+                    }
+                    Text { visible: pane.events.length === 0; text: I18n.tr("Nothing has been recorded for this machine yet."); color: Tokens.inkMuted; font.family: Tokens.ui; font.pixelSize: 11 }
                     Repeater {
                         model: pane.events
                         Rectangle {

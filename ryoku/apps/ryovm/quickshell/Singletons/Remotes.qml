@@ -48,8 +48,8 @@ Singleton {
 
     property var keysData: ({ agent: [], files: [] })
 
-    // a short session log of fleet actions, newest last, shared with the harbour
-    // dashboard's activity feed (paired with Vm.events).
+    // A short session log of fleet actions and observed health transitions,
+    // newest last. Dashboard and detail views share it with Vm.events.
     property var events: []
     function logEvent(kind, alias, text) {
         var d = new Date();
@@ -59,6 +59,41 @@ Singleton {
                  at: d.getTime(), alias: alias, kind: kind, text: text });
         if (e.length > 100) e = e.slice(e.length - 100);
         events = e;
+    }
+
+    function stateReason(a, state) {
+        state = state || stateOf(a);
+        var h = healthOf(a);
+        var r = reachOf(a);
+        if (state === "down")
+            return I18n.tr("connection unavailable");
+        if (state === "up" && r && r.rttMs >= 0)
+            return I18n.tr("reachable in %1 ms").arg(r.rttMs);
+        if (state !== "warn" || !h)
+            return "";
+        var reasons = [];
+        var memPct = h.memTotalKb > 0 ? Math.round(100 * (h.memTotalKb - h.memAvailKb) / h.memTotalKb) : 0;
+        if (h.diskPct >= 90)
+            reasons.push(I18n.tr("%1% disk used").arg(h.diskPct));
+        if (memPct >= 90)
+            reasons.push(I18n.tr("%1% memory used").arg(memPct));
+        if (h.cpus > 0 && h.load1 > h.cpus)
+            reasons.push(I18n.tr("load %1 on %2 cores").arg(Number(h.load1).toFixed(1)).arg(h.cpus));
+        if (h.failedUnits > 0)
+            reasons.push(I18n.tr("%1 failed services").arg(h.failedUnits));
+        return reasons.join(", ");
+    }
+
+    function _recordStateChange(alias, before) {
+        var after = stateOf(alias);
+        if (after === before || after === "unknown")
+            return;
+        var labels = { up: I18n.tr("UP"), warn: I18n.tr("DEGRADED"), down: I18n.tr("DOWN") };
+        var text = before === "unknown"
+            ? I18n.tr("Status is %1").arg(labels[after])
+            : I18n.tr("Status changed from %1 to %2").arg(labels[before] || before.toUpperCase()).arg(labels[after]);
+        var reason = stateReason(alias, after);
+        logEvent("status", alias, reason.length > 0 ? text + ": " + reason : text);
     }
 
     readonly property var selected: {
@@ -123,10 +158,16 @@ Singleton {
     }
     function loadTunnels() { tunnelListProc.running = true; }
     function openTunnel(alias, spec) {
+        tunnelOpenProc.forAlias = alias;
+        tunnelOpenProc.spec = spec;
         tunnelOpenProc.command = ["ryossh", "tunnel", "open", alias, spec];
         tunnelOpenProc.running = true;
     }
     function closeTunnel(id) {
+        tunnelCloseProc.forAlias = "";
+        for (var i = 0; i < tunnels.length; i++)
+            if (tunnels[i].id === id) { tunnelCloseProc.forAlias = tunnels[i].alias || ""; break; }
+        tunnelCloseProc.tunnelId = id;
         tunnelCloseProc.command = ["ryossh", "tunnel", "close", id];
         tunnelCloseProc.running = true;
     }
@@ -206,9 +247,9 @@ Singleton {
         logEvent(action, a, action + " " + type + "/" + vmid);
     }
     function connect(a) {
+        connectProc.forAlias = a;
         connectProc.command = ["ryossh", "connect", a];
         connectProc.running = true;
-        logEvent("connect", a, I18n.tr("opened a session to %1").arg(a));
     }
     function loadKeys() { keysProc.running = true; }
     // ssh-copy-id is interactive (it may prompt for a password), so it runs in a
@@ -262,19 +303,30 @@ Singleton {
     }
 
     function _mergeReach(arr) {
+        var before = {};
+        for (var i = 0; i < arr.length; i++)
+            before[arr[i].alias] = stateOf(arr[i].alias);
         var m = {};
-        for (var i = 0; i < arr.length; i++) m[arr[i].alias] = arr[i];
+        for (i = 0; i < arr.length; i++)
+            m[arr[i].alias] = arr[i];
         reach = m;
         reachRev++;
+        for (i = 0; i < arr.length; i++)
+            _recordStateChange(arr[i].alias, before[arr[i].alias]);
     }
     function _mergeHealth(arr) {
+        var before = {};
+        for (var i = 0; i < arr.length; i++)
+            before[arr[i].alias] = stateOf(arr[i].alias);
         var m = health;
-        for (var i = 0; i < arr.length; i++) {
+        for (i = 0; i < arr.length; i++) {
             m[arr[i].alias] = arr[i];
             root._recordMetrics(arr[i].alias, arr[i]);
         }
         health = m;
         healthRev++;
+        for (i = 0; i < arr.length; i++)
+            _recordStateChange(arr[i].alias, before[arr[i].alias]);
     }
     function _mergeApps(arr) {
         var m = root.appStatus;
@@ -382,7 +434,16 @@ Singleton {
         onTriggered: root.loadGuests(root.selectedAlias)
     }
 
-    Process { id: connectProc }
+    Process {
+        id: connectProc
+        property string forAlias: ""
+        onExited: (code) => {
+            if (code === 0)
+                root.logEvent("connect", forAlias, I18n.tr("opened a session to %1").arg(forAlias));
+            else
+                root.logEvent("connect", forAlias, I18n.tr("could not open a session to %1").arg(forAlias));
+        }
+    }
     Process {
         id: addProc
         property string alias: ""
@@ -426,9 +487,24 @@ Singleton {
     }
     Process {
         id: tunnelOpenProc
-        onExited: (code) => { root.loadTunnels(); if (code === 0) root.logEvent("tunnel", "", I18n.tr("opened a tunnel")); }
+        property string forAlias: ""
+        property string spec: ""
+        onExited: (code) => {
+            root.loadTunnels();
+            if (code === 0)
+                root.logEvent("tunnel", forAlias, I18n.tr("opened tunnel %1").arg(spec));
+        }
     }
-    Process { id: tunnelCloseProc; onExited: root.loadTunnels() }
+    Process {
+        id: tunnelCloseProc
+        property string forAlias: ""
+        property string tunnelId: ""
+        onExited: (code) => {
+            root.loadTunnels();
+            if (code === 0)
+                root.logEvent("tunnel", forAlias, I18n.tr("closed tunnel %1").arg(tunnelId));
+        }
+    }
 
     // reachability on a short cadence; the fuller health probe less often. Both
     // gate on a page being on screen, so a hidden hub costs nothing.
