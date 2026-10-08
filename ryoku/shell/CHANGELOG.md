@@ -511,6 +511,12 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **Live wallpaper previews no longer shred the picker on NVIDIA.** The
+  download browser's MotionBGs, MoeWalls and YouTube previews decoded on the
+  GPU and shared their frames into the picker through CUDA, which on hybrid
+  machines tore the whole picker into giant triangles and scrambled text while
+  you browsed. The picker now decodes previews in software, the same way the
+  shell plays its own clips (`ryogami/daemon/process.go`).
 - **Switching workspaces no longer replays the wallpaper transition.** Since
   per-workspace wallpapers, every switch (a three-finger swipe included)
   repainted the output with a reveal even when both workspaces show the same
