@@ -51,7 +51,11 @@ func runApply(args []string) error {
 	if preview {
 		return encodeReport(rep)
 	}
-	if err := writeOverlayIni("wayfire.ini", compose(s)); err != nil {
+	body, err := compose(s)
+	if err != nil {
+		return err
+	}
+	if err := writeOverlayIni("wayfire.ini", body); err != nil {
 		return err
 	}
 	wm.PublishGreeterNumlock(s.Input.NumlockByDefault)
@@ -78,14 +82,18 @@ func runDefaults() error {
 
 // compose lays the layers over each other, later winning per key: the shipped
 // defaults, the store's own sections, then the machine seeds with user.ini
-// last. wayfire has no include, so this one composed file is the whole config;
-// a missing layer is skipped, so apply still writes a session-able file before
-// the package has shipped its defaults or before a seed exists.
-func compose(s wayfireStore) []byte {
-	var layers []iniDoc
-	if b, err := os.ReadFile(shareDefaultsPath); err == nil {
-		layers = append(layers, parseIni(b))
+// last. wayfire has no include, so this one composed file is the whole config.
+// The shipped defaults are the session's spine and not a layer that may go
+// missing: they carry the plugin list, the autostart rows and the baseline's
+// own binds, so a compose without them writes a wayfire that boots bare, with
+// no shell and no depthdeck, and looks like a render all the same. A missing
+// seed stays skippable; a seed is one machine's own addition.
+func compose(s wayfireStore) ([]byte, error) {
+	base, err := os.ReadFile(shareDefaultsPath)
+	if err != nil {
+		return nil, fmt.Errorf("shipped wayfire defaults at %s (ryoku-desktop-wayfire ships them): %w", shareDefaultsPath, err)
 	}
+	layers := []iniDoc{parseIni(base)}
 	layers = append(layers, renderStoreIni(s))
 	for _, seed := range []string{"monitors.ini", "keyboard.ini", "user.ini"} {
 		if b, err := os.ReadFile(filepath.Join(wayfireConfigDir(), seed)); err == nil {
@@ -95,7 +103,7 @@ func compose(s wayfireStore) []byte {
 	merged := mergeIni(layers...)
 	adjustPlugins(&merged, s)
 	applyBinds(&merged, s)
-	return renderIni(merged)
+	return renderIni(merged), nil
 }
 
 // renderStoreIni is the store's own layer: every wayfire key the neutral and

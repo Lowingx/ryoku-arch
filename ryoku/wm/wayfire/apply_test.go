@@ -60,6 +60,17 @@ func writeSeed(t *testing.T, dir, name, body string) {
 	}
 }
 
+// mustCompose is compose for the tests that need its bytes: the shipped
+// defaults are a fixture by then, so a failure is the test's own setup.
+func mustCompose(t *testing.T, s wayfireStore) []byte {
+	t.Helper()
+	b, err := compose(s)
+	if err != nil {
+		t.Fatalf("compose: %v", err)
+	}
+	return b
+}
+
 // capApply runs apply with stdout captured and returns the decoded report.
 func capApply(t *testing.T, args ...string) wm.ApplyReport {
 	t.Helper()
@@ -97,7 +108,7 @@ func TestComposeLastWins(t *testing.T) {
 	writeSeed(t, dir, "user.ini", "[decoration]\nborder_size = 1\n")
 	store := writeStore(t, `{"desktop":{"appearance":{"borderSize":4,"activeBorder":"#112233","inactiveBorder":"#445566","borderFollowsPalette":false,"animations":true,"blurEnabled":true},"input":{"kbLayout":"de"}}}`)
 
-	got := string(compose(loadStore(store)))
+	got := string(mustCompose(t, loadStore(store)))
 	want := generatedHeader + `
 [core]
 vwidth = 3
@@ -301,7 +312,7 @@ func TestContinuationSeedsGlued(t *testing.T) {
 	withDefaults(t, "")
 	writeSeed(t, dir, "user.ini", "[core]\nplugins = \\\n  animate \\\n  blur \\\n  zoom\n")
 	store := writeStore(t, `{"desktop":{"appearance":{"borderFollowsPalette":false,"animations":false,"blurEnabled":true}}}`)
-	body := string(compose(loadStore(store)))
+	body := string(mustCompose(t, loadStore(store)))
 	if !strings.Contains(body, "plugins = blur zoom") {
 		t.Errorf("a continued plugin list must glue into one line, then lose animate:\n%s", body)
 	}
@@ -314,7 +325,7 @@ func TestComposeDeterministic(t *testing.T) {
 	withDefaults(t, "[core]\nplugins = animate blur\n")
 	store := writeStore(t, `{"desktop":{"appearance":{"borderSize":4,"borderFollowsPalette":false}}}`)
 	s := loadStore(store)
-	if a, b := compose(s), compose(s); !bytes.Equal(a, b) {
+	if a, b := mustCompose(t, s), mustCompose(t, s); !bytes.Equal(a, b) {
 		t.Fatalf("two runs differ:\n%s\n---\n%s", a, b)
 	}
 }
@@ -428,11 +439,11 @@ func TestPaletteGateInCompose(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	pinned := string(compose(loadStore(pin)))
+	pinned := string(mustCompose(t, loadStore(pin)))
 	if !strings.Contains(pinned, "active_color = \\#111111FF") {
 		t.Errorf("a pinned border must ignore the palette:\n%s", pinned)
 	}
-	following := string(compose(loadStore(follow)))
+	following := string(mustCompose(t, loadStore(follow)))
 	if !strings.Contains(following, "active_color = \\#AABBCCFF") ||
 		!strings.Contains(following, "inactive_color = \\#DDEEFFFF") {
 		t.Errorf("a palette-following border must take the recorded colours:\n%s", following)
@@ -446,13 +457,13 @@ func TestPluginsAdjustedByStore(t *testing.T) {
 	withDefaults(t, "[core]\nplugins =   animate   blur   grid  \n")
 
 	off := writeStore(t, `{"desktop":{"appearance":{"animations":false,"blurEnabled":true,"borderFollowsPalette":false}}}`)
-	body := string(compose(loadStore(off)))
+	body := string(mustCompose(t, loadStore(off)))
 	if strings.Contains(body, "plugins = animate") || !strings.Contains(body, "plugins = blur grid") {
 		t.Errorf("animations off must drop animate only:\n%s", body)
 	}
 
 	on := writeStore(t, `{"desktop":{"appearance":{"animations":true,"blurEnabled":true,"borderFollowsPalette":false}}}`)
-	body = string(compose(loadStore(on)))
+	body = string(mustCompose(t, loadStore(on)))
 	if !strings.Contains(body, "plugins = animate   blur   grid") {
 		t.Errorf("both toggles on must leave the defaults list's inner spacing alone:\n%s", body)
 	}
@@ -623,7 +634,7 @@ func TestStoreSectionsEmitted(t *testing.T) {
 	  },
 	  "wm": {"wayfire": {"depthdeck": {"maximizedFrontScale": 0.95, "animationMs": 250}}}
 	}`)
-	body := string(compose(loadStore(store)))
+	body := string(mustCompose(t, loadStore(store)))
 	for _, want := range []string{
 		"xkb_layout = br",
 		"mouse_cursor_speed = 0.4",
@@ -647,6 +658,7 @@ func TestStoreSectionsEmitted(t *testing.T) {
 // it, so login and the session agree on the keypad.
 func TestApplyPublishesGreeterNumlock(t *testing.T) {
 	wayfireHome(t)
+	withDefaults(t, "[core]\nplugins = animate\n")
 	file := filepath.Join(t.TempDir(), "greeter-numlock")
 	t.Setenv("RYOKU_GREETER_NUMLOCK_FILE", file)
 	store := writeStore(t, `{"desktop":{"input":{"numlockByDefault":true}}}`)
@@ -657,5 +669,34 @@ func TestApplyPublishesGreeterNumlock(t *testing.T) {
 	}
 	if got := strings.TrimSpace(string(b)); got != "on" {
 		t.Fatalf("hand-off = %q, want on", got)
+	}
+}
+
+// The shipped defaults are the session's spine: the plugin list, the autostart
+// rows, the baseline's own binds. A compose without them still produces bytes,
+// and those bytes boot a bare wayfire with no shell and no depthdeck, which
+// looks like a render and is worse than none. apply refuses and the live file
+// keeps the last good one.
+func TestApplyRefusesWhenTheShippedDefaultsAreMissing(t *testing.T) {
+	dir := wayfireHome(t)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "wayfire.ini"), []byte("# last good render\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	prev := shareDefaultsPath
+	shareDefaultsPath = filepath.Join(t.TempDir(), "absent.ini")
+	t.Cleanup(func() { shareDefaultsPath = prev })
+
+	store := writeStore(t, `{}`)
+	if _, err := compose(loadStore(store)); err == nil {
+		t.Fatal("compose without its shipped defaults must fail")
+	}
+	if err := runApply([]string{store}); err == nil {
+		t.Fatal("apply without its shipped defaults must fail")
+	}
+	if got := readGen(t, dir, "wayfire.ini"); got != "# last good render\n" {
+		t.Errorf("apply overwrote the live file without its first layer: %q", got)
 	}
 }
