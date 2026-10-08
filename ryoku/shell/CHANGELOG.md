@@ -511,6 +511,17 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **Multi-monitor desktops stay smooth.** Moving the pointer from one monitor
+  to another made the shell fetch and re-parse every output, workspace and
+  window on each crossing; it now gets a 44-byte focus note, and Hyprland no
+  longer refreshes its whole state for it. All bars share one network-speed
+  reader instead of starting a process per monitor every two seconds, the dial
+  clock only ticks each second when it draws a second hand, and the
+  visualiser leaves every monitor 30 seconds after the sound stops, which is
+  what Performance > "Unload the visualiser" always promised; it comes back the
+  moment audio plays. The idle wave still moves during that grace
+  (`ipc/wmclient.go`, `../ui/Singletons/Wm.qml`, `quickshell/shell/services/`,
+  `quickshell/shell/shell.qml`, `../wm/hyprland/watch.go`).
 - **Nomarchy draws again on Qt 6.12.** Qt 6.12 added its own `Color` type to
   QtQuick, and it hides the bar style's theme colours, so the bar, menus and
   panels came up blank. Nomarchy's files now import QtQuick 6.11, which keeps
