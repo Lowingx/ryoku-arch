@@ -3,6 +3,15 @@
 ## Unreleased
 
 ### Changed
+- **Add-ons is a library of what you installed, not a wall of toggles.**
+  Desktop widgets no longer appear there; they are managed in Desktop, and
+  one line on the page hands you over with the count. Shell add-ons (bar
+  glyphs, popouts, panels) and bundles are cards in a grid with their kind,
+  version or component count, state, settings and remove or repair, under a
+  header that counts what is installed. With Nomarchy as the bar style an
+  Omarchy section lists the installed Omarchy plugins with enable, remove and
+  a link to the market (`quickshell/pages/AddonsPage.qml`,
+  `quickshell/pages/Addon*.qml`).
 - **Rices can ship with Ryoku.** The picker merges packaged looks from
   `/usr/share/ryoku/rices` with the user's library, prefers a user rice when
   slugs match, and copies a packaged rice into the user library before applying
