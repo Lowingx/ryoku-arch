@@ -46,6 +46,8 @@ func runApply(args []string) error {
 		Unhonored:    unhonored(storeArg),
 		ReloadNeeded: false,
 	}
+	_, bindReport := resolveBinds(s)
+	rep.Unhonored = append(rep.Unhonored, bindReport...)
 	if preview {
 		return encodeReport(rep)
 	}
@@ -92,6 +94,7 @@ func compose(s wayfireStore) []byte {
 	}
 	merged := mergeIni(layers...)
 	adjustPlugins(&merged, s)
+	applyBinds(&merged, s)
 	return renderIni(merged)
 }
 
@@ -151,7 +154,6 @@ func renderStoreIni(s wayfireStore) iniDoc {
 		d.set("autostart", fmt.Sprintf("ryoku_%02d", i), strings.TrimSpace(cmd.Command))
 	}
 
-	d.overlay(genWayfireBinds(s))
 	d.overlay(genWindowRules(s))
 
 	anim := s.Wayfire.Animation
@@ -283,13 +285,14 @@ func unhonored(storePath string) []wm.Unhonored {
 }
 
 // desktopHandled are the desktop.* keys this provider either emits or reports at
-// a finer grain; a top-level key outside this set is reported whole. env, apps,
-// windows and the rebind tables have no wayfire spelling, so they stay out and
-// get a reason of their own below.
+// a finer grain; a top-level key outside this set is reported whole. env, apps
+// and windows have no wayfire spelling, so they stay out and get a reason of
+// their own below. The rebind tables are honoured: resolveBinds folds them into
+// the emission, so they leave this list with the old reason.
 var desktopHandled = map[string]bool{
 	"appearance": true, "input": true, "cursor": true,
 	"windowRules": true, "appOverrides": true, "autostart": true,
-	"keybinds": true,
+	"keybinds": true, "keybindRebinds": true, "unbinds": true,
 }
 
 var appearanceEmitted = map[string]bool{
@@ -480,8 +483,6 @@ func desktopMiscReason(key string) string {
 		return "wayfire takes its environment from the session, not from the store."
 	case "windows":
 		return "wayfire lets apps open themselves maximised; there is no tame-on-open."
-	case "keybindRebinds", "unbinds":
-		return "wayfire's shipped binds are seed entries; change a chord in user.ini instead."
 	}
 	return "wayfire has no setting for this."
 }

@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+
+	wm "ryoku-wm"
 )
 
-// The neutral chord to wayfire's activator spelling, and the store's keybind
-// rows onto the command plugin's compound binding options. The sibling of
-// niri's config_binds.go: same input rows, wayfire's own output language.
+// The neutral chord to wayfire's activator spelling, the catalogue onto
+// wayfire's own option vocabulary, and the resolved emission apply lays into
+// the composed config. The sibling of niri's config_binds.go: same inputs,
+// wayfire's own output language.
 
 // wayfireModifiers maps the neutral modifier tokens to wayfire's bracket
 // spellings, lower-cased on the way in.
@@ -19,10 +22,12 @@ var wayfireModifiers = map[string]string{
 	"shift": "<shift>",
 }
 
-// wayfireKeys maps the awkward neutral keysym names to wayfire's KEY_ codes.
-// Everything else follows two regular shapes: a letter or digit is KEY_<it>,
-// and an XF86 keysym is KEY_ plus its upper case. Mouse entries and family
-// placeholders have no activator spelling and fall through as unmatched.
+// wayfireKeys maps the neutral keysym names to wayfire's KEY_ codes. Wayfire
+// names the media and function keys by their linux input codes, so the XF86
+// keysyms are explicit entries rather than a derived spelling, and the number
+// pad's NumLock-off keysyms point at the same keypad code they type on: the
+// key is the same key whichever level NumLock selects. The family placeholder
+// and the wheel tokens have no activator spelling and fall through unmatched.
 var wayfireKeys = map[string]string{
 	"Return": "KEY_ENTER", "Enter": "KEY_ENTER",
 	"Escape": "KEY_ESC", "Esc": "KEY_ESC",
@@ -44,9 +49,22 @@ var wayfireKeys = map[string]string{
 	"KP_Subtract": "KEY_KPMINUS", "KP_Multiply": "KEY_KPASTERISK",
 	"KP_Divide": "KEY_KPSLASH", "KP_Decimal": "KEY_KPDOT",
 	"KP_Separator": "KEY_KPDOT",
+
+	"XF86AudioRaiseVolume": "KEY_VOLUMEUP", "XF86AudioLowerVolume": "KEY_VOLUMEDOWN",
+	"XF86AudioMute": "KEY_MUTE", "XF86AudioPlay": "KEY_PLAY",
+	"XF86AudioNext": "KEY_NEXTSONG", "XF86AudioPrev": "KEY_PREVSONG",
+	"XF86MonBrightnessUp": "KEY_BRIGHTNESSUP", "XF86MonBrightnessDown": "KEY_BRIGHTNESSDOWN",
+	"XF86TouchpadToggle": "KEY_TOUCHPADTOGGLE",
+	"XF86TouchpadOn":     "KEY_TOUCHPADON", "XF86TouchpadOff": "KEY_TOUCHPADOFF",
+
+	// The NumLock-off keypad keysyms, on the keypad code they belong to.
+	"KP_End": "KEY_KP1", "KP_Down": "KEY_KP2", "KP_Next": "KEY_KP3",
+	"KP_Left": "KEY_KP4", "KP_Begin": "KEY_KP5", "KP_Right": "KEY_KP6",
+	"KP_Home": "KEY_KP7", "KP_Up": "KEY_KP8", "KP_Prior": "KEY_KP9",
+	"KP_Insert": "KEY_KP0",
 }
 
-// toWayfireActivator converts a neutral chord ("Super+Shift+Left") into the
+// toWayfireActivator converts a neutral chord ("SUPER + Shift + Left") into the
 // activator wayfire parses ("<super> <shift> KEY_LEFT"). ok is false for a
 // chord with no wayfire spelling, so apply reports it rather than writing a
 // bind that never fires.
@@ -76,14 +94,18 @@ func toWayfireActivator(chord string) (string, bool) {
 }
 
 // wayfireKey spells the chord's final token: a modifier on its own (the bare
-// "Super" chord), a mapped keysym, a letter or digit, an XF86 keysym, or a
-// function key.
+// "SUPER" chord), a mapped keysym, a letter or digit, a mouse button, or a
+// function key. Wheel steps are deliberately absent: wayfire binds keys and
+// buttons, and a scroll has no activator spelling.
 func wayfireKey(tok string) (string, bool) {
 	if m, ok := wayfireModifiers[strings.ToLower(tok)]; ok {
 		return m, true
 	}
 	if k, ok := wayfireKeys[tok]; ok {
 		return k, true
+	}
+	if b, ok := wayfireButtons[tok]; ok {
+		return b, true
 	}
 	upper := strings.ToUpper(tok)
 	if len(tok) == 1 {
@@ -92,9 +114,6 @@ func wayfireKey(tok string) (string, bool) {
 		case c >= 'a' && c <= 'z', c >= 'A' && c <= 'Z', c >= '0' && c <= '9':
 			return "KEY_" + upper, true
 		}
-	}
-	if strings.HasPrefix(tok, "XF86") {
-		return "KEY_" + upper, true
 	}
 	if strings.HasPrefix(tok, "F") && len(tok) > 1 && len(tok) <= 3 {
 		if _, err := strconv.Atoi(tok[1:]); err == nil {
@@ -107,6 +126,13 @@ func wayfireKey(tok string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// wayfireButtons maps the neutral mouse tokens to wayfire's button codes.
+var wayfireButtons = map[string]string{
+	"mouse:272": "BTN_LEFT",
+	"mouse:273": "BTN_RIGHT",
+	"mouse:274": "BTN_MIDDLE",
 }
 
 // keybindWhy is the reason a store row has no wayfire spelling, or "" when it
@@ -128,13 +154,289 @@ func keybindWhy(k Keybind) string {
 	return ""
 }
 
-// genWayfireBinds renders the store's keybind rows into the command plugin's
-// compound options: a command_<id> and a binding_<id> pair per exec bind (or a
-// release_binding_<id> variant for a release bind), grouped by the shared id.
-// Rows with no spelling are skipped here and named by unhonoredKeybinds, which
-// asks keybindWhy the same question, so the two lists can never disagree.
-func genWayfireBinds(s wayfireStore) iniDoc {
-	var d iniDoc
+// wayfireBind is how wayfire expresses one catalogue entry. A row with a reason
+// has no wayfire expression at all and the legend lists it unhonored rather
+// than hiding it. A row with cmd is a command-plugin row: it lands under
+// [command] as binding_<key> plus command_<key> (repeatable_binding_<key> when
+// a held key should repeat it). A row with section and key is a native option
+// wayfire already understands. extra is a second activator the shipped config
+// carried on the same option and keeps.
+type wayfireBind struct {
+	section, key string
+	cmd          string
+	repeatable   bool
+	extra        string
+	reason       string
+}
+
+// defaultBinds is the whole catalogue mapped onto wayfire's vocabulary: what
+// wayfire performs natively, what it runs through the command plugin, and what
+// it honestly cannot do. An id absent here is left off entirely, which would be
+// a bug, so the tests assert full coverage.
+func defaultBinds() map[string]wayfireBind {
+	return map[string]wayfireBind{
+		// Windows
+		"window.close": {
+			key: "window_close", extra: "<alt> KEY_F4",
+			cmd: wm.IrisCloseCheck + " && qs -c shell ipc call closeConfirm trigger || ryoku-wm-wayfire act window.close",
+		},
+		"window.fullscreen":    {section: "wm-actions", key: "toggle_fullscreen"},
+		"window.float":         {key: "window_float", cmd: "ryoku-wm-wayfire act window.float"},
+		"window.pin":           {section: "wm-actions", key: "toggle_sticky"},
+		"window.resize":        {reason: "wayfire resizes with Super and the mouse; there is no keyboard resize mode."},
+		"window.presetHeight":  {reason: "wayfire has no preset window heights."},
+		"column.tabbed":        {reason: "wayfire windows have no tabs; each view keeps its own cell."},
+		"column.maximize":      {section: "wm-actions", key: "toggle_maximize"},
+		"column.center":        {reason: "wayfire has no centre-window action."},
+		"window.focusPrevious": {section: "fast-switcher", key: "activate_forward"},
+
+		// Focus. Super and the arrows snap the window to a screen region here
+		// (the grid rows), so each direction names what the chord does instead.
+		"focus.left":   {reason: "wayfire has no directional focus; Super and the arrows snap the window to a screen region here."},
+		"focus.right":  {reason: "wayfire has no directional focus; Super and the arrows snap the window to a screen region here."},
+		"focus.up":     {reason: "wayfire has no directional focus; Super and the arrows snap the window to a screen region here."},
+		"focus.down":   {reason: "wayfire has no directional focus; Super and the arrows snap the window to a screen region here."},
+		"column.first": {reason: "wayfire has no first-or-last column; windows live in the grid."},
+		"column.last":  {reason: "wayfire has no first-or-last column; windows live in the grid."},
+
+		// Move
+		"move.left":         {reason: "wayfire moves windows with Super and the mouse; there is no keyboard move."},
+		"move.right":        {reason: "wayfire moves windows with Super and the mouse; there is no keyboard move."},
+		"move.up":           {reason: "wayfire moves windows with Super and the mouse; there is no keyboard move."},
+		"move.down":         {reason: "wayfire moves windows with Super and the mouse; there is no keyboard move."},
+		"column.mergeLeft":  {reason: "wayfire has no merge-between-windows action."},
+		"column.mergeRight": {reason: "wayfire has no merge-between-windows action."},
+
+		// Resize. Super, Ctrl and the arrows switch workspaces here (the
+		// vswitch rows), so each direction names the diversion.
+		"resize.narrower":    {reason: "wayfire resizes with the mouse; Super, Ctrl and the arrows switch workspaces here."},
+		"resize.wider":       {reason: "wayfire resizes with the mouse; Super, Ctrl and the arrows switch workspaces here."},
+		"resize.shorter":     {reason: "wayfire resizes with the mouse; Super, Ctrl and the arrows switch workspaces here."},
+		"resize.taller":      {reason: "wayfire resizes with the mouse; Super, Ctrl and the arrows switch workspaces here."},
+		"resize.resetHeight": {reason: "wayfire has no reset-height action."},
+
+		// Workspaces. The grid's nine cells take the number keys natively; the
+		// number pad stays the grid's, so the keypad families report instead.
+		"workspace.focus":                   {section: "vswitch", key: "binding_{n}"},
+		"workspace.moveWindow":              {section: "vswitch", key: "with_win_{n}"},
+		"workspace.moveWindowSilent":        {section: "vswitch", key: "send_win_{n}"},
+		"workspace.focus.numpad":            {reason: "wayfire's number pad snaps window regions; the digit keys focus workspaces."},
+		"workspace.moveWindow.numpad":       {reason: "wayfire's number pad snaps window regions; Super, Alt and a digit sends the window."},
+		"workspace.moveWindowSilent.numpad": {reason: "wayfire's number pad snaps window regions; Super, Shift and a digit sends it quietly."},
+		"workspace.prev":                    {key: "workspace_prev", cmd: "ryoku-wm-wayfire act workspace.cycle -1"},
+		"workspace.next":                    {key: "workspace_next", cmd: "ryoku-wm-wayfire act workspace.cycle 1"},
+		"workspace.prevWheel":               {reason: "wayfire binds keys and mouse buttons, not wheel steps."},
+		"workspace.nextWheel":               {reason: "wayfire binds keys and mouse buttons, not wheel steps."},
+		"workspace.moveWindowPrev":          {reason: "wayfire has no send-to-the-previous-workspace action."},
+		"workspace.moveWindowNext":          {reason: "wayfire has no send-to-the-next-workspace action."},
+		"workspace.reorderUp":               {reason: "wayfire's workspace order is fixed by the grid."},
+		"workspace.reorderDown":             {reason: "wayfire's workspace order is fixed by the grid."},
+		"workspace.hideWindow":              {reason: "wayfire has no scratchpad workspace."},
+		"workspace.scratchpad":              {reason: "wayfire has no scratchpad workspace."},
+		"workspace.overview":                {reason: "the shipped session carries no wayfire overview plugin."},
+		"workspace.overviewDesktops":        {reason: "the shipped session carries no wayfire overview plugin."},
+
+		// Displays
+		"display.focus.left":          {reason: "wayfire has no focus-screen-by-direction bind."},
+		"display.focus.right":         {reason: "wayfire has no focus-screen-by-direction bind."},
+		"display.focus.up":            {reason: "wayfire has no focus-screen-by-direction bind."},
+		"display.focus.down":          {reason: "wayfire has no focus-screen-by-direction bind."},
+		"display.moveWindow.left":     {reason: "wayfire has no send-window-to-screen bind; Super and drag carries it across."},
+		"display.moveWindow.right":    {reason: "wayfire has no send-window-to-screen bind; Super and drag carries it across."},
+		"display.moveWindow.up":       {reason: "wayfire has no send-window-to-screen bind; Super and drag carries it across."},
+		"display.moveWindow.down":     {reason: "wayfire has no send-window-to-screen bind; Super and drag carries it across."},
+		"display.moveWorkspace.left":  {reason: "wayfire has no move-workspace-to-screen bind."},
+		"display.moveWorkspace.right": {reason: "wayfire has no move-workspace-to-screen bind."},
+		"display.moveWorkspace.up":    {reason: "wayfire has no move-workspace-to-screen bind."},
+		"display.moveWorkspace.down":  {reason: "wayfire has no move-workspace-to-screen bind."},
+		"display.cycle":               {key: "display_cycle", cmd: "ryoku-wm-wayfire act output.cycle"},
+
+		// Apps
+		"app.terminal": {key: "app_terminal", cmd: "ryoku-app terminal"},
+		"app.files":    {key: "app_files", cmd: "ryoku-app files"},
+		"app.browser":  {key: "app_browser", cmd: "ryoku-app browser"},
+		"app.editor":   {key: "app_editor", cmd: "ryoku-app editor"},
+		"app.notes":    {key: "app_notes", cmd: "ryoku-app notes"},
+		"app.yazi":     {key: "app_yazi", cmd: "kitty -e yazi"},
+		"app.ryotunes": {key: "app_ryotunes", cmd: "ryotunes"},
+
+		// Shell
+		"shell.launcher":          {key: "shell_launcher", cmd: "ryoku-shell launcher"},
+		"shell.ask":               {key: "shell_ask", cmd: "ryoku-shell ask"},
+		"shell.rashin":            {key: "shell_rashin", cmd: "ryoku-summon Rashin flock -n -o /tmp/rashin-app.lock rashin-app"},
+		"shell.cheatsheet":        {key: "shell_cheatsheet", cmd: "pkill -x -f 'qs -c keys' 2>/dev/null || " + wm.QmlEnv + " flock -n -o /tmp/ryoku-keys.lock qs -c keys"},
+		"shell.lock":              {key: "shell_lock", cmd: "ryoku-shell lock"},
+		"shell.quicksettings":     {key: "shell_quicksettings", cmd: "ryoku-shell quicksettings"},
+		"shell.wallpaper":         {key: "shell_wallpaper", cmd: "ryogami wallpaper ui"},
+		"shell.wallpaperRandom":   {key: "shell_wallpaper_random", cmd: "ryogami wallpaper random"},
+		"shell.ryovm":             {key: "shell_ryovm", cmd: "ryoku-summon ryovm " + wm.QmlEnv + " flock -n -o /tmp/ryovm.lock qs -c ryovm"},
+		"shell.clipboard":         {key: "shell_clipboard", cmd: "ryoku-shell clipboard"},
+		"shell.visualizer":        {key: "shell_visualizer", cmd: "ryoku-shell visualizer"},
+		"shell.visualizerOverlay": {key: "shell_visualizer_overlay", cmd: "ryoku-shell visualizer-overlay"},
+		"shell.visualizerPlace":   {key: "shell_visualizer_place", cmd: "ryoku-shell visualizer-place"},
+		"shell.voice":             {key: "shell_voice", cmd: "ryoku-shell voice"},
+		"shell.settings":          {key: "shell_settings", cmd: "ryoku-shell hub open"},
+		"shell.screenshot":        {key: "shell_screenshot", cmd: wm.QmlEnv + " flock -n -o /tmp/ryoshot.lock qs -c ryoshot"},
+		"shell.screenshotPrint":   {key: "shell_screenshot_print", cmd: wm.QmlEnv + " flock -n -o /tmp/ryoshot.lock qs -c ryoshot"},
+		"shell.screenshotMonitor": {key: "shell_screenshot_monitor", cmd: wm.QmlEnv + " flock -n -o /tmp/ryoshot.lock env RYOSHOT_MODE=monitor qs -c ryoshot"},
+		"shell.colorPicker":       {key: "shell_color_picker", cmd: "hyprpicker -a"},
+		"shell.restartAudio":      {key: "shell_restart_audio", cmd: "ryoku-restart-audio"},
+		"shell.inhibitShortcuts":  {reason: "wayfire has no keyboard-shortcuts inhibit."},
+
+		// Media. The row repeats while the key is held, the way the shipped
+		// config spelled its own volume rows.
+		"media.volumeUp":   {key: "media_volume_up", cmd: "ryoku-volume up", repeatable: true},
+		"media.volumeDown": {key: "media_volume_down", cmd: "ryoku-volume down", repeatable: true},
+		"media.mute":       {key: "media_mute", cmd: "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"},
+		"media.play":       {key: "media_play", cmd: "playerctl play-pause"},
+		"media.next":       {key: "media_next", cmd: "playerctl next"},
+		"media.prev":       {key: "media_prev", cmd: "playerctl previous"},
+
+		// Hardware
+		"hardware.brightnessUp":   {key: "hardware_brightness_up", cmd: "ryoku-cmd-brightness +5", repeatable: true},
+		"hardware.brightnessDown": {key: "hardware_brightness_down", cmd: "ryoku-cmd-brightness -5", repeatable: true},
+		"hardware.touchpadToggle": {key: "hardware_touchpad_toggle", cmd: "ryoku-wm-wayfire act input.touchpad toggle"},
+		"hardware.touchpadOn":     {key: "hardware_touchpad_on", cmd: "ryoku-wm-wayfire act input.touchpad on"},
+		"hardware.touchpadOff":    {key: "hardware_touchpad_off", cmd: "ryoku-wm-wayfire act input.touchpad off"},
+
+		// Mouse
+		"mouse.move":   {section: "move", key: "activate"},
+		"mouse.resize": {section: "resize", key: "activate"},
+	}
+}
+
+// wayfireExclusive is one bind wayfire's own shipped config carries outside the
+// catalogue. Its chords seed the claim, so a custom bind or a rebind onto one
+// is reported rather than firing twice over wayfire's own row, and the legend
+// lists it under wayfire's name.
+type wayfireExclusive struct {
+	section, key string
+	chord        string
+	also         []string
+	label        string
+	hint         string
+}
+
+// wayfireExclusives is the shipped baseline's own binds: the grid, the
+// workspace grid navigation, the zoom modifier and the reverse window cycle.
+// The chords mirror wayfire/wayfire.ini, which a test pins, so the legend and
+// the claim can never drift from the config they describe.
+func wayfireExclusives() []wayfireExclusive {
+	return []wayfireExclusive{
+		{section: "zoom", key: "modifier", chord: "SUPER", label: "Zoom", hint: "Hold Super and roll the wheel to magnify the desktop"},
+		{section: "grid", key: "slot_bl", chord: "SUPER + KP_1", label: "Tile bottom-left"},
+		{section: "grid", key: "slot_b", chord: "SUPER + KP_2", label: "Tile bottom"},
+		{section: "grid", key: "slot_br", chord: "SUPER + KP_3", label: "Tile bottom-right"},
+		{section: "grid", key: "slot_l", chord: "SUPER + Left", also: []string{"SUPER + KP_4"}, label: "Tile left"},
+		{section: "grid", key: "slot_c", chord: "SUPER + Up", also: []string{"SUPER + KP_5"}, label: "Tile centre"},
+		{section: "grid", key: "slot_r", chord: "SUPER + Right", also: []string{"SUPER + KP_6"}, label: "Tile right"},
+		{section: "grid", key: "slot_tl", chord: "SUPER + KP_7", label: "Tile top-left"},
+		{section: "grid", key: "slot_t", chord: "SUPER + KP_8", label: "Tile top"},
+		{section: "grid", key: "slot_tr", chord: "SUPER + KP_9", label: "Tile top-right"},
+		{section: "grid", key: "restore", chord: "SUPER + Down", also: []string{"SUPER + KP_0"}, label: "Restore the default geometry"},
+		{section: "vswitch", key: "binding_left", chord: "SUPER + CTRL + Left", label: "Workspace left"},
+		{section: "vswitch", key: "binding_down", chord: "SUPER + CTRL + Down", label: "Workspace down"},
+		{section: "vswitch", key: "binding_up", chord: "SUPER + CTRL + Up", label: "Workspace up"},
+		{section: "vswitch", key: "binding_right", chord: "SUPER + CTRL + Right", label: "Workspace right"},
+		{section: "vswitch", key: "with_win_left", chord: "SUPER + CTRL + SHIFT + Left", label: "Send window to the workspace left"},
+		{section: "vswitch", key: "with_win_down", chord: "SUPER + CTRL + SHIFT + Down", label: "Send window to the workspace down"},
+		{section: "vswitch", key: "with_win_up", chord: "SUPER + CTRL + SHIFT + Up", label: "Send window to the workspace up"},
+		{section: "vswitch", key: "with_win_right", chord: "SUPER + CTRL + SHIFT + Right", label: "Send window to the workspace right"},
+		{section: "fast-switcher", key: "activate_backward", chord: "ALT + SHIFT + Tab", label: "Reverse window cycle"},
+	}
+}
+
+// wayfireWorkspaceCount is the workspace grid's cells: the number keys hold
+// one bind each and the tenth member of a family has nowhere to go.
+const wayfireWorkspaceCount = 9
+
+// outBind is one resolved bind, ready for the ini writer: the option to write
+// (a native option, or the command plugin's binding_ with its command_ beside
+// it) and the activator it accepts. An empty activator with an empty cmd is a
+// native option being switched off.
+type outBind struct {
+	section    string
+	option     string
+	commandOpt string
+	activator  string
+	extra      string
+	cmd        string
+}
+
+// effectiveChord resolves a default's emitted chord: the user's rebind when
+// set, otherwise the shipped chord. The bool reports whether a rebind applied.
+func effectiveChord(def string, rebinds map[string]string) (string, bool) {
+	if v, ok := rebinds[def]; ok {
+		if t := strings.TrimSpace(v); t != "" {
+			return t, true
+		}
+	}
+	return def, false
+}
+
+// resolveBinds expands the catalogue into the emitted bind set and folds the
+// store's custom binds, rebinds and unbinds into it, resolving every wayfire
+// activator to one winner: wayfire's own shipped bind, then a custom bind,
+// then a rebound default, then a static default. A family expands to its nine
+// workspace members; a workspace family's tenth member is reported instead of
+// bound, and an unbound native option is written empty so it dies rather than
+// surviving from the baseline layer. report names each behaviour wayfire could
+// not honour and each chord that lost its claim.
+func resolveBinds(s wayfireStore) ([]outBind, []wm.Unhonored) {
+	unbind := map[string]bool{}
+	for _, c := range s.Unbinds {
+		if c = strings.TrimSpace(c); c != "" {
+			unbind[c] = true
+		}
+	}
+
+	claimed := map[string]string{}
+	for _, ex := range wayfireExclusives() {
+		for _, chord := range append([]string{ex.chord}, ex.also...) {
+			if act, ok := toWayfireActivator(chord); ok && claimed[act] == "" {
+				claimed[act] = "wayfire's own " + ex.label
+			}
+		}
+	}
+
+	defs := defaultBinds()
+	var report []wm.Unhonored
+	var out []outBind
+	// A number-pad chord wants its NumLock-off twin too. Twins are held back so
+	// every explicit chord claims first; on wayfire both keysyms land on the
+	// same keypad code, so a twin of an already-emitted chord is a silent no-op
+	// rather than a second write.
+	type pendingTwin struct {
+		reportKey string
+		hubChord  string
+		ob        outBind
+	}
+	var twins []pendingTwin
+	emit := func(reportKey, owner, hubChord string, ob outBind, recordTwin bool) {
+		activator, ok := toWayfireActivator(hubChord)
+		if !ok {
+			return
+		}
+		if taker := claimed[activator]; taker != "" {
+			if taker != owner {
+				report = append(report, wm.Unhonored{
+					Key:    reportKey,
+					Reason: fmt.Sprintf("the chord is already taken by %s.", taker),
+				})
+			}
+			return
+		}
+		claimed[activator] = owner
+		ob.activator = activator
+		out = append(out, ob)
+		if recordTwin && len(wm.NumpadAliases(hubChord)) > 0 {
+			twins = append(twins, pendingTwin{reportKey, hubChord, ob})
+		}
+	}
+
+	// Priority 1: a user custom bind wins every chord it takes. A row that
+	// fails keybindWhy is skipped here and named by unhonoredKeybinds, which
+	// asks the same question, so the two lists can never disagree.
 	for i, k := range s.Keybinds {
 		if strings.TrimSpace(k.Keys) == "" {
 			continue
@@ -142,14 +444,155 @@ func genWayfireBinds(s wayfireStore) iniDoc {
 		if keybindWhy(k) != "" {
 			continue
 		}
-		activator, _ := toWayfireActivator(k.Keys)
-		id := fmt.Sprintf("ryoku_%d", i)
-		d.set("command", "command_"+id, strings.TrimSpace(k.Value))
-		binding := "binding_" + id
-		if k.Release {
-			binding = "release_binding_" + id
+		ob := outBind{
+			section:    "command",
+			commandOpt: fmt.Sprintf("command_ryoku_%d", i),
+			option:     fmt.Sprintf("binding_ryoku_%d", i),
+			cmd:        strings.TrimSpace(k.Value),
 		}
-		d.set("command", binding, activator)
+		if k.Release {
+			ob.option = fmt.Sprintf("release_binding_ryoku_%d", i)
+		}
+		emit(fmt.Sprintf("desktop.keybinds[%d]", i), "a custom bind", k.Keys, ob, true)
 	}
-	return d
+
+	cat := wm.ShippedBinds()
+
+	// Behaviours wayfire cannot perform: report each once, unless the user
+	// removed the chord anyway.
+	for _, cb := range cat {
+		wb := defs[cb.ID]
+		if wb.reason == "" || unbind[cb.Chord] {
+			continue
+		}
+		report = append(report, wm.Unhonored{
+			Key:    fmt.Sprintf("desktop.keybinds (default %s)", cb.Chord),
+			Reason: wb.reason,
+		})
+	}
+
+	// The tenth member of a workspace family has no home: wayfire's grid is
+	// three by three, so member 10 is reported once instead of bound to
+	// nothing.
+	for _, cb := range cat {
+		wb := defs[cb.ID]
+		if !cb.Family || wb.reason != "" || unbind[wm.ExpandChord(cb.Chord, 10)] {
+			continue
+		}
+		report = append(report, wm.Unhonored{
+			Key:    fmt.Sprintf("desktop.keybinds (default %s)", wm.ExpandChord(cb.Chord, 10)),
+			Reason: "wayfire's workspace grid holds nine workspaces; there is no tenth.",
+		})
+	}
+
+	// An unbound native option must still be written, empty, so the baseline
+	// layer cannot keep it alive behind the user's back; seen once per option.
+	seenOff := map[string]bool{}
+	offNative := func(ob outBind) {
+		k := ob.section + "." + ob.option
+		if seenOff[k] {
+			return
+		}
+		seenOff[k] = true
+		out = append(out, ob)
+	}
+
+	// Priority 2 then 3: rebound defaults claim before static ones, so a rebind
+	// onto another default's chord wins and the static default is dropped.
+	claimDefaults := func(rebound bool) {
+		for _, cb := range cat {
+			wb := defs[cb.ID]
+			if wb.reason != "" {
+				continue
+			}
+			base := outBind{section: wb.section, extra: wb.extra, cmd: wb.cmd}
+			switch {
+			case wb.cmd != "":
+				if base.section == "" {
+					base.section = "command"
+				}
+				prefix := "binding_"
+				if wb.repeatable {
+					prefix = "repeatable_binding_"
+				}
+				base.option = prefix + wb.key
+				base.commandOpt = "command_" + wb.key
+			default:
+				base.option = wb.key
+			}
+			// A family resolves through its family-level rebind first, so one
+			// stored entry moves all its members; a per-member legacy rebind
+			// (keyed on the shipped concrete chord) still wins below.
+			famChord, famRebound := cb.Chord, false
+			if cb.Family {
+				famChord, famRebound = wm.FamilyRebind(cb.Chord, s.KeybindRebinds)
+			}
+			for idx, chord := range cb.Expand() {
+				n := idx + 1
+				if cb.Family && n > wayfireWorkspaceCount {
+					continue
+				}
+				member := base
+				if cb.Family {
+					member.option = strings.ReplaceAll(base.option, "{n}", strconv.Itoa(n))
+					member.commandOpt = strings.ReplaceAll(base.commandOpt, "{n}", strconv.Itoa(n))
+				}
+				if unbind[chord] {
+					if wb.cmd == "" {
+						offNative(member)
+					}
+					continue
+				}
+				to, isRebound := effectiveChord(chord, s.KeybindRebinds)
+				if !isRebound && famRebound {
+					to = wm.ExpandChord(famChord, n)
+					isRebound = true
+				}
+				if isRebound != rebound {
+					continue
+				}
+				emit(fmt.Sprintf("desktop.keybinds (default %s)", chord), "another shipped bind", to, member, true)
+			}
+		}
+	}
+	claimDefaults(true)
+	claimDefaults(false)
+
+	// Every explicit chord is claimed now, so lay down the NumLock-off twin of
+	// each number-pad bind. A twin never displaces a bind a user set, and its
+	// report stays silent: on wayfire it is the same keypad code again.
+	for _, t := range twins {
+		for _, alias := range wm.NumpadAliases(t.hubChord) {
+			activator, ok := toWayfireActivator(alias)
+			if !ok {
+				continue
+			}
+			if claimed[activator] != "" {
+				continue
+			}
+			claimed[activator] = "another shipped bind"
+			ob := t.ob
+			ob.activator = activator
+			out = append(out, ob)
+		}
+	}
+
+	return out, report
+}
+
+// applyBinds lays the resolved binds into the composed config, after every
+// layer, so the chords the legend will claim are the chords the session emits:
+// the seeds and the baseline can no longer hide one.
+func applyBinds(d *iniDoc, s wayfireStore) {
+	out, _ := resolveBinds(s)
+	for _, o := range out {
+		if o.commandOpt != "" {
+			d.set(o.section, o.commandOpt, o.cmd)
+		}
+		value := o.activator
+		if o.activator != "" && o.extra != "" {
+			value = o.activator + " | " + o.extra
+		}
+		d.set(o.section, o.option, value)
+	}
 }

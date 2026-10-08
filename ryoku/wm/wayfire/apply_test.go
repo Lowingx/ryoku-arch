@@ -137,6 +137,33 @@ fingers = 3
 
 [vswitch]
 duration = 300ms circle
+binding_1 = <super> KEY_1
+binding_2 = <super> KEY_2
+binding_3 = <super> KEY_3
+binding_4 = <super> KEY_4
+binding_5 = <super> KEY_5
+binding_6 = <super> KEY_6
+binding_7 = <super> KEY_7
+binding_8 = <super> KEY_8
+binding_9 = <super> KEY_9
+with_win_1 = <super> <alt> KEY_1
+with_win_2 = <super> <alt> KEY_2
+with_win_3 = <super> <alt> KEY_3
+with_win_4 = <super> <alt> KEY_4
+with_win_5 = <super> <alt> KEY_5
+with_win_6 = <super> <alt> KEY_6
+with_win_7 = <super> <alt> KEY_7
+with_win_8 = <super> <alt> KEY_8
+with_win_9 = <super> <alt> KEY_9
+send_win_1 = <super> <shift> KEY_1
+send_win_2 = <super> <shift> KEY_2
+send_win_3 = <super> <shift> KEY_3
+send_win_4 = <super> <shift> KEY_4
+send_win_5 = <super> <shift> KEY_5
+send_win_6 = <super> <shift> KEY_6
+send_win_7 = <super> <shift> KEY_7
+send_win_8 = <super> <shift> KEY_8
+send_win_9 = <super> <shift> KEY_9
 
 [animate]
 duration = 400ms circle
@@ -158,6 +185,108 @@ layer_2_opacity = 0.7
 layer_2_scale = 0.5
 max_layers = 8
 maximized_front_scale = 0.9
+
+[command]
+command_window_close = jq -e '(.barStyle // "qsbar") == "iris" and .inir.closeConfirm.enabled == true' "${XDG_CONFIG_HOME:-$HOME/.config}/ryoku/shell.json" >/dev/null 2>&1 && qs -c shell ipc call closeConfirm trigger || ryoku-wm-wayfire act window.close
+binding_window_close = <super> KEY_Q | <alt> KEY_F4
+command_window_float = ryoku-wm-wayfire act window.float
+binding_window_float = <super> KEY_A
+command_workspace_prev = ryoku-wm-wayfire act workspace.cycle -1
+binding_workspace_prev = <super> KEY_PAGEUP
+command_workspace_next = ryoku-wm-wayfire act workspace.cycle 1
+binding_workspace_next = <super> KEY_PAGEDOWN
+command_display_cycle = ryoku-wm-wayfire act output.cycle
+binding_display_cycle = <super> KEY_P
+command_app_terminal = ryoku-app terminal
+binding_app_terminal = <super> KEY_ENTER
+command_app_files = ryoku-app files
+binding_app_files = <super> KEY_E
+command_app_browser = ryoku-app browser
+binding_app_browser = <super> KEY_B
+command_app_editor = ryoku-app editor
+binding_app_editor = <super> KEY_N
+command_app_notes = ryoku-app notes
+binding_app_notes = <super> KEY_O
+command_app_yazi = kitty -e yazi
+binding_app_yazi = <super> <alt> KEY_E
+command_app_ryotunes = ryotunes
+binding_app_ryotunes = <super> KEY_J
+command_shell_launcher = ryoku-shell launcher
+binding_shell_launcher = <super> KEY_SPACE
+command_shell_ask = ryoku-shell ask
+binding_shell_ask = <alt> KEY_SPACE
+command_shell_rashin = ryoku-summon Rashin flock -n -o /tmp/rashin-app.lock rashin-app
+binding_shell_rashin = <super> <alt> KEY_SPACE
+command_shell_cheatsheet = pkill -x -f 'qs -c keys' 2>/dev/null || env QML_IMPORT_PATH="$HOME/.local/lib/qt6/qml" QML2_IMPORT_PATH="$HOME/.local/lib/qt6/qml" flock -n -o /tmp/ryoku-keys.lock qs -c keys
+binding_shell_cheatsheet = <super> KEY_K
+command_shell_lock = ryoku-shell lock
+binding_shell_lock = <super> KEY_L
+command_shell_quicksettings = ryoku-shell quicksettings
+binding_shell_quicksettings = <super> KEY_ESC
+command_shell_wallpaper = ryogami wallpaper ui
+binding_shell_wallpaper = <super> KEY_W
+command_shell_wallpaper_random = ryogami wallpaper random
+binding_shell_wallpaper_random = <super> <shift> KEY_W
+command_shell_ryovm = ryoku-summon ryovm env QML_IMPORT_PATH="$HOME/.local/lib/qt6/qml" QML2_IMPORT_PATH="$HOME/.local/lib/qt6/qml" flock -n -o /tmp/ryovm.lock qs -c ryovm
+binding_shell_ryovm = <super> <shift> KEY_V
+command_shell_clipboard = ryoku-shell clipboard
+binding_shell_clipboard = <super> KEY_V
+command_shell_visualizer = ryoku-shell visualizer
+binding_shell_visualizer = <super> KEY_M
+command_shell_visualizer_overlay = ryoku-shell visualizer-overlay
+binding_shell_visualizer_overlay = <super> <shift> KEY_M
+command_shell_visualizer_place = ryoku-shell visualizer-place
+binding_shell_visualizer_place = <super> <alt> KEY_M
+command_shell_voice = ryoku-shell voice
+binding_shell_voice = <super> KEY_GRAVE
+command_shell_settings = ryoku-shell hub open
+binding_shell_settings = <super> KEY_COMMA
+command_shell_screenshot = env QML_IMPORT_PATH="$HOME/.local/lib/qt6/qml" QML2_IMPORT_PATH="$HOME/.local/lib/qt6/qml" flock -n -o /tmp/ryoshot.lock qs -c ryoshot
+binding_shell_screenshot = <super> <shift> KEY_S
+command_shell_screenshot_print = env QML_IMPORT_PATH="$HOME/.local/lib/qt6/qml" QML2_IMPORT_PATH="$HOME/.local/lib/qt6/qml" flock -n -o /tmp/ryoshot.lock qs -c ryoshot
+binding_shell_screenshot_print = KEY_SYSRQ
+command_shell_screenshot_monitor = env QML_IMPORT_PATH="$HOME/.local/lib/qt6/qml" QML2_IMPORT_PATH="$HOME/.local/lib/qt6/qml" flock -n -o /tmp/ryoshot.lock env RYOSHOT_MODE=monitor qs -c ryoshot
+binding_shell_screenshot_monitor = <shift> KEY_SYSRQ
+command_shell_color_picker = hyprpicker -a
+binding_shell_color_picker = <super> <shift> KEY_C
+command_shell_restart_audio = ryoku-restart-audio
+binding_shell_restart_audio = <super> <shift> KEY_A
+command_media_volume_up = ryoku-volume up
+repeatable_binding_media_volume_up = KEY_VOLUMEUP
+command_media_volume_down = ryoku-volume down
+repeatable_binding_media_volume_down = KEY_VOLUMEDOWN
+command_media_mute = wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+binding_media_mute = KEY_MUTE
+command_media_play = playerctl play-pause
+binding_media_play = KEY_PLAY
+command_media_next = playerctl next
+binding_media_next = KEY_NEXTSONG
+command_media_prev = playerctl previous
+binding_media_prev = KEY_PREVSONG
+command_hardware_brightness_up = ryoku-cmd-brightness +5
+repeatable_binding_hardware_brightness_up = KEY_BRIGHTNESSUP
+command_hardware_brightness_down = ryoku-cmd-brightness -5
+repeatable_binding_hardware_brightness_down = KEY_BRIGHTNESSDOWN
+command_hardware_touchpad_toggle = ryoku-wm-wayfire act input.touchpad toggle
+binding_hardware_touchpad_toggle = KEY_TOUCHPADTOGGLE
+command_hardware_touchpad_on = ryoku-wm-wayfire act input.touchpad on
+binding_hardware_touchpad_on = KEY_TOUCHPADON
+command_hardware_touchpad_off = ryoku-wm-wayfire act input.touchpad off
+binding_hardware_touchpad_off = KEY_TOUCHPADOFF
+
+[wm-actions]
+toggle_fullscreen = <super> KEY_F
+toggle_sticky = <super> <shift> KEY_P
+toggle_maximize = <super> KEY_D
+
+[fast-switcher]
+activate_forward = <alt> KEY_TAB
+
+[move]
+activate = <super> BTN_LEFT
+
+[resize]
+activate = <super> BTN_RIGHT
 `
 	if got != want {
 		t.Errorf("composed body differs from the pinned golden:\n--- want ---\n%s\n--- got ---\n%s", want, got)
@@ -237,7 +366,8 @@ func TestUnhonoredNamesLosses(t *testing.T) {
 	    "env": [{"key": "FOO", "value": "bar"}],
 	    "windows": {"tameMaximizeOnOpen": true},
 	    "apps": {"terminal": "alacritty"},
-	    "keybindRebinds": {"Super+T": "Super+Y"},
+	    "keybindRebinds": {"SUPER + T": "SUPER + Y"},
+	    "unbinds": ["SUPER + Q"],
 	    "autostart": [{"command": "sleep 1"}]
 	  },
 	  "wm": {"niri": {"preferNoCsd": true}}
@@ -253,7 +383,6 @@ func TestUnhonoredNamesLosses(t *testing.T) {
 		"desktop.env":                 "wayfire takes its environment from the session, not from the store.",
 		"desktop.windows":             "wayfire lets apps open themselves maximised; there is no tame-on-open.",
 		"desktop.apps":                "wayfire takes its environment from the session, not from the store.",
-		"desktop.keybindRebinds":      "wayfire's shipped binds are seed entries; change a chord in user.ini instead.",
 		"wm.niri":                     "These Niri-only settings have no wayfire equivalent. They stay in the store and return if you switch back.",
 	} {
 		if got[key] != want {
@@ -262,6 +391,11 @@ func TestUnhonoredNamesLosses(t *testing.T) {
 	}
 	if _, ok := got["desktop.appearance.borderSize"]; ok {
 		t.Error("an emitted leaf must not be reported")
+	}
+	for _, key := range []string{"desktop.keybindRebinds", "desktop.unbinds"} {
+		if _, ok := got[key]; ok {
+			t.Errorf("the rebind tables are honoured by resolveBinds; %s must stay quiet", key)
+		}
 	}
 	for key := range got {
 		if strings.HasPrefix(key, "desktop.autostart") {
@@ -411,16 +545,19 @@ func TestWindowRuleRendering(t *testing.T) {
 }
 
 // The bind path: an exec chord lands as a command/binding pair in wayfire's
-// spelling, a release bind takes the release prefix, and every loss is named.
+// spelling, a release bind takes the release prefix, and a row wayfire cannot
+// express never emits. The catalogue rides the same emission, so the composed
+// doc carries both.
 func TestBindsEmitted(t *testing.T) {
 	s := defaultStore()
 	s.Keybinds = []Keybind{
 		{Keys: "Super+T", Action: "exec", Value: "alacritty"},
 		{Keys: "Super+Shift+Y", Action: "exec", Value: "say hi", Release: true},
 		{Keys: "Super+Q", Action: "close"},
-		{Keys: "mouse:272", Action: "exec", Value: "click"},
+		{Keys: "mouse_up", Action: "exec", Value: "wheel"},
 	}
-	d := genWayfireBinds(s)
+	d := &iniDoc{}
+	applyBinds(d, s)
 	got := map[string]string{}
 	for _, sec := range d.sections {
 		for _, k := range sec.keys {
@@ -436,13 +573,20 @@ func TestBindsEmitted(t *testing.T) {
 	if _, ok := got["command/command_ryoku_2"]; ok {
 		t.Error("a non-exec bind has no wayfire spelling and must not be emitted")
 	}
+	if _, ok := got["command/binding_ryoku_3"]; ok {
+		t.Error("a wheel chord has no activator spelling and must not be emitted")
+	}
+	// The catalogue's own row lands beside the customs in the same pass.
+	if got["command/command_shell_launcher"] != "ryoku-shell launcher" || got["command/binding_shell_launcher"] != "<super> KEY_SPACE" {
+		t.Errorf("catalogue spawn row: %v", got)
+	}
 }
 
 func TestBindsUnhonored(t *testing.T) {
 	wayfireHome(t)
 	store := writeStore(t, `{"desktop":{"keybinds":[
 	  {"keys":"Super+Q","action":"close"},
-	  {"keys":"mouse:272","action":"exec","value":"x"},
+	  {"keys":"mouse_up","action":"exec","value":"x"},
 	  {"keys":"Super+T","action":"exec","value":""},
 	  {"keys":"Super+R","action":"exec","value":"rofi"}
 	]}}`)

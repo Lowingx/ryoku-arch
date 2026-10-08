@@ -45,7 +45,7 @@ func TestShippedBaselineIsHonest(t *testing.T) {
 	// the caps, and the act verbs each need their plugin already loaded.
 	for _, want := range []string{
 		"animate", "autostart", "command", "decoration", "depthdeck",
-		"ipc", "ipc-rules", "vswipe", "window-rules", "wm-actions",
+		"fast-switcher", "ipc", "ipc-rules", "vswipe", "window-rules", "wm-actions",
 	} {
 		if !loaded[want] {
 			t.Errorf("core.plugins is missing %q", want)
@@ -56,7 +56,7 @@ func TestShippedBaselineIsHonest(t *testing.T) {
 	// plugin was off, so their binds did nothing, and the depth deck's knobs
 	// belong to the store rather than to two copies of the same defaults.
 	for _, dead := range []string{
-		"alpha", "cube", "depthdeck", "expo", "fast-switcher", "fisheye",
+		"alpha", "cube", "depthdeck", "expo", "fisheye",
 		"invert", "oswitch", "switcher", "wayfire-shell", "wrot",
 	} {
 		for _, sec := range doc.sections {
@@ -66,7 +66,12 @@ func TestShippedBaselineIsHonest(t *testing.T) {
 		}
 	}
 
-	if term, _ := doc.get("command", "command_terminal"); term != "kitty" {
-		t.Errorf("command_terminal = %q, want the ryoku terminal kitty", term)
+	// The catalogue owns its binds now: apply writes them beside this layer,
+	// so a command row here would be a second copy waiting to drift.
+	if term, _ := doc.get("command", "command_app_terminal"); term != "" {
+		t.Errorf("command_app_terminal = %q; the baseline must not carry a second copy of the catalogue", term)
+	}
+	if cmd := defaultBinds()["app.terminal"].cmd; cmd != "ryoku-app terminal" {
+		t.Errorf("app.terminal = %q, want the ryoku app verb", cmd)
 	}
 }

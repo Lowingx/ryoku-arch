@@ -161,7 +161,11 @@ type wayfireStore struct {
 	AppOverrides []AppOverride `json:"appOverrides"`
 	Autostart    []Autostart   `json:"autostart"`
 	Keybinds     []Keybind     `json:"keybinds"`
-	Wayfire      Wayfire       `json:"-"`
+	// KeybindRebinds moves a shipped chord and Unbinds drops one, both keyed on
+	// the catalogue's own default; resolveBinds folds them into the emission.
+	KeybindRebinds map[string]string `json:"keybindRebinds,omitempty"`
+	Unbinds        []string          `json:"unbinds,omitempty"`
+	Wayfire        Wayfire           `json:"-"`
 }
 
 // neutralStore is desktop.json on disk: { "desktop": {...}, "wm": { "<name>":
