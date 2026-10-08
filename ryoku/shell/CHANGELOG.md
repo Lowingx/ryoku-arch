@@ -511,6 +511,11 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **Nomarchy's battery panel shows three power profiles, not eleven.** The
+  profile list also picked up power-profiles-daemon's detail lines
+  (`CpuDriver:`, `PlatformDriver:`, `Degraded:`) as profiles, so the row filled
+  with overlapping buttons. Only the profile names are listed now
+  (`nomarchy/bin/omarchy-powerprofiles-list`).
 - **The wallpaper picker stops scrambling its text and drawing shards.** On
   NVIDIA, the picker reloaded compiled GPU programs from the shader cache that
   every Quickshell window shares, and those drew wrong: provider names and
