@@ -868,7 +868,8 @@ void CardField::resolveTexture(CardRenderNode *node, const LayoutContext &ctx,
     if (preview) {
         inst.misc[0] = CardTex::Preview;
         inst.misc[1] = 0;
-        setVec4(inst.uv, 0.0f, 0.0f, 1.0f, 1.0f);
+        const QRectF uv = node->previewUv();
+        setVec4(inst.uv, float(uv.x()), float(uv.y()), float(uv.width()), float(uv.height()));
     } else {
         const TextureTier::Slot *slot = nullptr;
         if (wantNear && (slot = node->nearTier().find(key)))
@@ -1084,11 +1085,14 @@ QSGNode *CardField::updatePaintNode(QSGNode *old, UpdatePaintNodeData *)
     m_wanted.clear();
     if (m_layout && m_source && m_source->cardCount() > 0) {
         LayoutContext ctx = makeContext();
-        QImage previewImage;
+        // The frame goes to the node first: resolve() reads back the part of
+        // the preview texture it covers.
         if (m_previewActive && m_preview->active()) {
-            previewImage = m_preview->takeFrame();
-            if (!previewImage.isNull())
+            const QImage previewImage = m_preview->takeFrame();
+            if (!previewImage.isNull()) {
                 m_previewHasFrame = true;
+                node->setPreviewImage(previewImage);
+            }
         }
 
         m_visuals.clear();
@@ -1111,8 +1115,6 @@ QSGNode *CardField::updatePaintNode(QSGNode *old, UpdatePaintNodeData *)
         node->setSandyPass(m_layout->sandyPass());
         const QRectF clip = m_layout->clip(ctx);
         node->setScene(boundingRect(), clip.isValid() ? clip : boundingRect(), float(m_time), 1.0f);
-        if (!previewImage.isNull())
-            node->setPreviewImage(previewImage);
     } else {
         node->setInstances({});
         node->setTransition({}, 1.0f, 0);

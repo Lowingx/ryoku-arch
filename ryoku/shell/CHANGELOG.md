@@ -511,12 +511,18 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
-- **Live wallpaper previews no longer shred the picker on NVIDIA.** The
-  download browser's MotionBGs, MoeWalls and YouTube previews decoded on the
-  GPU and shared their frames into the picker through CUDA, which on hybrid
-  machines tore the whole picker into giant triangles and scrambled text while
-  you browsed. The picker now decodes previews in software, the same way the
-  shell plays its own clips (`ryogami/daemon/process.go`).
+- **Live wallpaper previews no longer shred the picker on NVIDIA.** Selecting
+  a MotionBGs, MoeWalls or YouTube result plays its clip in the card, and
+  turning each decoded frame into an image went through Qt's GPU converter,
+  which brought a second OpenGL context of its own into the picker's render
+  thread. On the NVIDIA driver that left the wrong context current under the
+  scene graph, and the whole picker tore into giant triangles and scrambled
+  text while you browsed. Frames are now converted on the CPU on a worker of
+  their own, the preview texture is allocated once instead of per clip, and
+  previews decode in software like the shell's own clips
+  (`ryogami/picker/src/render/previewvideo.cpp`,
+  `ryogami/picker/src/render/previewyuv.cpp`,
+  `ryogami/picker/src/render/cardrendernode.cpp`, `ryogami/daemon/process.go`).
 - **Switching workspaces no longer replays the wallpaper transition.** Since
   per-workspace wallpapers, every switch (a three-finger swipe included)
   repainted the output with a reveal even when both workspaces show the same
