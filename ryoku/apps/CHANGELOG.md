@@ -13,6 +13,13 @@
   missing or fails falls back to the product's initials instead of an endless
   placeholder (`ryostore/quickshell/ProductDetail.qml`,
   `ryostore/quickshell/ProductMedia.qml`).
+- `ryostore/`: **Ryostore moves.** Cards lift and their covers ease in on
+  hover and press in on click, the rail's selection plate slides between
+  categories, results settle in with a short stagger when you change category,
+  search, provider or sort, the hero crossfades, an opened product settles in,
+  and Install shows its progress and a brief installed check. Everything rests
+  still and sharp, and follows the reduced-motion setting
+  (`ryostore/quickshell/ProductCard.qml`, `ryostore/quickshell/InstallAction.qml`).
 - `ryostore/`: **The Omarchy plugin market, inside Ryostore.** While Nomarchy is
   the bar style, an Omarchy plugins category lists the plugins.omarchy.org
   catalogue (cached, with Popular, New and Verified orders and search), shows

@@ -401,6 +401,9 @@ FocusScope {
         width: Math.max(1, detail.width - x - Tokens.s6)
         height: detail.targetHeight
         opacity: detail.transitionProgress
+        transform: Translate {
+            x: (1 - detail.transitionProgress) * Tokens.s4
+        }
         clip: true
         readonly property bool compact: width < 240
 
@@ -792,7 +795,7 @@ FocusScope {
                     Accessible.onPressAction: detail.ditherOn = !detail.ditherOn
                 }
 
-                Btn {
+                InstallAction {
                     objectName: "ryostore-detail-install-selected"
                     visible: detail.isBundle
                     text: detail.busyKey === detail.actionKey && detail.installStage !== ""
@@ -800,41 +803,40 @@ FocusScope {
                             : (detail.actionItem.updateAvailable === true
                                ? I18n.tr("UPDATE SELECTED") : I18n.tr("INSTALL SELECTED"))
                     primary: true
-                    armed: detail.item !== null && detail.busyKey === "" && detail.selectedNames.length > 0
-                            && !StoreLogic.isDownloadPaused(detail.actionItem) && !StoreLogic.isUnavailable(detail.actionItem)
-                    Accessible.role: Accessible.Button
-                    Accessible.name: text
+                    busy: detail.busyKey === detail.actionKey
+                    reducedMotion: detail.reducedMotion
+                    armed: detail.item !== null && detail.selectedNames.length > 0
+                            && !StoreLogic.isDownloadPaused(detail.actionItem)
+                            && !StoreLogic.isUnavailable(detail.actionItem)
                     onAct: detail.triggerInstallSelected()
-                    Accessible.onPressAction: detail.triggerInstallSelected()
                 }
 
-                Btn {
+                InstallAction {
                     objectName: "ryostore-detail-install-all"
                     visible: detail.isBundle
                     text: detail.actionItem.updateAvailable === true ? I18n.tr("UPDATE ALL") : I18n.tr("INSTALL ALL")
                     armed: detail.item !== null && detail.busyKey === ""
-                            && !StoreLogic.isDownloadPaused(detail.actionItem) && !StoreLogic.isUnavailable(detail.actionItem)
-                    Accessible.role: Accessible.Button
-                    Accessible.name: text
+                            && !StoreLogic.isDownloadPaused(detail.actionItem)
+                            && !StoreLogic.isUnavailable(detail.actionItem)
+                    reducedMotion: detail.reducedMotion
                     onAct: detail.triggerInstallAll()
-                    Accessible.onPressAction: detail.triggerInstallAll()
                 }
 
-                Btn {
+                InstallAction {
                     objectName: "ryostore-detail-install"
                     visible: !detail.isBundle
                     text: detail.busyKey === detail.actionKey && detail.installStage !== ""
                             ? I18n.tr(detail.installStage)
                             : I18n.tr(StoreLogic.primaryAction(detail.actionItem))
                     primary: true
-                    armed: detail.item !== null && detail.busyKey === ""
-                            && StoreLogic.primaryAction(detail.actionItem) !== "INSTALLED"
+                    busy: detail.busyKey === detail.actionKey
+                    installed: StoreLogic.primaryAction(detail.actionItem) === "INSTALLED"
+                    reducedMotion: detail.reducedMotion
+                    armed: detail.item !== null
+                            && !installed
                             && !StoreLogic.isDownloadPaused(detail.actionItem)
                             && !StoreLogic.isUnavailable(detail.actionItem)
-                    Accessible.role: Accessible.Button
-                    Accessible.name: text
                     onAct: detail.triggerInstall()
-                    Accessible.onPressAction: detail.triggerInstall()
                 }
 
                 Btn {

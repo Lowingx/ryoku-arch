@@ -10,6 +10,8 @@ Item {
     property bool selected: false
     property bool active: true
     property string artOverride: ""
+    property bool zoomed: false
+    property bool reducedMotion: false
 
     function identityColor() {
         const raw = String(item && (item.accent || item.surface) || "").trim().toLowerCase();
@@ -76,6 +78,12 @@ Item {
         fallbackText: cover.hasIdentity ? cover.coverInitials : ""
         fallbackSurface: cover.identitySurface
         fallbackInk: cover.identityInk
+        scale: cover.tile && cover.zoomed ? 1.025 : 1
+
+        Behavior on scale {
+            enabled: !cover.reducedMotion
+            NumberAnimation { duration: Tokens.move; easing.type: Tokens.ease }
+        }
     }
 
     Rectangle {

@@ -8,17 +8,43 @@ Item {
     property bool selected: false
     property bool focusVisible: false
     property bool reducedMotion: false
+    property bool hovered: hover.hovered
+    property bool pressed: tap.pressed
 
     signal hoverChanged(bool hovered)
     signal activated()
 
     Rectangle {
         id: frame
+        objectName: "ryostore-card-frame"
         anchors.fill: parent
         anchors.margins: Tokens.s2
-        color: card.selected ? Tokens.tint5 : Tokens.paper
+        color: card.selected ? Tokens.tint5
+              : (card.pressed ? Tokens.tint16 : (card.hovered ? Tokens.tint5 : Tokens.paper))
         border.width: card.focusVisible || card.selected ? Tokens.border * 2 : Tokens.border
-        border.color: card.focusVisible ? Tokens.bone : (card.selected ? Tokens.lineStrong : Tokens.line)
+        border.color: card.focusVisible ? Tokens.bone
+                      : (card.selected || card.hovered ? Tokens.lineStrong : Tokens.line)
+        scale: card.pressed ? 0.992 : (card.hovered ? 1.012 : 1)
+
+        transform: Translate {
+            y: card.pressed ? 0 : (card.hovered ? -Tokens.s1 : 0)
+            Behavior on y {
+                enabled: !card.reducedMotion
+                NumberAnimation { duration: Tokens.move; easing.type: Tokens.ease }
+            }
+        }
+        Behavior on scale {
+            enabled: !card.reducedMotion
+            NumberAnimation { duration: Tokens.snap; easing.type: Tokens.easeSnap }
+        }
+        Behavior on color {
+            enabled: !card.reducedMotion
+            ColorAnimation { duration: Tokens.snap }
+        }
+        Behavior on border.color {
+            enabled: !card.reducedMotion
+            ColorAnimation { duration: Tokens.snap }
+        }
 
         ProductCover {
             id: cover
@@ -26,7 +52,9 @@ Item {
             height: Math.round(parent.height * 0.67)
             item: card.item
             selected: false
-            active: card.enabled && hover.hovered && card.Window.window && card.Window.window.active
+            active: card.enabled && card.hovered && card.Window.window && card.Window.window.active
+            zoomed: card.hovered || card.pressed
+            reducedMotion: card.reducedMotion
         }
 
         Column {
@@ -90,5 +118,8 @@ Item {
         onHoveredChanged: card.hoverChanged(hovered)
     }
 
-    TapHandler { onTapped: card.activated() }
+    TapHandler {
+        id: tap
+        onTapped: card.activated()
+    }
 }

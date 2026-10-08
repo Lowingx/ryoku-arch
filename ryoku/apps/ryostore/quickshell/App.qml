@@ -92,6 +92,14 @@ Rectangle {
             ? String(selectedIndex + 1) + " / " + String(collection.length)
             : ""
     readonly property bool showHero: view === "discover" && categoryID === "" && !searchOpen && collection.length > 0
+    readonly property string contentMotionKey: [
+        view,
+        categoryID,
+        query,
+        providerFilter,
+        pluginFilter,
+        omarchySort
+    ].join("|")
     readonly property var currentCategory: categoryID !== "" ? Store.category(categoryID) : null
     readonly property string pageTitle: searchOpen ? I18n.tr("Search")
             : (view === "library" ? I18n.tr("Library")
@@ -457,6 +465,7 @@ Rectangle {
         refreshing: Store.refreshing
         searchActive: app.searchOpen
         resultCount: app.collection.length
+        reducedMotion: app.reducedMotion
         onRouteRequested: (routeView, routeCategory) => app.openRoute(routeCategory || routeView)
         onRefreshRequested: Store.refresh(true)
         onQueryEdited: value => app.searchFor(value)
@@ -555,6 +564,7 @@ Rectangle {
         trailingKey: app.themesBrowse ? "__mine__" : ""
         installableCount: app.themesBrowse ? app.themeInstallable : 0
         busy: Store.busyKey !== ""
+        reducedMotion: app.reducedMotion
         onPicked: filter => {
             if (app.decorBrowse) {
                 app.openRoute(filter);
@@ -615,6 +625,7 @@ Rectangle {
         items: app.collection
         selectedKey: app.selectedKey
         reducedMotion: app.reducedMotion
+        contentKey: app.contentMotionKey
         enabled: !app.detailOpen
         onPreviewRequested: item => app.previewItem = item
         onSelectionRequested: item => app.selectKey(StoreLogic.itemKey(item))

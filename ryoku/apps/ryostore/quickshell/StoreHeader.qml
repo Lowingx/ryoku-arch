@@ -17,6 +17,7 @@ Item {
     property bool searchActive: false
     property int resultCount: 0
     property bool updateAvailable: false
+    property bool reducedMotion: false
 
     signal routeRequested(string view, string categoryID)
     signal refreshRequested()
@@ -60,15 +61,19 @@ Item {
         width: navColumn.width
         height: Tokens.rowH
         radius: Tokens.radius
-        color: current ? Tokens.bone : (pointer.hovered ? Tokens.tint5 : "transparent")
-        border.width: current ? Tokens.border : 0
-        border.color: current ? Tokens.bone : "transparent"
+        color: plate.current ? "transparent"
+              : (plateTap.pressed ? Tokens.tint16 : (pointer.hovered ? Tokens.tint5 : "transparent"))
         activeFocusOnTab: true
         Accessible.role: Accessible.Button
         Accessible.name: note === "" ? I18n.tr(label) : I18n.tr(label) + ", " + note
         Accessible.onPressAction: chose()
         onActiveFocusChanged: if (activeFocus) navScroll.reveal(plate)
         onCurrentChanged: if (current) Qt.callLater(function() { navScroll.reveal(plate); })
+
+        Behavior on color {
+            enabled: !header.reducedMotion
+            ColorAnimation { duration: Tokens.snap }
+        }
 
         Keys.onPressed: event => {
             if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter || event.key === Qt.Key_Space) {
@@ -107,6 +112,10 @@ Item {
                     font.pixelSize: Tokens.fRow
                     font.weight: Font.Medium
                     elide: Text.ElideRight
+                    Behavior on color {
+                        enabled: !header.reducedMotion
+                        ColorAnimation { duration: Tokens.snap }
+                    }
                 }
 
                 Text {
@@ -117,6 +126,10 @@ Item {
                     font.family: Tokens.ui
                     font.pixelSize: Tokens.fTiny
                     elide: Text.ElideRight
+                    Behavior on color {
+                        enabled: !header.reducedMotion
+                        ColorAnimation { duration: Tokens.snap }
+                    }
                 }
             }
 
@@ -127,6 +140,10 @@ Item {
                 font.family: Tokens.jp
                 font.pixelSize: Tokens.fBody
                 anchors.verticalCenter: parent.verticalCenter
+                Behavior on color {
+                    enabled: !header.reducedMotion
+                    ColorAnimation { duration: Tokens.snap }
+                }
             }
         }
 
@@ -140,7 +157,7 @@ Item {
         }
 
         HoverHandler { id: pointer; cursorShape: Qt.PointingHandCursor }
-        TapHandler { onTapped: plate.chose() }
+        TapHandler { id: plateTap; onTapped: plate.chose() }
     }
 
     Rectangle {
@@ -311,11 +328,58 @@ Item {
             contentY = Math.max(0, Math.min(contentHeight - height, target));
         }
         clip: true
+        readonly property real selectedY: {
+            header.view;
+            header.categoryID;
+            header.searchActive;
+            header.categories;
+            const rows = navColumn.children;
+            for (let i = 0; i < rows.length; i++) {
+                if (rows[i].current === true)
+                    return rows[i].y;
+            }
+            return 0;
+        }
+        readonly property bool hasSelection: {
+            header.view;
+            header.categoryID;
+            header.searchActive;
+            const rows = navColumn.children;
+            for (let i = 0; i < rows.length; i++) {
+                if (rows[i].current === true)
+                    return true;
+            }
+            return false;
+        }
+
+        Rectangle {
+            id: selectionPlate
+            objectName: "ryostore-category-selection"
+            x: 0
+            y: navScroll.selectedY
+            z: 0
+            width: navColumn.width
+            height: Tokens.rowH
+            radius: Tokens.radius
+            color: Tokens.bone
+            opacity: navScroll.hasSelection ? 1 : 0
+
+            Behavior on y {
+                enabled: !header.reducedMotion
+                NumberAnimation { duration: Tokens.move; easing.type: Tokens.ease }
+            }
+            Behavior on opacity {
+                enabled: !header.reducedMotion
+                NumberAnimation { duration: Tokens.snap; easing.type: Tokens.easeSnap }
+            }
+        }
+
 
         Column {
             id: navColumn
             width: navScroll.width
             spacing: Tokens.s1
+            z: 1
 
             Text {
                 text: I18n.tr("01 BROWSE")
@@ -367,7 +431,7 @@ Item {
                            ? I18n.tr("%1 installed, %2 updates ready").arg(header.libraryCount).arg(header.updateCount)
                            : I18n.tr("%1 installed").arg(header.libraryCount))
                 seal: "蔵"
-                current: header.view === "library"
+                current: header.view === "library" && !header.searchActive
                 flagged: header.updateCount > 0
                 onChose: header.activateLibrary()
             }
