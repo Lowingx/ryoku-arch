@@ -511,6 +511,13 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **The wallpaper picker draws all of itself again on Qt 6.12.** Its card
+  renderer only issues commands through Qt's own graphics layer but never said
+  so, so Qt fenced it off as raw OpenGL on every frame. On Qt 6.12 with OpenGL
+  that fencing wiped the rest of the picker: the header, tabs, panels and text
+  disappeared, and download results were drawn over the main card when you
+  switched providers. The renderer now declares it renders through Qt's
+  graphics layer only (`ryogami/picker/src/render/cardrendernode.cpp`).
 - **Multi-monitor desktops stay smooth.** Moving the pointer from one monitor
   to another made the shell fetch and re-parse every output, workspace and
   window on each crossing; it now gets a 44-byte focus note, and Hyprland no

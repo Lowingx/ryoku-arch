@@ -407,7 +407,7 @@ void CardRenderNode::releaseResources()
 
 QSGRenderNode::RenderingFlags CardRenderNode::flags() const
 {
-    return BoundedRectRendering;
+    return BoundedRectRendering | NoExternalRendering;
 }
 
 QRectF CardRenderNode::rect() const
