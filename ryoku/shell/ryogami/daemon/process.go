@@ -149,20 +149,38 @@ func pickerImportDirs() string {
 	return strings.Join(dirs, string(os.PathListSeparator))
 }
 
-// pickerDiskCacheEnv keeps the picker off Qt's on-disk shader and pipeline
-// caches. Every quickshell process shares one cache file, and on NVIDIA's
-// OpenGL driver programs reloaded from it drew the picker's text and geometry
-// scrambled (the Download menu, provider labels, the shards in the browser),
-// while freshly compiled ones render correctly. The picker stays resident, so
-// compiling once per daemon start costs little.
-var pickerDiskCacheEnv = []string{"QSG_RHI_DISABLE_DISK_CACHE=1", "QT_DISABLE_SHADER_DISK_CACHE=1"}
+var pickerVulkanICDPaths = []string{
+	"/usr/share/vulkan/icd.d/nvidia_icd.json",
+	"/etc/vulkan/icd.d/nvidia_icd.json",
+}
+
+// pickerGraphicsEnv avoids Qt's unstable OpenGL RHI on the proprietary NVIDIA
+// driver when Vulkan is known to be usable. Other systems retain Qt's normal
+// backend selection, and an explicit user choice always wins.
+func pickerGraphicsEnv(nvidiaVersionPath string, nvidiaICDPaths []string, inheritedBackend string) []string {
+	env := []string{"QSG_RHI_DISABLE_DISK_CACHE=1", "QT_DISABLE_SHADER_DISK_CACHE=1"}
+	if inheritedBackend != "" || !fileExists(nvidiaVersionPath) {
+		return env
+	}
+	for _, path := range nvidiaICDPaths {
+		if fileExists(path) {
+			return append(env, "QSG_RHI_BACKEND=vulkan")
+		}
+	}
+	return env
+}
 
 // Import dirs are prepended so the Ryoku.Ryogami module resolves ahead of any
 // inherited path.
 func pickerEnv(extra ...string) []string {
 	dirs := pickerImportDirs()
 	base := os.Environ()
-	out := make([]string, 0, len(base)+len(extra)+len(pickerDiskCacheEnv)+2)
+	graphicsEnv := pickerGraphicsEnv(
+		"/proc/driver/nvidia/version",
+		pickerVulkanICDPaths,
+		os.Getenv("QSG_RHI_BACKEND"),
+	)
+	out := make([]string, 0, len(base)+len(extra)+len(graphicsEnv)+2)
 	var haveImport, have2 bool
 	for _, kv := range base {
 		switch {
@@ -182,7 +200,7 @@ func pickerEnv(extra ...string) []string {
 	if !have2 {
 		out = append(out, "QML2_IMPORT_PATH="+dirs)
 	}
-	out = append(out, pickerDiskCacheEnv...)
+	out = append(out, graphicsEnv...)
 	return append(out, extra...)
 }
 

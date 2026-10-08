@@ -565,15 +565,18 @@
   with "bad interpreter" while models already on disk kept working. It now
   runs pip through the environment's own Python (`scripts/ryostage`).
 - **The wallpaper picker's download browser no longer tears into shards.**
-  Switching between Wallhaven, MoeWalls, MotionBGs and YouTube while results
-  loaded could draw the new card count from the previous frame's buffer; on
-  GPUs that do not clear fresh memory (most NVIDIA cards) that came out as
-  giant textured triangles and a shredded header. The card renderer now draws
-  only what it uploaded that frame, clears every offscreen target before it is
-  sampled, drops the old provider's transitions on a reset, keys thumbnails by
-  provider, and clamps layout values. `RYOGAMI_POISON_GPU=1` fills new GPU
-  memory with garbage so this class of bug shows on any GPU
-  (`ryogami/picker/src/render/cardrendernode.cpp`, `src/scene/cardfield.cpp`).
+  Switching providers and pages rapidly could eventually corrupt thumbnails,
+  panels and text on NVIDIA's OpenGL RHI. The same damage remained when the
+  picker submitted no custom draw or resource-update commands, while Vulkan
+  stayed clean under the identical workload. On proprietary NVIDIA systems
+  with a usable Vulkan ICD, the resident picker now chooses Qt's Vulkan RHI;
+  explicit backend choices and machines without Vulkan remain untouched. The
+  renderer also draws only the instances uploaded for the
+  current frame, clears offscreen targets before sampling them, drops the old
+  provider's transitions on reset, keys thumbnails by provider and clamps
+  layout values. `RYOGAMI_POISON_GPU=1` fills fresh allocations with garbage
+  for regression runs (`ryogami/daemon/process.go`,
+  `ryogami/picker/src/render/cardrendernode.cpp`, `src/scene/cardfield.cpp`).
 - **The Stage Editor's toolbar and catalogue answer clicks on Hyprland.** While
   the editor was open the desktop held the keyboard exclusively, and Hyprland
   hands a surface holding that grab every click too, so only the desktop's own
