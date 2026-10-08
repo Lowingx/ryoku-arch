@@ -511,6 +511,12 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **Switching workspaces no longer replays the wallpaper transition.** Since
+  per-workspace wallpapers, every switch (a three-finger swipe included)
+  repainted the output with a reveal even when both workspaces show the same
+  wallpaper. Ryogami now remembers what each output shows and only animates
+  when the workspace's wallpaper is actually different
+  (`ryogami/daemon/workspaces.go`, `ryogami/daemon/apply.go`).
 - **Nomarchy's battery panel shows three power profiles, not eleven.** The
   profile list also picked up power-profiles-daemon's detail lines
   (`CpuDriver:`, `PlatformDriver:`, `Degraded:`) as profiles, so the row filled

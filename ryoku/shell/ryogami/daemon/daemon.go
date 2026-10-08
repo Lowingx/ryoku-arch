@@ -40,9 +40,10 @@ type daemon struct {
 
 	// Paint generations are per output, so a delayed video READY on one monitor
 	// cannot cancel another monitor's independent wallpaper switch.
-	paintMu   sync.Mutex
-	paintNext int64
-	paintSeq  map[string]int64
+	paintMu    sync.Mutex
+	paintNext  int64
+	paintSeq   map[string]int64
+	paintShows map[string]string // output ("" = broadcast default) -> beginPaint's shows
 
 	// previous transition preset index (-1 = none); guards the no-repeat pick.
 	lastTransition int

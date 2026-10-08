@@ -101,7 +101,7 @@ func (d *daemon) applyWallpaperReasonRecord(reason, wpType, path, mode string, o
 		}
 		clipAudio := frameAudio(outputs, mute, volume)
 		clipFrame := videoClip{path: clip, mute: clipAudio.mute, volume: clipAudio.volume}
-		d.beginPaint(outputs)
+		d.beginPaint(outputs, path)
 		if len(outputs) == 0 || contains(outputs, "*") {
 			d.surface.show(paint, fit, d.transitionFor(mode), false, true, clipFrame)
 		} else {
@@ -135,7 +135,7 @@ func (d *daemon) applyWallpaperReasonRecord(reason, wpType, path, mode string, o
 			tr = picked
 		}
 	}
-	token := d.beginPaint(outputs)
+	token := d.beginPaint(outputs, path)
 	if len(outputs) == 0 || contains(outputs, "*") {
 		d.surface.show(paint, fit, tr, frameLive, live, videoClip{})
 	} else {
@@ -514,7 +514,7 @@ func (d *daemon) restoreOutputTargets(targets []string) (want, applied int) {
 					d.transcodeAsync(p, []string{out}, prefs, false, false)
 				}
 			}
-			d.beginPaint(outs)
+			d.beginPaint(outs, p)
 			if out == "*" {
 				d.surface.show(paint, fit, nil, false, true, videoClip{path: clip, mute: m, volume: vol})
 			} else {
@@ -525,7 +525,7 @@ func (d *daemon) restoreOutputTargets(targets []string) (want, applied int) {
 			return
 		}
 
-		token := d.beginPaint(outs)
+		token := d.beginPaint(outs, p)
 		frameLive := live && paint == p
 		if out == "*" {
 			d.surface.show(paint, fit, nil, frameLive, live, videoClip{})
@@ -786,20 +786,39 @@ func paintSlots(outputs []string) []string {
 	return append([]string(nil), outputs...)
 }
 
-func (d *daemon) beginPaint(outputs []string) paintToken {
+// beginPaint starts a paint generation on the outputs and records which
+// wallpaper they now show: a source path, or "we:<id>" for a scene. A broadcast
+// paint replaces every record.
+func (d *daemon) beginPaint(outputs []string, shows string) paintToken {
 	slots := paintSlots(outputs)
 	d.paintMu.Lock()
 	defer d.paintMu.Unlock()
 	if d.paintSeq == nil {
 		d.paintSeq = map[string]int64{}
 	}
+	if len(outputs) == 0 || contains(outputs, "*") {
+		d.paintShows = map[string]string{"": shows}
+	} else if d.paintShows == nil {
+		d.paintShows = map[string]string{}
+	}
 	d.paintNext++
 	token := paintToken{}
 	for _, output := range slots {
 		d.paintSeq[output] = d.paintNext
+		d.paintShows[output] = shows
 		token[output] = d.paintNext
 	}
 	return token
+}
+
+// showing is the wallpaper the output was last painted with, "" when unknown.
+func (d *daemon) showing(output string) string {
+	d.paintMu.Lock()
+	defer d.paintMu.Unlock()
+	if shows, ok := d.paintShows[output]; ok {
+		return shows
+	}
+	return d.paintShows[""]
 }
 
 func (d *daemon) paintIsCurrent(token paintToken) bool {

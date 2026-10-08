@@ -524,6 +524,12 @@ func (d *daemon) applyWorkspaceTarget(target workspaceTarget, mode string) error
 }
 
 func (d *daemon) paintWorkspaceWall(target workspaceTarget, wall workspaceWall, mode string) error {
+	// Moving between workspaces that resolve to the wallpaper already on this
+	// output (the usual case: no assignment, so both use the display's own)
+	// must not replay the reveal on every switch.
+	if shows := wall.shows(); shows != "" && d.showing(target.Output) == shows {
+		return nil
+	}
 	outputs := []string{target.Output}
 	mute := map[string]bool{target.Output: wall.Mute}
 	volume := map[string]int{target.Output: wall.Volume}
@@ -532,6 +538,14 @@ func (d *daemon) paintWorkspaceWall(target workspaceTarget, wall workspaceWall, 
 		return d.driveWE(wall.WeID, itemDir, outputs, mute, volume)
 	}
 	return d.paintWallpaperReason("workspace", wall.Type, wall.Path, mode, outputs, mute, volume)
+}
+
+// shows names the wallpaper the way beginPaint records it.
+func (w workspaceWall) shows() string {
+	if w.Type == "we" {
+		return "we:" + w.WeID
+	}
+	return w.Path
 }
 
 func (m *workspaceManager) setAudio(mute *bool, volume *int, outputs []string) (claimed map[string]bool, weOutputs []string) {

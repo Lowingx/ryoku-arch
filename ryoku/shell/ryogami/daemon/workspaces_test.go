@@ -186,3 +186,52 @@ func TestHotplugRestoreTouchesOnlyAddedOutput(t *testing.T) {
 		t.Fatalf("settled output changed to %q, want %q", got, settled)
 	}
 }
+
+// Switching between workspaces that resolve to the wallpaper already on the
+// output must leave the frame alone; only a different wallpaper repaints.
+func TestWorkspaceSwitchToSameWallpaperDoesNotRepaint(t *testing.T) {
+	d, manager, root := workspaceTestManager(t)
+	shared := filepath.Join(root, "shared.png")
+	own := filepath.Join(root, "own.png")
+	for _, path := range []string{shared, own} {
+		if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	saveJSON(filepath.Join(d.cfg.Paths.Cache, "outputs.json"), map[string]map[string]interface{}{
+		"*": {"type": "static", "path": shared},
+	})
+	one := workspaceTarget{Provider: "test", ID: "1", Name: "1", Output: "eDP-1"}
+	two := workspaceTarget{Provider: "test", ID: "2", Name: "2", Output: "eDP-1"}
+	three := workspaceTarget{Provider: "test", ID: "3", Name: "3", Output: "eDP-1"}
+	manager.state.Assignments[workspaceKey("test", "3")] = workspaceWall{
+		Provider: "test", ID: "3", Name: "3", Output: "eDP-1", Type: "static", Path: own,
+	}
+	revision := func() int64 { return d.surface.snapshot().Outputs["eDP-1"].Revision }
+
+	if err := d.applyWorkspaceTarget(one, "set"); err != nil {
+		t.Fatal(err)
+	}
+	painted := revision()
+	if painted == 0 {
+		t.Fatal("first workspace did not paint its wallpaper")
+	}
+	if err := d.applyWorkspaceTarget(two, "set"); err != nil {
+		t.Fatal(err)
+	}
+	if got := revision(); got != painted {
+		t.Fatalf("same wallpaper repainted on switch: revision %d -> %d", painted, got)
+	}
+	if err := d.applyWorkspaceTarget(three, "set"); err != nil {
+		t.Fatal(err)
+	}
+	if frame := d.surface.snapshot().Outputs["eDP-1"]; frame.Path != own || frame.Revision == painted {
+		t.Fatalf("assigned workspace did not repaint: %+v", frame)
+	}
+	if err := d.applyWorkspaceTarget(one, "set"); err != nil {
+		t.Fatal(err)
+	}
+	if got := d.surface.snapshot().Outputs["eDP-1"].Path; got != shared {
+		t.Fatalf("returning to an unassigned workspace kept %q, want %q", got, shared)
+	}
+}
