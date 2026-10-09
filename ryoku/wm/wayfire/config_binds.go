@@ -309,38 +309,33 @@ func defaultBinds() map[string]wayfireBind {
 }
 
 // wayfireExclusive is one bind wayfire's own shipped config carries outside the
-// catalogue. Its chords seed the claim, so a custom bind or a rebind onto one
+// catalogue. Its chord seeds the claim, so a custom bind or a rebind onto one
 // is reported rather than firing twice over wayfire's own row, and the legend
 // lists it under wayfire's name.
 type wayfireExclusive struct {
 	section, key string
 	chord        string
-	also         []string
 	label        string
 	hint         string
 }
 
 // wayfireExclusives is the shipped baseline's own binds: the grid, the
-// workspace grid navigation, the zoom modifier and the reverse window cycle.
-// The chords mirror wayfire/wayfire.ini, which a test pins, so the legend and
-// the claim can never drift from the config they describe.
+// window-taking workspace switches, the zoom modifier and the reverse window
+// cycle. The chords mirror wayfire/wayfire.ini, which a test pins, so the
+// legend and the claim can never drift from the config they describe.
 func wayfireExclusives() []wayfireExclusive {
 	return []wayfireExclusive{
 		{section: "zoom", key: "modifier", chord: "SUPER", label: "Zoom", hint: "Hold Super and roll the wheel to magnify the desktop"},
-		{section: "grid", key: "slot_bl", chord: "SUPER + KP_1", label: "Tile bottom-left"},
-		{section: "grid", key: "slot_b", chord: "SUPER + KP_2", label: "Tile bottom"},
-		{section: "grid", key: "slot_br", chord: "SUPER + KP_3", label: "Tile bottom-right"},
-		{section: "grid", key: "slot_l", chord: "SUPER + Left", also: []string{"SUPER + KP_4"}, label: "Tile left"},
-		{section: "grid", key: "slot_c", chord: "SUPER + Up", also: []string{"SUPER + KP_5"}, label: "Tile centre"},
-		{section: "grid", key: "slot_r", chord: "SUPER + Right", also: []string{"SUPER + KP_6"}, label: "Tile right"},
-		{section: "grid", key: "slot_tl", chord: "SUPER + KP_7", label: "Tile top-left"},
-		{section: "grid", key: "slot_t", chord: "SUPER + KP_8", label: "Tile top"},
-		{section: "grid", key: "slot_tr", chord: "SUPER + KP_9", label: "Tile top-right"},
-		{section: "grid", key: "restore", chord: "SUPER + Down", also: []string{"SUPER + KP_0"}, label: "Restore the default geometry"},
-		{section: "vswitch", key: "binding_left", chord: "SUPER + CTRL + Left", label: "Workspace left"},
-		{section: "vswitch", key: "binding_down", chord: "SUPER + CTRL + Down", label: "Workspace down"},
-		{section: "vswitch", key: "binding_up", chord: "SUPER + CTRL + Up", label: "Workspace up"},
-		{section: "vswitch", key: "binding_right", chord: "SUPER + CTRL + Right", label: "Workspace right"},
+		{section: "grid", key: "slot_bl", chord: "SUPER + CTRL + KP_1", label: "Tile bottom-left"},
+		{section: "grid", key: "slot_b", chord: "SUPER + CTRL + KP_2", label: "Tile bottom"},
+		{section: "grid", key: "slot_br", chord: "SUPER + CTRL + KP_3", label: "Tile bottom-right"},
+		{section: "grid", key: "slot_l", chord: "SUPER + CTRL + KP_4", label: "Tile left"},
+		{section: "grid", key: "slot_c", chord: "SUPER + CTRL + KP_5", label: "Tile centre"},
+		{section: "grid", key: "slot_r", chord: "SUPER + CTRL + KP_6", label: "Tile right"},
+		{section: "grid", key: "slot_tl", chord: "SUPER + CTRL + KP_7", label: "Tile top-left"},
+		{section: "grid", key: "slot_t", chord: "SUPER + CTRL + KP_8", label: "Tile top"},
+		{section: "grid", key: "slot_tr", chord: "SUPER + CTRL + KP_9", label: "Tile top-right"},
+		{section: "grid", key: "restore", chord: "SUPER + CTRL + KP_0", label: "Restore the default geometry"},
 		{section: "vswitch", key: "with_win_left", chord: "SUPER + CTRL + SHIFT + Left", label: "Send window to the workspace left"},
 		{section: "vswitch", key: "with_win_down", chord: "SUPER + CTRL + SHIFT + Down", label: "Send window to the workspace down"},
 		{section: "vswitch", key: "with_win_up", chord: "SUPER + CTRL + SHIFT + Up", label: "Send window to the workspace up"},
@@ -395,10 +390,8 @@ func resolveBinds(s wayfireStore) ([]outBind, []wm.Unhonored) {
 
 	claimed := map[string]string{}
 	for _, ex := range wayfireExclusives() {
-		for _, chord := range append([]string{ex.chord}, ex.also...) {
-			if act, ok := toWayfireActivator(chord); ok && claimed[act] == "" {
-				claimed[act] = "wayfire's own " + ex.label
-			}
+		if act, ok := toWayfireActivator(ex.chord); ok && claimed[act] == "" {
+			claimed[act] = "wayfire's own " + ex.label
 		}
 	}
 
@@ -643,24 +636,15 @@ func bindRows(s wayfireStore) []wm.BindRow {
 	}
 
 	// wayfire's own shipped binds, titled with wayfire's name: the grid and
-	// its workspace navigation, the zoom modifier and the reverse window
-	// cycle. They belong to the baseline, so they rebind nowhere. An option
-	// that takes a second chord on top of its own carries it as a note.
+	// the workspace switches that carry a window, the zoom modifier and the
+	// reverse window cycle. They belong to the baseline, so they rebind
+	// nowhere.
 	for _, ex := range wayfireExclusives() {
-		hint := ex.hint
-		if len(ex.also) > 0 {
-			note := "also " + strings.Join(ex.also, ", ")
-			if hint == "" {
-				hint = note
-			} else {
-				hint += "; " + note
-			}
-		}
 		rows = append(rows, wm.BindRow{
 			ID:         "wayfire." + ex.section + "." + ex.key,
 			Category:   "Wayfire",
 			Label:      ex.label,
-			Hint:       hint,
+			Hint:       ex.hint,
 			Keys:       wm.DisplayKeys(ex.chord),
 			Default:    ex.chord,
 			Chord:      ex.chord,

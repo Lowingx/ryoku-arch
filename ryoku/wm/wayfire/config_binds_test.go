@@ -179,7 +179,7 @@ func TestResolvePriority(t *testing.T) {
 
 	// A custom onto wayfire's own shipped chord loses to the shipped bind.
 	s = defaultStore()
-	s.Keybinds = []Keybind{{Keys: "SUPER + Left", Action: "exec", Value: "x"}}
+	s.Keybinds = []Keybind{{Keys: "SUPER + CTRL + KP_4", Action: "exec", Value: "x"}}
 	_, report = resolveBinds(s)
 	if !strings.Contains(strings.Join(reportStrings(report), "\n"), "wayfire's own Tile left") {
 		t.Errorf("a chord wayfire's own config holds must stay reported: %v", report)
@@ -235,16 +235,14 @@ func TestExclusivesMatchBaseline(t *testing.T) {
 			t.Errorf("baseline carries no [%s] %s", ex.section, ex.key)
 			continue
 		}
-		for _, chord := range append([]string{ex.chord}, ex.also...) {
-			activator, ok := toWayfireActivator(chord)
-			if !ok {
-				t.Errorf("%s: %s has no wayfire spelling", ex.label, chord)
-				continue
-			}
-			for _, tok := range strings.Fields(activator) {
-				if !containsField(value, tok) {
-					t.Errorf("[%s] %s = %q does not bind %s (missing %s)", ex.section, ex.key, value, chord, tok)
-				}
+		activator, ok := toWayfireActivator(ex.chord)
+		if !ok {
+			t.Errorf("%s: %s has no wayfire spelling", ex.label, ex.chord)
+			continue
+		}
+		for _, tok := range strings.Fields(activator) {
+			if !containsField(value, tok) {
+				t.Errorf("[%s] %s = %q does not bind %s (missing %s)", ex.section, ex.key, value, ex.chord, tok)
 			}
 		}
 	}
@@ -342,7 +340,7 @@ func TestBindRowsCatalogueAndExclusives(t *testing.T) {
 		t.Errorf("the first wayfire exclusive sits at %d with category %q", len(cat), rows[len(cat)].Category)
 	}
 	got := byID["wayfire.grid.slot_l"]
-	if got.Label != "Tile left" || got.Rebindable || !strings.Contains(got.Hint, "also SUPER + KP_4") {
+	if got.Label != "Tile left" || got.Rebindable || got.Hint != "" {
 		t.Errorf("wayfire.grid.slot_l = %+v", got)
 	}
 	if strings.Contains(byID["wayfire.zoom.modifier"].Hint, "also") {
