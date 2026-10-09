@@ -405,6 +405,10 @@
   Ryoku's seams (`../inir/`).
 
 ### Changed
+- **Picker style lives in QS Bar Settings.** Tanzaku, Hearthstone or Carousel
+  for the theme, wallpaper and media pickers is chosen on the Bar route of QS
+  Bar Settings, next to the rest of how the bar looks, and switches the pickers
+  live (`quickshell/shell/modules/bar/barstyles/qsbar/controlcenter/routes/BarsRoute.qml`).
 - **The picker's Download browser is a store.** Providers sit in a rail on the
   left with the selected provider's filters under them; the results fill the
   whole height in a grid that sizes its columns to the width, with a real
