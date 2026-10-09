@@ -82,6 +82,10 @@
   (`quickshell/SchemaPage.qml`, `quickshell/AppPicker.qml`)
 
 ### Removed
+- **The Desktop page drops Brand and Pickers.** Renaming the desktop and
+  swapping its mark are gone, and the picker style moved to QS Bar Settings,
+  the bar it belongs to. General keeps the reload cover
+  (`quickshell/pages/DesktopPage.qml`, `quickshell/schema/DesktopPage.js`).
 - **Desktop Scene is no longer a Hub page.** Wallpaper depth, visualizers, and
   desktop widgets now open directly in the shell's Stage Editor. Retired links
   skip Hub and open the matching catalogue, while direct navigation to an
