@@ -236,8 +236,8 @@ func defaultBinds() map[string]wayfireBind {
 		"workspace.reorderDown":             {reason: "wayfire's workspace order is fixed by the grid."},
 		"workspace.hideWindow":              {reason: "wayfire has no scratchpad workspace."},
 		"workspace.scratchpad":              {reason: "wayfire has no scratchpad workspace."},
-		"workspace.overview":                {reason: "the shipped session carries no wayfire overview plugin."},
-		"workspace.overviewDesktops":        {reason: "the shipped session carries no wayfire overview plugin."},
+		"workspace.overview":                {key: "workspace_overview", cmd: "ryoku-shell overview"},
+		"workspace.overviewDesktops":        {key: "workspace_overview_desktops", cmd: "ryoku-shell overview", hint: "Opens the overview; once inside, Alt+Left and Alt+Right step across desktops"},
 
 		// Displays
 		"display.focus.left":          {reason: "wayfire has no focus-screen-by-direction bind."},
