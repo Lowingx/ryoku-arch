@@ -58,6 +58,7 @@ type wayfireView struct {
 	Title              string          `json:"title"`
 	AppID              string          `json:"app-id"`
 	Geometry           wayfireGeometry `json:"geometry"`
+	BBox               wayfireGeometry `json:"bbox"`
 	OutputID           int             `json:"output-id"`
 	OutputName         string          `json:"output-name"`
 	LastFocusTimestamp int64           `json:"last-focus-timestamp"`
@@ -235,6 +236,23 @@ func workspaceHandle(wset int64, x, y int) string {
 	return strconv.FormatInt(wset, 10) + ":" + strconv.Itoa(x) + ":" + strconv.Itoa(y)
 }
 
+// workspaceName is the flat cell name every consumer keys on: row-major from
+// 1, the same number hyprland hands a dispatcher, so the shell compares one
+// shape whatever compositor feeds it. Handles never leak into names.
+func workspaceName(x, y, gridW int) string {
+	return strconv.Itoa(y*gridW + x + 1)
+}
+
+// rect is the view's on-screen extent. bbox is what actually rendered: a
+// fullscreen XWayland window can leave the logical geometry stale, while a
+// view nothing has drawn yet reports an empty bbox and keeps its geometry.
+func (v wayfireView) rect() wayfireGeometry {
+	if v.BBox.Width > 0 && v.BBox.Height > 0 {
+		return v.BBox
+	}
+	return v.Geometry
+}
+
 func parseWorkspaceHandle(id string) (wset int64, x, y int, ok bool) {
 	parts := strings.Split(id, ":")
 	if len(parts) != 3 {
@@ -263,8 +281,9 @@ func cellOf(v wayfireView, out wayfireOutput, cur wayfireWorkspace, gridW, gridH
 	if out.Geometry.Width <= 0 || out.Geometry.Height <= 0 {
 		return cur.X, cur.Y
 	}
-	x := cur.X + int(math.Floor((v.Geometry.X-out.Geometry.X)/out.Geometry.Width))
-	y := cur.Y + int(math.Floor((v.Geometry.Y-out.Geometry.Y)/out.Geometry.Height))
+	r := v.rect()
+	x := cur.X + int(math.Floor((r.X-out.Geometry.X)/out.Geometry.Width))
+	y := cur.Y + int(math.Floor((r.Y-out.Geometry.Y)/out.Geometry.Height))
 	return clamp(x, 0, gridW-1), clamp(y, 0, gridH-1)
 }
 
@@ -300,18 +319,22 @@ func (s *stage) wsetByIndex(index int64) (wayfireWset, bool) {
 }
 
 // cellOfView resolves the output and the set's current workspace the
-// derivation needs. A view whose set is unknown falls back to its output's
-// current cell, which is where an ordinary view lives anyway.
-func (s *stage) cellOfView(v wayfireView) (int, int) {
+// derivation needs, plus the grid width the flat name needs. A view whose set
+// is unknown falls back to its output's current cell, which is where an
+// ordinary view lives anyway; a view with no output reports grid width 0,
+// which callers fold back into the handle.
+func (s *stage) cellOfView(v wayfireView) (int, int, int) {
 	out, ok := s.outputByName(v.OutputName)
 	if !ok {
-		return 0, 0
+		return 0, 0, 0
 	}
 	ws, ok := s.wsetByIndex(v.WsetIndex)
 	if !ok {
-		return cellOf(v, out, out.Workspace, out.Workspace.GridWidth, out.Workspace.GridHeight)
+		x, y := cellOf(v, out, out.Workspace, out.Workspace.GridWidth, out.Workspace.GridHeight)
+		return x, y, out.Workspace.GridWidth
 	}
-	return cellOf(v, out, ws.Workspace, ws.Workspace.GridWidth, ws.Workspace.GridHeight)
+	x, y := cellOf(v, out, ws.Workspace, ws.Workspace.GridWidth, ws.Workspace.GridHeight)
+	return x, y, ws.Workspace.GridWidth
 }
 
 // workspaceFrame renders one cell per grid slot of every set. Wayfire has no
@@ -321,7 +344,7 @@ func (s *stage) workspaceFrame() []wm.Workspace {
 	counts := map[string]int{}
 	fullscreen := map[string]bool{}
 	for _, v := range s.views {
-		x, y := s.cellOfView(v)
+		x, y, _ := s.cellOfView(v)
 		handle := workspaceHandle(v.WsetIndex, x, y)
 		counts[handle]++
 		if v.Fullscreen {
@@ -340,7 +363,7 @@ func (s *stage) workspaceFrame() []wm.Workspace {
 				handle := workspaceHandle(ws.Index, x, y)
 				out = append(out, wm.Workspace{
 					ID:         handle,
-					Name:       strconv.Itoa(y*gridW + x + 1),
+					Name:       workspaceName(x, y, gridW),
 					Output:     ws.OutputName,
 					Active:     attached && onCurrent.X == x && onCurrent.Y == y,
 					Windows:    counts[handle],
@@ -393,19 +416,26 @@ func (s *stage) windowFrame() []wm.Window {
 	})
 	out := make([]wm.Window, 0, len(ordered))
 	for i, v := range ordered {
-		x, y := s.cellOfView(v)
+		x, y, gridW := s.cellOfView(v)
+		// Consumers compare names, so the frame carries the flat name; a
+		// grid-less stage keeps the handle, the only key that still works.
+		workspace := workspaceHandle(v.WsetIndex, x, y)
+		if gridW > 0 {
+			workspace = workspaceName(x, y, gridW)
+		}
+		rect := v.rect()
 		frame := wm.Window{
 			ID:         strconv.FormatInt(v.ID, 10),
 			AppID:      v.AppID,
 			Title:      v.Title,
-			Workspace:  workspaceHandle(v.WsetIndex, x, y),
+			Workspace:  workspace,
 			Output:     v.OutputName,
 			FocusOrder: i,
 			Floating:   v.TiledEdges == 0 && !v.Fullscreen,
-			X:          int(math.Round(v.Geometry.X)),
-			Y:          int(math.Round(v.Geometry.Y)),
-			Width:      int(math.Round(v.Geometry.Width)),
-			Height:     int(math.Round(v.Geometry.Height)),
+			X:          int(math.Round(rect.X)),
+			Y:          int(math.Round(rect.Y)),
+			Width:      int(math.Round(rect.Width)),
+			Height:     int(math.Round(rect.Height)),
 		}
 		out = append(out, frame)
 	}
@@ -421,7 +451,7 @@ func (s *stage) outputFrame(o wayfireOutput) wm.Output {
 		X:               int(math.Round(o.Geometry.X)),
 		Y:               int(math.Round(o.Geometry.Y)),
 		Focused:         o.Name == s.focused,
-		ActiveWorkspace: workspaceHandle(o.WsetIndex, o.Workspace.X, o.Workspace.Y),
+		ActiveWorkspace: activeWorkspaceName(o),
 	}
 	section, ok := s.config["output:"+o.Name]
 	if !ok {
@@ -458,6 +488,17 @@ func (s *stage) outputsFrame() []wm.Output {
 		out = append(out, s.outputFrame(o))
 	}
 	return out
+}
+
+// activeWorkspaceName is the flat name of the cell an output shows, the same
+// key its windows report. An output with no grid configured (before the first
+// configure) keeps the handle: the name would be a guess, the handle still
+// round-trips through an act.
+func activeWorkspaceName(o wayfireOutput) string {
+	if o.Workspace.GridWidth <= 0 {
+		return workspaceHandle(o.WsetIndex, o.Workspace.X, o.Workspace.Y)
+	}
+	return workspaceName(o.Workspace.X, o.Workspace.Y, o.Workspace.GridWidth)
 }
 
 // keyboardPair folds wayfire's "unknown" layout (no keyboard ever named one)

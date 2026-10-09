@@ -211,7 +211,7 @@ func runAct(args []string) error {
 		// workspace travelling: the windows go, the cell belongs to the
 		// grid they land in.
 		for _, view := range stage.views {
-			vx, vy := stage.cellOfView(view)
+			vx, vy, _ := stage.cellOfView(view)
 			if view.WsetIndex == wsetIdx && vx == x && vy == y {
 				if err := perform("window-rules/configure-view", map[string]any{
 					"id": view.ID, "output_id": target.ID,

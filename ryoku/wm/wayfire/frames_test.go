@@ -133,8 +133,8 @@ func TestWorkspaceAndWindowFrames(t *testing.T) {
 	if wins[1].Floating != true || wins[2].Floating {
 		t.Errorf("floating flags wrong: an untilled window must float, tiled fullscreen must not")
 	}
-	if wins[0].Workspace != "1:1:0" {
-		t.Errorf("current-cell window maps to workspace %q, want 1:1:0", wins[0].Workspace)
+	if wins[0].Workspace != "2" {
+		t.Errorf("current-cell window maps to workspace %q, want 2", wins[0].Workspace)
 	}
 }
 

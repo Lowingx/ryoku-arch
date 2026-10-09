@@ -54,7 +54,7 @@ func TestReplayReadsFixture(t *testing.T) {
 	}
 
 	outs := s.outputsFrame()
-	if len(outs) != 1 || !outs[0].Focused || outs[0].ActiveWorkspace != "1:1:0" {
+	if len(outs) != 1 || !outs[0].Focused || outs[0].ActiveWorkspace != "2" {
 		t.Fatalf("output frame wrong: %+v", outs)
 	}
 	if outs[0].Scale != 2 {
@@ -74,9 +74,9 @@ func TestReplayReadsFixture(t *testing.T) {
 		t.Fatalf("got %d windows, want 1", len(wins))
 	}
 	// The view is translated to x=-1107 while its set shows cell (1,0), so it
-	// belongs to the cell it started on.
-	if wins[0].Workspace != "1:0:0" {
-		t.Errorf("workspace = %q, want 1:0:0", wins[0].Workspace)
+	// belongs to the cell it started on, flat name 1.
+	if wins[0].Workspace != "1" {
+		t.Errorf("workspace = %q, want 1", wins[0].Workspace)
 	}
 	if wins[0].FocusOrder != 0 {
 		t.Errorf("focus order = %d, want 0", wins[0].FocusOrder)
