@@ -30,6 +30,12 @@ Singleton {
     property alias osdRadius:  adapter.osdRadius
     property alias osdOpacity: adapter.osdOpacity
 
+    // deckFrost: the haze the desktop takes while a window owns the workspace —
+    // wallpaper, widgets and the bar body sit under it, windows render above on
+    // their own layers. 0 clears it, 1 is solid black. The background scrim
+    // reads the same shell.json key generically.
+    property alias deckFrost: adapter.deckFrost
+
     property alias frameBars: adapter.frameBars
     readonly property var normalizedFrameBars: FrameBars.normalize(frameBars, BarCatalog, MenuCatalog)
 
@@ -250,6 +256,7 @@ Singleton {
             property real frameCorner: 8
             property real osdRadius: 0
             property real osdOpacity: 1
+            property real deckFrost: 0.45
             property real fontScale: 1.3
             property string fontFamily: "Space Grotesk"
             property int fontSize: 11

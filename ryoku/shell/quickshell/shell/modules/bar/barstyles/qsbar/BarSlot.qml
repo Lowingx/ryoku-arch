@@ -12,11 +12,32 @@ import Quickshell.Io
 import "modules"
 import shell.services as Svc
 import Ryoku.PluginKit
+import Ryoku.Ui.Singletons
 
 PanelWindow {
     id: barSlot
     required property var root
     readonly property string screenName: barSlot.screen ? barSlot.screen.name : ""
+    // The bar frosts with the desktop while a window owns this screen's active
+    // workspace — the same presence rule the background scrim answers to. The
+    // window's workspace key carries the id, so the match is against ids.
+    readonly property bool deckFrostWindows: {
+        const act = []
+        const wsl = Wm.workspaces
+        for (let i = 0; i < wsl.length; i++)
+            if (wsl[i].active) act.push(wsl[i].id)
+        if (act.length === 0)
+            return false
+        const wins = Wm.windows
+        for (let i = 0; i < wins.length; i++) {
+            const w = wins[i]
+            if (w.output !== barSlot.screenName || (w.toplevel && w.toplevel.minimized))
+                continue
+            if (act.indexOf(w.workspace) !== -1)
+                return true
+        }
+        return false
+    }
     // islands renders as separate per-region pills but uses the full-width
     // spread layout (rows anchored to the edges), so it is NOT a compact shell.
     readonly property bool islandsShell: barSlot.root.barShellStyle === "islands"
@@ -684,6 +705,18 @@ PanelWindow {
             // Geometry/state owner only. The visible border and connected inset
             // are rendered after the widget island so fills can never cover them.
         }
+    }
+
+    // ── deck frost: the bar body hazes over with the desktop canvas ──
+    Rectangle {
+        anchors.fill: parent
+        color: "#000000"
+        opacity: barSlot.deckFrostWindows
+            ? Math.max(0, Math.min(1, Svc.Config.deckFrost || 0))
+            : 0
+        visible: opacity > 0.001
+        z: 1
+        Behavior on opacity { NumberAnimation { duration: 180 } }
     }
 
     // ── dim backdrop while unlocked (edit mode); click empty → lock ──
