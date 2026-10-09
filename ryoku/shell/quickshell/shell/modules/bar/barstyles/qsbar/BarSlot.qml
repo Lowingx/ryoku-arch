@@ -18,34 +18,39 @@ PanelWindow {
     id: barSlot
     required property var root
     readonly property string screenName: barSlot.screen ? barSlot.screen.name : ""
-    // The bar frosts with the desktop while a window owns this screen's active
-    // workspace — the same presence rule the background scrim answers to. The
-    // window's workspace key carries the id, so the match is against ids.
-    readonly property bool deckFrostWindows: {
+    // The bar frosts with the desktop while a window owns this screen's
+    // active workspace — the same presence rule the desktop scrim answers
+    // to, counted rather than merely felt so the haze can deepen with each
+    // window behind the front. The window's workspace key carries the id,
+    // so the match is against ids.
+    readonly property int deckFrostCount: {
         const act = []
         const wsl = Wm.workspaces
         for (let i = 0; i < wsl.length; i++)
             if (wsl[i].active) act.push(wsl[i].id)
         if (act.length === 0)
-            return false
+            return 0
+        let n = 0
         const wins = Wm.windows
         for (let i = 0; i < wins.length; i++) {
             const w = wins[i]
             if (w.output !== barSlot.screenName || (w.toplevel && w.toplevel.minimized))
                 continue
             if (act.indexOf(w.workspace) !== -1)
-                return true
+                n++
         }
-        return false
+        return n
     }
-    // The shell silhouette frosts with the desktop canvas at the same strength,
-    // as translucency on the bar's own fills. Not a plate over the window: this
-    // window spans the whole output (the popups need it), so a fill of it would
-    // frost the windows too — including the one in focus.
+    // The shell silhouette frosts with the desktop canvas at the same depth
+    // (Config.deckFrostIntensity), as translucency on the bar's own fills.
+    // Not a plate over the window: this window spans the whole output (the
+    // popups need it), so a fill of it would frost the windows too —
+    // including the one in focus.
     readonly property color shellFill: {
         const c = barSlot.root.barBg
-        const k = barSlot.deckFrostWindows
-            ? 1 - Math.max(0, Math.min(1, Svc.Config.deckFrost || 0))
+        const k = barSlot.deckFrostCount > 0
+            ? 1 - Math.max(0, Math.min(1,
+                Svc.Config.deckFrostIntensity(barSlot.deckFrostCount)))
             : 1
         return Qt.rgba(c.r, c.g, c.b, c.a * k)
     }
