@@ -405,6 +405,23 @@
   Ryoku's seams (`../inir/`).
 
 ### Changed
+- **Python catches up with serpantinum's fixes.** A curated sync of the
+  upstream shell's bug fixes and small features that stand on their own,
+  leaving its rearchitecture out: the clock stops re-evaluating its date string
+  every tick and the keyboard-lock watcher keeps its LED files open, so the
+  style idles cooler; the weather and calendar pills read Offline instead of
+  showing a stale forecast when updates keep failing; a hidden image box stops
+  decoding its GIF; the lyrics search matches better and fixes word spacing for
+  non-Latin scripts; battery notifications deduplicate and wait for the
+  language files; the draw action exports and copies again; song art caches one
+  thumbnail per player instead of mixing them up; the equalizer runs; an input
+  that loses focus no longer strands the arrow keys; the popup stage hides only
+  after its close animation; and the guide can search the OSD and notification
+  rows. With no language chosen the style now follows the system locale, and
+  its buttons draw their glyphs from Ryoku's own icon face. What stays out is
+  upstream's bar-module and widget-face registry, its canvas-to-shader rewrite
+  and the features hung on that structure, the emoji picker, and the lock,
+  clipboard and launcher work Ryoku owns (`barstyles/python/`).
 - **Picker style lives in QS Bar Settings.** Tanzaku, Hearthstone or Carousel
   for the theme, wallpaper and media pickers is chosen on the Bar route of QS
   Bar Settings, next to the rest of how the bar looks, and switches the pickers
