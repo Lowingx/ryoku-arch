@@ -222,6 +222,9 @@ The lid's panel handoff is the one compositor-shaped piece: Hyprland binds the
 lid switch to `ryoku-clamshell lid close|open` from
 `ryoku/hyprland/modules/lid.lua`; niri sends both native `lid-close` and
 `lid-open` switch events to the helper and retains its native output topology.
+wayfire routes none of it: it exposes no switch event and binds no lid key, so
+a close there reaches no owner and neither the policy nor the panel handoff
+runs; that gap is known until wayfire grows a switch path.
 Only the active Ryoku session inhibits logind, so without a live owner logind's
 safe fallback suspends on lid close. ACPI supplies live physical state when
 available; UPower seeds an already-closed startup otherwise, but its
