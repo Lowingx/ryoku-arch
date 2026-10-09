@@ -36,15 +36,16 @@ Singleton {
     // reads the same shell.json key generically.
     property alias deckFrost: adapter.deckFrost
 
-    // The frost's strength under a stack of n windows: the deckFrost knob
-    // saturated as 1-(1-base)^n. One window reads as the knob itself, every
-    // further window keeps half again of the light that was left, so the haze
-    // deepens exponentially toward solid instead of stepping. Both the
-    // desktop scrim and the bar silhouette ask here, so depth means the same
-    // thing on both.
+    // The frost's depth under a stack of n windows: the deckFrost knob plus
+    // 0.25 for every window behind the front, uncapped. One window reads as
+    // the knob itself; past 1.0 the surplus stops dimming the corners (they
+    // are already solid) and lifts the haze floor instead, so every window
+    // keeps showing all the way to a deep stack. Consumers clamp for their
+    // own range: the desktop reads the surplus as its floor, the bar as
+    // translucency. Both ask here, so depth means the same thing on both.
     function deckFrostIntensity(n: int): real {
         const base = Math.max(0, Math.min(1, Number(root.deckFrost) || 0));
-        return 1 - Math.pow(1 - base, Math.max(1, n));
+        return base + 0.25 * (Math.max(1, n) - 1);
     }
 
     property alias frameBars: adapter.frameBars
