@@ -550,6 +550,10 @@
   on its own layer, on the focused screen, on Hyprland and niri alike
   (`quickshell/shell/modules/launcher/variants/spotlight/`,
   `quickshell/inir/modules/iris/palette/IrisPalette.qml`).
+- **The Stage Editor has a Dock button.** The dock's design, placement,
+  behaviour and pinned apps were built into the editor's drawer with nothing
+  in the toolbar to open them. Dock sits after Style now, and its reset is one
+  undoable step (`quickshell/stage/modules/ii/editMode/`).
 - **Live wallpaper previews no longer shred the picker on NVIDIA.** Selecting
   a MotionBGs, MoeWalls or YouTube result plays its clip in the card, and
   turning each decoded frame into an image went through Qt's GPU converter,
