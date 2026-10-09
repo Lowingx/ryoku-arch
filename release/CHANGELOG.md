@@ -24,9 +24,11 @@
   densifies on an exponential ramp toward the far corner, the frosted surface
   under it blurs as glass (folded into the shared eye-candy policy, so Low
   Power, Power Saver or Game Mode flatten it to plain translucency), the
-  strength deepens with every window behind the front as `1-(1-base)^n`, and
-  the bar frosts as translucency of its own silhouette. One knob: the
-  `deckFrost` shell.json key (0-1, default 0.45).
+  strength steps up by 0.25 for every window behind the front, and a stack
+  past a solid haze lifts a floor so the rim around the focus keeps
+  darkening with each window instead of stopping, while the bar frosts as
+  translucency of its own silhouette. One knob: the `deckFrost` shell.json
+  key (0-1, default 0.45).
 - **`skwd-paper-bin` ships from [ryoku].** The skwd-paper renderer Ryogami
   drives for Wallpaper Engine scenes, repackaged from the prebuilt Arch package
   of a pinned upstream release (version and checksum in its PKGBUILD).
