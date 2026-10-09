@@ -181,51 +181,55 @@ func defaultBinds() map[string]wayfireBind {
 		// Windows
 		"window.close": {
 			key: "window_close", extra: "<alt> KEY_F4",
-			cmd: wm.IrisCloseCheck + " && qs -c shell ipc call closeConfirm trigger || ryoku-wm-wayfire act window.close",
+			cmd: wm.IrisCloseCheck + " && qs -c shell ipc call closeConfirm trigger || ryoku-wm-wayfire act window.close focused",
 		},
 		"window.fullscreen":    {section: "wm-actions", key: "toggle_fullscreen"},
-		"window.float":         {key: "window_float", cmd: "ryoku-wm-wayfire act window.float"},
+		"window.float":         {key: "window_float", cmd: "ryoku-wm-wayfire act window.float focused"},
 		"window.pin":           {section: "wm-actions", key: "toggle_sticky"},
-		"window.resize":        {reason: "wayfire resizes with Super and the mouse; there is no keyboard resize mode."},
-		"window.presetHeight":  {reason: "wayfire has no preset window heights."},
+		"window.resize":        {reason: "wayfire has no resize mode; Super, Ctrl and the arrows step the size instead."},
+		"window.presetHeight":  {key: "window_preset_height", cmd: "ryoku-wm-wayfire act window.presetHeight"},
 		"column.tabbed":        {reason: "wayfire windows have no tabs; each view keeps its own cell."},
 		"column.maximize":      {section: "wm-actions", key: "toggle_maximize"},
-		"column.center":        {reason: "wayfire has no centre-window action."},
+		"column.center":        {key: "column_center", cmd: "ryoku-wm-wayfire act window.center"},
 		"window.focusPrevious": {section: "fast-switcher", key: "activate_forward"},
 
-		// Focus. Super and the arrows snap the window to a screen region here
-		// (the grid rows), so each direction names what the chord does instead.
-		"focus.left":   {reason: "wayfire has no directional focus; Super and the arrows snap the window to a screen region here."},
-		"focus.right":  {reason: "wayfire has no directional focus; Super and the arrows snap the window to a screen region here."},
-		"focus.up":     {reason: "wayfire has no directional focus; Super and the arrows snap the window to a screen region here."},
-		"focus.down":   {reason: "wayfire has no directional focus; Super and the arrows snap the window to a screen region here."},
-		"column.first": {reason: "wayfire has no first-or-last column; windows live in the grid."},
-		"column.last":  {reason: "wayfire has no first-or-last column; windows live in the grid."},
+		// Focus. Each direction picks the nearest window whose centre lies
+		// that way from the focused one, both measured on their rectangles;
+		// first and last jump to the edge of the cell.
+		"focus.left":   {key: "focus_left", cmd: "ryoku-wm-wayfire act window.focusDirection left"},
+		"focus.right":  {key: "focus_right", cmd: "ryoku-wm-wayfire act window.focusDirection right"},
+		"focus.up":     {key: "focus_up", cmd: "ryoku-wm-wayfire act window.focusDirection up"},
+		"focus.down":   {key: "focus_down", cmd: "ryoku-wm-wayfire act window.focusDirection down"},
+		"column.first": {key: "column_first", cmd: "ryoku-wm-wayfire act window.focusEdge left"},
+		"column.last":  {key: "column_last", cmd: "ryoku-wm-wayfire act window.focusEdge right"},
 
-		// Move
-		"move.left":         {reason: "wayfire moves windows with Super and the mouse; there is no keyboard move."},
-		"move.right":        {reason: "wayfire moves windows with Super and the mouse; there is no keyboard move."},
-		"move.up":           {reason: "wayfire moves windows with Super and the mouse; there is no keyboard move."},
-		"move.down":         {reason: "wayfire moves windows with Super and the mouse; there is no keyboard move."},
+		// Move. One press slides the window an eighth of the screen that way,
+		// kept inside its own cell; the slide clears the snap.
+		"move.left":         {key: "move_left", cmd: "ryoku-wm-wayfire act window.moveBy left"},
+		"move.right":        {key: "move_right", cmd: "ryoku-wm-wayfire act window.moveBy right"},
+		"move.up":           {key: "move_up", cmd: "ryoku-wm-wayfire act window.moveBy up"},
+		"move.down":         {key: "move_down", cmd: "ryoku-wm-wayfire act window.moveBy down"},
 		"column.mergeLeft":  {reason: "wayfire has no merge-between-windows action."},
 		"column.mergeRight": {reason: "wayfire has no merge-between-windows action."},
 
-		// Resize. Super, Ctrl and the arrows switch workspaces here (the
-		// vswitch rows), so each direction names the diversion.
-		"resize.narrower":    {reason: "wayfire resizes with the mouse; Super, Ctrl and the arrows switch workspaces here."},
-		"resize.wider":       {reason: "wayfire resizes with the mouse; Super, Ctrl and the arrows switch workspaces here."},
-		"resize.shorter":     {reason: "wayfire resizes with the mouse; Super, Ctrl and the arrows switch workspaces here."},
-		"resize.taller":      {reason: "wayfire resizes with the mouse; Super, Ctrl and the arrows switch workspaces here."},
-		"resize.resetHeight": {reason: "wayfire has no reset-height action."},
+		// Resize. One press steps the size an eighth of the screen from the
+		// top-left corner, with a floor so a window cannot crush itself out
+		// of reach; the step clears the snap too.
+		"resize.narrower":    {key: "resize_narrower", cmd: "ryoku-wm-wayfire act window.resizeBy narrower"},
+		"resize.wider":       {key: "resize_wider", cmd: "ryoku-wm-wayfire act window.resizeBy wider"},
+		"resize.shorter":     {key: "resize_shorter", cmd: "ryoku-wm-wayfire act window.resizeBy shorter"},
+		"resize.taller":      {key: "resize_taller", cmd: "ryoku-wm-wayfire act window.resizeBy taller"},
+		"resize.resetHeight": {key: "resize_reset_height", cmd: "ryoku-wm-wayfire act window.presetHeight first", hint: "Give the window the full height of its workspace"},
 
-		// Workspaces. The grid's nine cells take the number keys natively; the
-		// number pad stays the grid's, so the keypad families report instead.
+		// Workspaces. The grid's nine cells take the number keys and the
+		// number pad natively: each family lands on the same option, so both
+		// spellings switch together.
 		"workspace.focus":                   {section: "vswitch", key: "binding_{n}", hint: "Focus workspace 1 to 9; wayfire's grid holds nine, so the 0 key has no tenth to focus"},
 		"workspace.moveWindow":              {section: "vswitch", key: "with_win_{n}", hint: "Send the window to workspace 1 to 9; there is no tenth to send it to"},
 		"workspace.moveWindowSilent":        {section: "vswitch", key: "send_win_{n}", hint: "Send the window to workspace 1 to 9 without focusing it; there is no tenth"},
-		"workspace.focus.numpad":            {reason: "wayfire's number pad snaps window regions; the digit keys focus workspaces."},
-		"workspace.moveWindow.numpad":       {reason: "wayfire's number pad snaps window regions; Super, Alt and a digit sends the window."},
-		"workspace.moveWindowSilent.numpad": {reason: "wayfire's number pad snaps window regions; Super, Shift and a digit sends it quietly."},
+		"workspace.focus.numpad":            {section: "vswitch", key: "binding_{n}", hint: "Focus workspace 1 to 9 from the number pad; wayfire's grid holds nine, so the 0 key has no tenth to focus"},
+		"workspace.moveWindow.numpad":       {section: "vswitch", key: "with_win_{n}", hint: "Send the window to workspace 1 to 9 from the number pad; there is no tenth to send it to"},
+		"workspace.moveWindowSilent.numpad": {section: "vswitch", key: "send_win_{n}", hint: "Send the window to workspace 1 to 9 from the number pad without focusing it; there is no tenth"},
 		"workspace.prev":                    {key: "workspace_prev", cmd: "ryoku-wm-wayfire act workspace.cycle -1"},
 		"workspace.next":                    {key: "workspace_next", cmd: "ryoku-wm-wayfire act workspace.cycle 1"},
 		"workspace.prevWheel":               {reason: "wayfire binds keys and mouse buttons, not wheel steps."},
@@ -239,19 +243,20 @@ func defaultBinds() map[string]wayfireBind {
 		"workspace.overview":                {key: "workspace_overview", cmd: "ryoku-shell overview"},
 		"workspace.overviewDesktops":        {key: "workspace_overview_desktops", cmd: "ryoku-shell overview", hint: "Opens the overview; once inside, Alt+Left and Alt+Right step across desktops"},
 
-		// Displays
-		"display.focus.left":          {reason: "wayfire has no focus-screen-by-direction bind."},
-		"display.focus.right":         {reason: "wayfire has no focus-screen-by-direction bind."},
-		"display.focus.up":            {reason: "wayfire has no focus-screen-by-direction bind."},
-		"display.focus.down":          {reason: "wayfire has no focus-screen-by-direction bind."},
-		"display.moveWindow.left":     {reason: "wayfire has no send-window-to-screen bind; Super and drag carries it across."},
-		"display.moveWindow.right":    {reason: "wayfire has no send-window-to-screen bind; Super and drag carries it across."},
-		"display.moveWindow.up":       {reason: "wayfire has no send-window-to-screen bind; Super and drag carries it across."},
-		"display.moveWindow.down":     {reason: "wayfire has no send-window-to-screen bind; Super and drag carries it across."},
-		"display.moveWorkspace.left":  {reason: "wayfire has no move-workspace-to-screen bind."},
-		"display.moveWorkspace.right": {reason: "wayfire has no move-workspace-to-screen bind."},
-		"display.moveWorkspace.up":    {reason: "wayfire has no move-workspace-to-screen bind."},
-		"display.moveWorkspace.down":  {reason: "wayfire has no move-workspace-to-screen bind."},
+		// Displays. The screen in that direction: focus the window it last
+		// held, hand the focused window over, or send the whole cell across.
+		"display.focus.left":          {key: "display_focus_left", cmd: "ryoku-wm-wayfire act output.focusDirection left", hint: "Focus the last window of the screen to the left; with one screen there is nowhere to go"},
+		"display.focus.right":         {key: "display_focus_right", cmd: "ryoku-wm-wayfire act output.focusDirection right", hint: "Focus the last window of the screen to the right; with one screen there is nowhere to go"},
+		"display.focus.up":            {key: "display_focus_up", cmd: "ryoku-wm-wayfire act output.focusDirection up", hint: "Focus the last window of the screen above; with one screen there is nowhere to go"},
+		"display.focus.down":          {key: "display_focus_down", cmd: "ryoku-wm-wayfire act output.focusDirection down", hint: "Focus the last window of the screen below; with one screen there is nowhere to go"},
+		"display.moveWindow.left":     {key: "display_move_window_left", cmd: "ryoku-wm-wayfire act window.moveToOutputBy left"},
+		"display.moveWindow.right":    {key: "display_move_window_right", cmd: "ryoku-wm-wayfire act window.moveToOutputBy right"},
+		"display.moveWindow.up":       {key: "display_move_window_up", cmd: "ryoku-wm-wayfire act window.moveToOutputBy up"},
+		"display.moveWindow.down":     {key: "display_move_window_down", cmd: "ryoku-wm-wayfire act window.moveToOutputBy down"},
+		"display.moveWorkspace.left":  {key: "display_move_workspace_left", cmd: "ryoku-wm-wayfire act workspace.moveToOutputBy left"},
+		"display.moveWorkspace.right": {key: "display_move_workspace_right", cmd: "ryoku-wm-wayfire act workspace.moveToOutputBy right"},
+		"display.moveWorkspace.up":    {key: "display_move_workspace_up", cmd: "ryoku-wm-wayfire act workspace.moveToOutputBy up"},
+		"display.moveWorkspace.down":  {key: "display_move_workspace_down", cmd: "ryoku-wm-wayfire act workspace.moveToOutputBy down"},
 		"display.cycle":               {key: "display_cycle", cmd: "ryoku-wm-wayfire act output.cycle"},
 
 		// Apps
@@ -576,12 +581,35 @@ func resolveBinds(s wayfireStore) ([]outBind, []wm.Unhonored) {
 	return out, report
 }
 
+// joinBinds folds the resolved rows onto their slots: the number-pad family
+// lands on the same option as the digit family, so several rows can share one
+// key now and the last write must not erase the others. Activators join in
+// first-seen order, a slot whose rows are all empty stays empty so it is
+// still written off, and a row with a unique option passes through as it is,
+// extra chord included.
+func joinBinds(out []outBind) []outBind {
+	joined := make([]outBind, 0, len(out))
+	at := map[string]int{}
+	for _, o := range out {
+		k := o.section + "\x00" + o.option
+		if i, seen := at[k]; seen {
+			if o.activator != "" {
+				joined[i].activator = strings.TrimSpace(joined[i].activator + " | " + o.activator)
+			}
+			continue
+		}
+		at[k] = len(joined)
+		joined = append(joined, o)
+	}
+	return joined
+}
+
 // applyBinds lays the resolved binds into the composed config, after every
 // layer, so the chords the legend will claim are the chords the session emits:
 // the seeds and the baseline can no longer hide one.
 func applyBinds(d *iniDoc, s wayfireStore) {
 	out, _ := resolveBinds(s)
-	for _, o := range out {
+	for _, o := range joinBinds(out) {
 		if o.commandOpt != "" {
 			d.set(o.section, o.commandOpt, o.cmd)
 		}

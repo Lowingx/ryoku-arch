@@ -85,10 +85,8 @@ func TestActivatorSpellings(t *testing.T) {
 // members, the tenth is reported, and no activator is claimed twice.
 func TestResolveEmitsCatalogue(t *testing.T) {
 	out, report := resolveBinds(defaultStore())
-	opts := map[string]outBind{}
 	claimed := map[string]string{}
 	for _, o := range out {
-		opts[o.section+"."+o.option] = o
 		if o.activator == "" {
 			continue
 		}
@@ -97,14 +95,20 @@ func TestResolveEmitsCatalogue(t *testing.T) {
 		}
 		claimed[o.activator] = o.option
 	}
+	// The pins read the rows as apply writes them: a family and its
+	// number-pad twin share one slot with both activators joined.
+	opts := map[string]outBind{}
+	for _, o := range joinBinds(out) {
+		opts[o.section+"."+o.option] = o
+	}
 
 	for option, want := range map[string]outBind{
 		"command.binding_shell_launcher":             {activator: "<super> KEY_SPACE", commandOpt: "command_shell_launcher", cmd: "ryoku-shell launcher"},
 		"command.binding_window_close":               {activator: "<super> KEY_Q", extra: "<alt> KEY_F4", commandOpt: "command_window_close"},
 		"command.repeatable_binding_media_volume_up": {activator: "KEY_VOLUMEUP", commandOpt: "command_media_volume_up", cmd: "ryoku-volume up"},
-		"vswitch.binding_1":                          {activator: "<super> KEY_1"},
-		"vswitch.with_win_5":                         {activator: "<super> <alt> KEY_5"},
-		"vswitch.send_win_9":                         {activator: "<super> <shift> KEY_9"},
+		"vswitch.binding_1":                          {activator: "<super> KEY_1 | <super> KEY_KP1"},
+		"vswitch.with_win_5":                         {activator: "<super> <alt> KEY_5 | <super> <alt> KEY_KP5"},
+		"vswitch.send_win_9":                         {activator: "<super> <shift> KEY_9 | <super> <shift> KEY_KP9"},
 		"wm-actions.toggle_fullscreen":               {activator: "<super> KEY_F"},
 		"fast-switcher.activate_forward":             {activator: "<alt> KEY_TAB"},
 		"move.activate":                              {activator: "<super> BTN_LEFT"},
@@ -137,7 +141,7 @@ func TestResolveEmitsCatalogue(t *testing.T) {
 		reasons = append(reasons, u.Key+": "+u.Reason)
 	}
 	joined := strings.Join(reasons, "\n")
-	if !strings.Contains(joined, "(default SUPER + Left)") || !strings.Contains(joined, "directional focus") {
+	if !strings.Contains(joined, "(default SUPER + T)") || !strings.Contains(joined, "tabs") {
 		t.Errorf("an impossible behaviour must be reported:\n%s", joined)
 	}
 	if !strings.Contains(joined, "SUPER + 0") || !strings.Contains(joined, "no tenth") {
@@ -306,8 +310,8 @@ func TestBindRowsCatalogueAndExclusives(t *testing.T) {
 	for _, r := range rows {
 		byID[r.ID] = r
 	}
-	if r := byID["focus.left"]; r.Unhonored == "" || r.Rebindable {
-		t.Errorf("focus.left = unhonored %q, rebindable %v; it has no wayfire expression", r.Unhonored, r.Rebindable)
+	if r := byID["focus.left"]; r.Unhonored != "" || !r.Rebindable {
+		t.Errorf("focus.left = unhonored %q, rebindable %v; it binds directionally", r.Unhonored, r.Rebindable)
 	}
 	if r := byID["window.close"]; r.Unhonored != "" || !r.Rebindable || r.Chord != "SUPER + Q" {
 		t.Errorf("window.close = %+v", r)
@@ -317,7 +321,8 @@ func TestBindRowsCatalogueAndExclusives(t *testing.T) {
 	}
 	// The row renders a ten-key range, so the hint has to say the emission
 	// stops at nine, the same story apply's report tells.
-	for _, id := range []string{"workspace.focus", "workspace.moveWindow", "workspace.moveWindowSilent"} {
+	for _, id := range []string{"workspace.focus", "workspace.moveWindow", "workspace.moveWindowSilent",
+		"workspace.focus.numpad", "workspace.moveWindow.numpad", "workspace.moveWindowSilent.numpad"} {
 		if r := byID[id]; !strings.Contains(r.Hint, "no tenth") && !strings.Contains(r.Hint, "nine") {
 			t.Errorf("%s hint = %q; the tenth member has nowhere to go", id, r.Hint)
 		}
