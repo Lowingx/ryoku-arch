@@ -544,6 +544,12 @@
   `../../hyprland/modules/binds.lua`).
 
 ### Fixed
+- **Spotlight opens under every bar style.** The launcher only flipped a
+  search flag that Shima's frame listens for, so with any other bar style
+  Super+Space did nothing. Without the frame it now mounts the same palette
+  on its own layer, on the focused screen, on Hyprland and niri alike
+  (`quickshell/shell/modules/launcher/variants/spotlight/`,
+  `quickshell/inir/modules/iris/palette/IrisPalette.qml`).
 - **Live wallpaper previews no longer shred the picker on NVIDIA.** Selecting
   a MotionBGs, MoeWalls or YouTube result plays its clip in the card, and
   turning each decoded frame into an image went through Qt's GPU converter,
