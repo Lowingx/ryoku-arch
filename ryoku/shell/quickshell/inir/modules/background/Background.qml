@@ -613,29 +613,6 @@ Scope {
                 screenName: modelData?.name ?? ""
             }
 
-            // ── Deck Frost ────────────────────────────────────────
-            // The canvas the deck recedes into: while a window owns the
-            // workspace, wallpaper and widgets haze over underneath it.
-            // Windows live on layers above this surface, so the focused
-            // window and every card stay clear without opting out; the bar
-            // sits above windows too and frosts itself in its own slot.
-            Rectangle {
-                id: deckFrost
-                anchors.fill: parent
-                z: 24
-                visible: opacity > 0
-                color: "#000000"
-                opacity: {
-                    if (!bgRoot.focusWindowsPresent) return 0
-                    const frost = Number(Config.getNestedValue("deckFrost", 0.45))
-                    return Math.max(0, Math.min(1, frost) || 0)
-                }
-                Behavior on opacity {
-                    enabled: Appearance.animationsEnabled
-                    animation: NumberAnimation { duration: Appearance.animation.elementMoveFast.duration; easing.type: Appearance.animation.elementMoveFast.type; easing.bezierCurve: Appearance.animation.elementMoveFast.bezierCurve }
-                }
-            }
-
             WidgetCanvas {
                 id: widgetCanvas
                 z: 20

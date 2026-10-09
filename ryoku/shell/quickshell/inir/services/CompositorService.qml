@@ -110,13 +110,26 @@ Singleton {
         return null;
     }
 
+    // Presence reads the daemon's window residue rather than the protocol-joined
+    // list above: a compositor may advertise no toplevels at all, or only for
+    // windows mapped after its foreign-toplevel plugin loaded, and a screen-wide
+    // state must not hinge on that. Residue rows carry the workspace id, so the
+    // active-workspace match stays exact; a handle, where one exists, only adds
+    // the compositor's own minimize flag.
     function hasWindowsOnActiveWorkspace(outputName: string): bool {
         const active = root.allWorkspaces.filter(w => w.is_active
             && (String(outputName ?? "").length === 0 || w.output === outputName));
         if (active.length === 0)
             return false;
-        return root.windows.some(w => !w.is_minimized
-            && active.some(ws => ws.id === w.workspace_id));
+        const list = Wm.windows;
+        for (let i = 0; i < list.length; i++) {
+            const w = list[i];
+            if (w.toplevel && w.toplevel.minimized === true)
+                continue;
+            if (active.some(ws => ws.id === w.workspace))
+                return true;
+        }
+        return false;
     }
 
     function activeWorkspaceFor(outputName) {

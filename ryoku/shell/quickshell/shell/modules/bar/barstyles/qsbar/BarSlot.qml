@@ -38,6 +38,17 @@ PanelWindow {
         }
         return false
     }
+    // The shell silhouette frosts with the desktop canvas at the same strength,
+    // as translucency on the bar's own fills. Not a plate over the window: this
+    // window spans the whole output (the popups need it), so a fill of it would
+    // frost the windows too — including the one in focus.
+    readonly property color shellFill: {
+        const c = barSlot.root.barBg
+        const k = barSlot.deckFrostWindows
+            ? 1 - Math.max(0, Math.min(1, Svc.Config.deckFrost || 0))
+            : 1
+        return Qt.rgba(c.r, c.g, c.b, c.a * k)
+    }
     // islands renders as separate per-region pills but uses the full-width
     // spread layout (rows anchored to the edges), so it is NOT a compact shell.
     readonly property bool islandsShell: barSlot.root.barShellStyle === "islands"
@@ -221,7 +232,7 @@ PanelWindow {
 
             ShapePath {
                 strokeColor: "transparent"
-                fillColor: barSlot.root.barBg
+                fillColor: barSlot.shellFill
                 startX: continuousBarSurface.topCornerRadius
                 startY: 0
                 PathLine { x: topSurfaceFill.width - continuousBarSurface.topCornerRadius; y: 0 }
@@ -281,7 +292,7 @@ PanelWindow {
 
             ShapePath {
                 strokeColor: "transparent"
-                fillColor: barSlot.root.barBg
+                fillColor: barSlot.shellFill
                 startX: continuousBarSurface.topCornerRadius
                 startY: 0
                 PathLine {
@@ -351,7 +362,7 @@ PanelWindow {
 
             ShapePath {
                 strokeColor: "transparent"
-                fillColor: barSlot.root.barBg
+                fillColor: barSlot.shellFill
                 startX: notchSurfaceFillTop.bodyLeft - barSlot.notchShoulderWidth
                 startY: 0
                 PathLine {
@@ -433,7 +444,7 @@ PanelWindow {
 
             ShapePath {
                 strokeColor: "transparent"
-                fillColor: barSlot.root.barBg
+                fillColor: barSlot.shellFill
                 startX: notchSurfaceFillBottom.bodyLeft - barSlot.notchShoulderWidth
                 startY: notchSurfaceFillBottom.height
                 PathLine {
@@ -705,18 +716,6 @@ PanelWindow {
             // Geometry/state owner only. The visible border and connected inset
             // are rendered after the widget island so fills can never cover them.
         }
-    }
-
-    // ── deck frost: the bar body hazes over with the desktop canvas ──
-    Rectangle {
-        anchors.fill: parent
-        color: "#000000"
-        opacity: barSlot.deckFrostWindows
-            ? Math.max(0, Math.min(1, Svc.Config.deckFrost || 0))
-            : 0
-        visible: opacity > 0.001
-        z: 1
-        Behavior on opacity { NumberAnimation { duration: 180 } }
     }
 
     // ── dim backdrop while unlocked (edit mode); click empty → lock ──
@@ -2137,7 +2136,7 @@ PanelWindow {
                     Math.min(island.width - barSlot.shellOuterMargin, rawRight) - x)
                 height: island.height
                 radius: barSlot.root.barCornerRadius
-                color: barSlot.root.barBg
+                color: barSlot.shellFill
                 border.color: barSlot.root.v2BarBorder
                 border.width: barSlot.root.barBorderEnabled ? 1 : 0
                 z: 0

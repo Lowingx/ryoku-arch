@@ -35,6 +35,7 @@ import "../wallpaper" as WallpaperMod
 // The iRiS frame singleton reports the dock's edge and its visible vs reserved
 // depth, so the Edit widgets bar can clear a bottom dock that reserves nothing.
 import inir.modules.iris.frame
+import inir.services
 
 // desktop widgets layer: WlrLayer.Bottom (below windows), instantiated once per
 // monitor by the main shell, carrying the clock. only clicks on bare wallpaper
@@ -105,6 +106,24 @@ Scope {
         && StageServices.WallpaperLayout.liveScreen === root.monitorName
     property real stageFramingDim: root.stageFramingHere ? 1 : 0
     Behavior on stageFramingDim {
+        NumberAnimation {
+            duration: Tokens.dur(180)
+            easing.type: Easing.OutCubic
+        }
+    }
+    // ── deck frost ───────────────────────────────────────────────────────
+    // While a window owns this monitor's active workspace the desktop hazes
+    // over underneath it: windows layer above this surface, so the front
+    // window needs no opt-out, and the bar frosts itself in its own slot.
+    // Presence rides the daemon's window residue rather than the toplevel
+    // protocol, which a compositor may not advertise at all. Off while the
+    // Stage Editor frames this monitor: that mode lifts the desktop above
+    // windows and draws its own chrome over it.
+    readonly property bool deckFrostWindows: !root.stageComposing
+        && !root.stageEditing
+        && CompositorService.hasWindowsOnActiveWorkspace(root.monitorName)
+    property real deckFrost: root.deckFrostWindows ? Services.Config.deckFrost : 0
+    Behavior on deckFrost {
         NumberAnimation {
             duration: Tokens.dur(180)
             easing.type: Easing.OutCubic
@@ -1733,6 +1752,24 @@ Scope {
                     * Stage.GlobalStates.editProgress
             }
         }
+        }
+
+        // The canvas the deck recedes into: wallpaper and widgets haze over
+        // inside this surface while a window owns the workspace, which layers
+        // above it and therefore stays clear. A bare Rectangle takes no input,
+        // so the desktop beneath keeps every press.
+        Rectangle {
+            id: deckFrost
+            anchors.fill: parent
+            color: "#000000"
+            visible: opacity > 0.001
+            opacity: Math.max(0, Math.min(1, root.deckFrost))
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: Tokens.dur(180)
+                    easing.type: Easing.OutCubic
+                }
+            }
         }
 
         // The Stage Editor's card: the reference's EditModeCard (the live
