@@ -292,10 +292,13 @@ EOF
       cp -a "${appdir}quickshell/." "$cfg/quickshell/$appname/"
     fi
     if [ "$has_cmake" = 1 ]; then
-      # compiled Qt app: build to a binary named for the app dir.
-      cmake -S "$appdir" -B "${appdir}build" -G Ninja -DCMAKE_BUILD_TYPE=Release
-      cmake --build "${appdir}build"
-      install -Dm755 "${appdir}build/$appname" "$pkgdir/usr/bin/$appname"
+      # compiled Qt app: build to a binary named for the app dir. The build
+      # tree lives in makepkg's scratch, never in the checkout: a build/ left
+      # beside the sources is gitignored but still on disk, and the delivery
+      # gate reads the disk, so the next commit would fail on it.
+      cmake -S "$appdir" -B "$srcdir/$appname-build" -G Ninja -DCMAKE_BUILD_TYPE=Release
+      cmake --build "$srcdir/$appname-build"
+      install -Dm755 "$srcdir/$appname-build/$appname" "$pkgdir/usr/bin/$appname"
     fi
     if [ -d "${appdir}bin" ]; then
       for b in "${appdir}bin/"*; do
