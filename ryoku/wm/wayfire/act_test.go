@@ -672,3 +672,309 @@ func TestNightlightTempClamps(t *testing.T) {
 		}
 	}
 }
+
+// The directional acts measure direction and distance against one stage
+// read: the focused window's rectangle and the cell it lives in. The
+// fixtures pin the maths and the exact configure payloads, because a step
+// the compositor refuses reads as a key that silently does nothing.
+
+func TestDirectionalWindowActs(t *testing.T) {
+	// Two windows on the focused cell: view 7 as the fixture ships it and
+	// view 9 up and to the right of it, so every direction has an answer.
+	replies := func() map[string]string {
+		r := stageReplies()
+		r["window-rules/list-views"] = `[{"id":7,"bbox":{"x":-1107,"y":0,"width":934,"height":720},
+			"output-name":"HEADLESS-1","output-id":1,"mapped":true,"minimized":false,"wset-index":1,"last-focus-timestamp":100},
+			{"id":9,"bbox":{"x":-500,"y":-100,"width":934,"height":720},
+			"output-name":"HEADLESS-1","output-id":1,"mapped":true,"minimized":false,"wset-index":1,"last-focus-timestamp":200}]`
+		return r
+	}
+
+	t.Run("focus follows the nearest window that way", func(t *testing.T) {
+		calls := stubAct(t, replies())
+		if err := runAct([]string{"window.focusDirection", "right"}); err != nil {
+			t.Fatal(err)
+		}
+		wantCall(t, *calls, "window-rules/focus-view", `{"id":9}`)
+	})
+
+	t.Run("focus up picks the window above", func(t *testing.T) {
+		calls := stubAct(t, replies())
+		if err := runAct([]string{"window.focusDirection", "up"}); err != nil {
+			t.Fatal(err)
+		}
+		wantCall(t, *calls, "window-rules/focus-view", `{"id":9}`)
+	})
+
+	t.Run("focus names the empty direction", func(t *testing.T) {
+		stubAct(t, replies())
+		err := runAct([]string{"window.focusDirection", "left"})
+		if err == nil || !strings.Contains(err.Error(), "no window to the left") {
+			t.Errorf("got %v, want a no-window-to-the-left error", err)
+		}
+	})
+
+	t.Run("focus edge jumps to the far side", func(t *testing.T) {
+		calls := stubAct(t, replies())
+		if err := runAct([]string{"window.focusEdge", "right"}); err != nil {
+			t.Fatal(err)
+		}
+		wantCall(t, *calls, "window-rules/focus-view", `{"id":9}`)
+	})
+
+	t.Run("focus edge keeps the window already there", func(t *testing.T) {
+		calls := stubAct(t, replies())
+		if err := runAct([]string{"window.focusEdge", "left"}); err != nil {
+			t.Fatal(err)
+		}
+		wantCall(t, *calls, "window-rules/focus-view", `{"id":7}`)
+	})
+
+	t.Run("a bad direction names its options", func(t *testing.T) {
+		stubAct(t, replies())
+		err := runAct([]string{"window.focusDirection", "northwest"})
+		if err == nil || !strings.Contains(err.Error(), "left|right|up|down") {
+			t.Errorf("got %v, want a direction error", err)
+		}
+	})
+
+	t.Run("a focus act with an empty seat says so", func(t *testing.T) {
+		r := replies()
+		r["window-rules/get-focused-view"] = `{"result":"ok","info":null}`
+		stubAct(t, r)
+		err := runAct([]string{"window.focusDirection", "right"})
+		if err == nil || !strings.Contains(err.Error(), "no window is focused") {
+			t.Errorf("got %v, want a no-focused-window error", err)
+		}
+	})
+}
+
+func TestDirectionalGeometryActs(t *testing.T) {
+	// The seat's window as the acts read it: half-height at the top of its
+	// cell, so both axes have room to move and the cell clamp has something
+	// to catch.
+	half := func() map[string]string {
+		r := stageReplies()
+		r["window-rules/get-focused-view"] = `{"result":"ok","info":{"id":7,"bbox":{"x":-1107,"y":0,"width":934,"height":300},
+			"output-name":"HEADLESS-1","output-id":1,"mapped":true,"minimized":false,"wset-index":1,"last-focus-timestamp":100}}`
+		return r
+	}
+
+	t.Run("move steps an eighth of the screen inside the cell", func(t *testing.T) {
+		calls := stubAct(t, half())
+		if err := runAct([]string{"window.moveBy", "down"}); err != nil {
+			t.Fatal(err)
+		}
+		wantCall(t, *calls, "window-rules/configure-view",
+			`{"geometry":{"height":300,"width":934,"x":-1107,"y":90},"id":7,"tiled-edges":0}`)
+	})
+
+	t.Run("move up clamps at the cell top", func(t *testing.T) {
+		calls := stubAct(t, half())
+		if err := runAct([]string{"window.moveBy", "up"}); err != nil {
+			t.Fatal(err)
+		}
+		wantCall(t, *calls, "window-rules/configure-view",
+			`{"geometry":{"height":300,"width":934,"x":-1107,"y":0},"id":7,"tiled-edges":0}`)
+	})
+
+	t.Run("move right steps inside the cell", func(t *testing.T) {
+		calls := stubAct(t, half())
+		if err := runAct([]string{"window.moveBy", "right"}); err != nil {
+			t.Fatal(err)
+		}
+		wantCall(t, *calls, "window-rules/configure-view",
+			`{"geometry":{"height":300,"width":934,"x":-947,"y":0},"id":7,"tiled-edges":0}`)
+	})
+
+	t.Run("resize steps an eighth of the screen from the top-left", func(t *testing.T) {
+		calls := stubAct(t, half())
+		if err := runAct([]string{"window.resizeBy", "wider"}); err != nil {
+			t.Fatal(err)
+		}
+		wantCall(t, *calls, "window-rules/configure-view",
+			`{"geometry":{"height":300,"width":1094,"x":-1107,"y":0},"id":7,"tiled-edges":0}`)
+	})
+
+	t.Run("resize shorter keeps a usable floor", func(t *testing.T) {
+		r := stageReplies()
+		r["window-rules/get-focused-view"] = `{"result":"ok","info":{"id":7,"bbox":{"x":-1107,"y":0,"width":934,"height":40},
+			"output-name":"HEADLESS-1","output-id":1,"mapped":true,"minimized":false,"wset-index":1,"last-focus-timestamp":100}}`
+		calls := stubAct(t, r)
+		if err := runAct([]string{"window.resizeBy", "shorter"}); err != nil {
+			t.Fatal(err)
+		}
+		wantCall(t, *calls, "window-rules/configure-view",
+			`{"geometry":{"height":64,"width":934,"x":-1107,"y":0},"id":7,"tiled-edges":0}`)
+	})
+
+	t.Run("a bad resize step names its options", func(t *testing.T) {
+		stubAct(t, half())
+		err := runAct([]string{"window.resizeBy", "bigger"})
+		if err == nil || !strings.Contains(err.Error(), "narrower|wider|shorter|taller") {
+			t.Errorf("got %v, want a resize-step error", err)
+		}
+	})
+
+	t.Run("preset height cycles down the fractions", func(t *testing.T) {
+		calls := stubAct(t, stageReplies())
+		if err := runAct([]string{"window.presetHeight"}); err != nil {
+			t.Fatal(err)
+		}
+		wantCall(t, *calls, "window-rules/configure-view",
+			`{"geometry":{"height":540,"width":934,"x":-1107,"y":0},"id":7,"tiled-edges":0}`)
+	})
+
+	t.Run("preset height wraps back to full", func(t *testing.T) {
+		r := stageReplies()
+		r["window-rules/get-focused-view"] = `{"result":"ok","info":{"id":7,"bbox":{"x":-1107,"y":0,"width":934,"height":360},
+			"output-name":"HEADLESS-1","output-id":1,"mapped":true,"minimized":false,"wset-index":1,"last-focus-timestamp":100}}`
+		calls := stubAct(t, r)
+		if err := runAct([]string{"window.presetHeight"}); err != nil {
+			t.Fatal(err)
+		}
+		wantCall(t, *calls, "window-rules/configure-view",
+			`{"geometry":{"height":720,"width":934,"x":-1107,"y":0},"id":7,"tiled-edges":0}`)
+	})
+
+	t.Run("preset first gives the full height and slides up", func(t *testing.T) {
+		r := stageReplies()
+		r["window-rules/get-focused-view"] = `{"result":"ok","info":{"id":7,"bbox":{"x":-1107,"y":100,"width":934,"height":300},
+			"output-name":"HEADLESS-1","output-id":1,"mapped":true,"minimized":false,"wset-index":1,"last-focus-timestamp":100}}`
+		calls := stubAct(t, r)
+		if err := runAct([]string{"window.presetHeight", "first"}); err != nil {
+			t.Fatal(err)
+		}
+		wantCall(t, *calls, "window-rules/configure-view",
+			`{"geometry":{"height":720,"width":934,"x":-1107,"y":0},"id":7,"tiled-edges":0}`)
+	})
+
+	t.Run("center puts the window in the middle of the screen", func(t *testing.T) {
+		calls := stubAct(t, stageReplies())
+		if err := runAct([]string{"window.center"}); err != nil {
+			t.Fatal(err)
+		}
+		wantCall(t, *calls, "window-rules/configure-view",
+			`{"geometry":{"height":720,"width":934,"x":173,"y":0},"id":7,"tiled-edges":0}`)
+	})
+
+	t.Run("a geometry act with an empty seat says so", func(t *testing.T) {
+		r := half()
+		r["window-rules/get-focused-view"] = `{"result":"ok","info":null}`
+		stubAct(t, r)
+		err := runAct([]string{"window.center"})
+		if err == nil || !strings.Contains(err.Error(), "no window is focused") {
+			t.Errorf("got %v, want a no-focused-window error", err)
+		}
+	})
+}
+
+func TestFocusedKeyword(t *testing.T) {
+	t.Run("close follows the seat's own window", func(t *testing.T) {
+		calls := stubAct(t, stageReplies())
+		if err := runAct([]string{"window.close", "focused"}); err != nil {
+			t.Fatal(err)
+		}
+		wantCall(t, *calls, "window-rules/close-view", `{"id":7}`)
+	})
+
+	t.Run("float toggles the seat's own window", func(t *testing.T) {
+		calls := stubAct(t, stageReplies())
+		if err := runAct([]string{"window.float", "focused"}); err != nil {
+			t.Fatal(err)
+		}
+		wantCall(t, *calls, "window-rules/configure-view", `{"id":7,"tiled-edges":15}`)
+	})
+
+	t.Run("focused with an empty seat refuses", func(t *testing.T) {
+		r := stageReplies()
+		r["window-rules/get-focused-view"] = `{"result":"ok","info":null}`
+		stubAct(t, r)
+		err := runAct([]string{"window.close", "focused"})
+		if err == nil || !strings.Contains(err.Error(), "no window is focused") {
+			t.Errorf("got %v, want a no-focused-window error", err)
+		}
+	})
+
+	t.Run("a non-numeric id still refuses to fall back", func(t *testing.T) {
+		stubAct(t, stageReplies())
+		err := runAct([]string{"window.close", "null"})
+		if err == nil || !strings.Contains(err.Error(), "must be numeric") {
+			t.Errorf("got %v, want a window id error", err)
+		}
+	})
+}
+
+func TestDirectionalScreenActs(t *testing.T) {
+	// The two-screen desk: HEADLESS-1 focused with its cell 1:0 showing,
+	// HDMI-A-1 to the right showing its own cell 0:0.
+	twoScreens := func() map[string]string {
+		r := stageReplies()
+		r["window-rules/list-outputs"] = `[{"id":1,"name":"HEADLESS-1",
+			"geometry":{"x":0,"y":0,"width":1280,"height":720},
+			"workarea":{"x":0,"y":0,"width":1280,"height":720},
+			"wset-index":1,"workspace":{"x":1,"y":0,"grid_width":3,"grid_height":3}},
+			{"id":2,"name":"HDMI-A-1","geometry":{"x":1280,"y":0,"width":1920,"height":1080},
+			"wset-index":2,"workspace":{"x":0,"y":0,"grid_width":3,"grid_height":3}}]`
+		return r
+	}
+	onHDMI := func(r map[string]string) {
+		r["window-rules/list-views"] = `[{"id":7,"bbox":{"x":0,"y":0,"width":934,"height":720},
+			"output-name":"HEADLESS-1","output-id":1,"mapped":true,"minimized":false,"wset-index":1,"last-focus-timestamp":100},
+			{"id":9,"bbox":{"x":1400,"y":10,"width":400,"height":300},
+			"output-name":"HDMI-A-1","output-id":2,"mapped":true,"minimized":false,"wset-index":2,"last-focus-timestamp":500}]`
+	}
+
+	t.Run("focus lands on the last window the neighbour held", func(t *testing.T) {
+		r := twoScreens()
+		onHDMI(r)
+		calls := stubAct(t, r)
+		if err := runAct([]string{"output.focusDirection", "right"}); err != nil {
+			t.Fatal(err)
+		}
+		wantCall(t, *calls, "window-rules/focus-view", `{"id":9}`)
+	})
+
+	t.Run("focus refuses a screen that shows no window", func(t *testing.T) {
+		calls := stubAct(t, twoScreens())
+		err := runAct([]string{"output.focusDirection", "right"})
+		if err == nil || !strings.Contains(err.Error(), "shows no window") {
+			t.Errorf("got %v, want a screen-shows-no-window error", err)
+		}
+		wantNoCall(t, *calls, "window-rules/focus-view")
+	})
+
+	t.Run("one screen has no direction to walk", func(t *testing.T) {
+		stubAct(t, stageReplies())
+		err := runAct([]string{"output.focusDirection", "right"})
+		if err == nil || !strings.Contains(err.Error(), "no screen to the right") {
+			t.Errorf("got %v, want a no-screen error", err)
+		}
+	})
+
+	t.Run("the window follows the seat to the neighbour", func(t *testing.T) {
+		calls := stubAct(t, twoScreens())
+		if err := runAct([]string{"window.moveToOutputBy", "right"}); err != nil {
+			t.Fatal(err)
+		}
+		wantCall(t, *calls, "window-rules/configure-view", `{"id":7,"output_id":2}`)
+	})
+
+	t.Run("the cell's windows follow the seat to the neighbour", func(t *testing.T) {
+		r := twoScreens()
+		onHDMI(r)
+		calls := stubAct(t, r)
+		if err := runAct([]string{"workspace.moveToOutputBy", "right"}); err != nil {
+			t.Fatal(err)
+		}
+		wantCall(t, *calls, "window-rules/configure-view", `{"id":7,"output_id":2}`)
+	})
+
+	t.Run("one screen cannot take a window off itself", func(t *testing.T) {
+		stubAct(t, stageReplies())
+		err := runAct([]string{"window.moveToOutputBy", "left"})
+		if err == nil || !strings.Contains(err.Error(), "no screen to the left") {
+			t.Errorf("got %v, want a no-screen error", err)
+		}
+	})
+}

@@ -201,6 +201,30 @@ func readFocusedOutput() (string, error) {
 	return out.Name, nil
 }
 
+// readFocusedView answers the window the seat is on, in the same "info"
+// envelope. No window focused reads as absent rather than as a failure: an
+// empty desktop is a state, and the act decides whether it can proceed.
+func readFocusedView() (wayfireView, bool, error) {
+	raw, err := request("window-rules/get-focused-view", nil)
+	if err != nil {
+		return wayfireView{}, false, err
+	}
+	var reply struct {
+		Info json.RawMessage `json:"info"`
+	}
+	if err := json.Unmarshal(raw, &reply); err != nil {
+		return wayfireView{}, false, fmt.Errorf("wayfire get-focused-view: bad reply %q", string(raw))
+	}
+	if len(reply.Info) == 0 || string(reply.Info) == "null" {
+		return wayfireView{}, false, nil
+	}
+	var v wayfireView
+	if err := json.Unmarshal(reply.Info, &v); err != nil {
+		return wayfireView{}, false, fmt.Errorf("wayfire get-focused-view: bad info %q", string(reply.Info))
+	}
+	return v, true, nil
+}
+
 func readKeyboard() (wayfireKeyboard, error) {
 	raw, err := request("wayfire/get-keyboard-state", nil)
 	if err != nil {

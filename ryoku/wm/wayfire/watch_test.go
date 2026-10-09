@@ -41,8 +41,16 @@ func stageReplies() map[string]string {
 			"tiled-edges":0,"fullscreen":false,"minimized":false,
 			"activated":false,"sticky":false,"wset-index":1}]`,
 		"window-rules/get-focused-output": `{"result":"ok","info":{"id":1,"name":"HEADLESS-1"}}`,
-		"wayfire/get-keyboard-state":      `{"possible-layouts":["us","br"],"layout":"us"}`,
-		"wayfire/list-config-options":     `{"result":"ok","options":{"output:HEADLESS-1":{"scale":{"value":"2.000000","default":"1.000000"},"mode":{"value":"auto","default":"auto"},"transform":{"value":"0","default":"0"}}}}`,
+		"window-rules/get-focused-view": `{"result":"ok","info":{"id":7,"pid":100,"title":"term","app-id":"kitty",
+			"base-geometry":{"x":177,"y":34,"width":926,"height":682},
+			"geometry":{"x":-1107,"y":0,"width":934,"height":720},
+			"bbox":{"x":-1107,"y":0,"width":934,"height":720},
+			"output-id":1,"output-name":"HEADLESS-1",
+			"last-focus-timestamp":1241198347800739,"mapped":true,
+			"tiled-edges":0,"fullscreen":false,"minimized":false,
+			"activated":false,"sticky":false,"wset-index":1}}`,
+		"wayfire/get-keyboard-state":  `{"possible-layouts":["us","br"],"layout":"us"}`,
+		"wayfire/list-config-options": `{"result":"ok","options":{"output:HEADLESS-1":{"scale":{"value":"2.000000","default":"1.000000"},"mode":{"value":"auto","default":"auto"},"transform":{"value":"0","default":"0"}}}}`,
 	}
 }
 

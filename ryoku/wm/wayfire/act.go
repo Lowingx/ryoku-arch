@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -114,6 +115,58 @@ func runAct(args []string) error {
 		}
 		return moveViewToCell(view.ID, workspaceHandle(out.WsetIndex, x, y), true)
 
+	// A direction is the whole argument of the acts a keybind points at the
+	// focused window or at a screen; wayfire binds none of these itself, so
+	// the catalogue rows run them through the command plugin.
+	case wm.ActionWindowFocusDirection:
+		dir, err := directionArg(rest, 0)
+		if err != nil {
+			return err
+		}
+		return focusByDirection(act, dir)
+
+	case wm.ActionWindowFocusEdge:
+		edge, err := arg(rest, 0, "edge")
+		if err != nil {
+			return err
+		}
+		if edge != "left" && edge != "right" {
+			return fmt.Errorf("act %s: edge must be left or right, got %q", act, edge)
+		}
+		return focusAtEdge(act, edge)
+
+	case wm.ActionWindowMoveBy:
+		dir, err := directionArg(rest, 0)
+		if err != nil {
+			return err
+		}
+		return moveFocusedBy(act, dir)
+
+	case wm.ActionWindowResizeBy:
+		step, err := arg(rest, 0, "resize step")
+		if err != nil {
+			return err
+		}
+		switch step {
+		case "narrower", "wider", "shorter", "taller":
+		default:
+			return fmt.Errorf("act %s: resize step must be narrower|wider|shorter|taller, got %q", act, step)
+		}
+		return resizeFocusedBy(act, step)
+
+	case wm.ActionWindowPresetHeight:
+		first := false
+		if s := strings.TrimSpace(strings.Join(rest, " ")); s != "" {
+			if s != "first" {
+				return fmt.Errorf("act %s: preset takes no argument or first, got %q", act, s)
+			}
+			first = true
+		}
+		return presetFocusedHeight(act, first)
+
+	case wm.ActionWindowCenter:
+		return centerFocused(act)
+
 	case wm.ActionAppFocus:
 		appID, err := arg(rest, 0, "app id")
 		if err != nil {
@@ -206,21 +259,30 @@ func runAct(args []string) error {
 		if err != nil {
 			return err
 		}
-		// The compositor's own cross-output move re-homes the view on the
-		// target output, which is as close as a per-output grid comes to a
-		// workspace travelling: the windows go, the cell belongs to the
-		// grid they land in.
-		for _, view := range stage.views {
-			vx, vy, _ := stage.cellOfView(view)
-			if view.WsetIndex == wsetIdx && vx == x && vy == y {
-				if err := perform("window-rules/configure-view", map[string]any{
-					"id": view.ID, "output_id": target.ID,
-				}); err != nil {
-					return err
-				}
-			}
+		return moveCellViewsToOutput(stage, wsetIdx, x, y, target)
+
+	// The screen acts measure direction from the focused screen: focus the
+	// window it last held, hand it over, or send the whole cell across.
+	case wm.ActionOutputFocusDirection:
+		dir, err := directionArg(rest, 0)
+		if err != nil {
+			return err
 		}
-		return nil
+		return focusScreenByDirection(act, dir)
+
+	case wm.ActionWindowMoveToOutputBy:
+		dir, err := directionArg(rest, 0)
+		if err != nil {
+			return err
+		}
+		return moveFocusedToScreen(act, dir)
+
+	case wm.ActionWorkspaceMoveToOutputBy:
+		dir, err := directionArg(rest, 0)
+		if err != nil {
+			return err
+		}
+		return moveCellToScreen(act, dir)
 
 	case wm.ActionSessionExit:
 		pid, err := wayfirePID()
@@ -321,12 +383,24 @@ func argID(args []string, i int, name string) (int64, error) {
 	return windowID(s)
 }
 
-// windowID rejects a non-numeric handle: a window action with a null id
-// would silently apply to the focused window.
+// windowID resolves the handle a window action takes: a numeric id, or the
+// literal focused a command row spells for the window under the seat. The
+// keyword is explicit on purpose: a missing or malformed id still fails, so
+// an action can never silently fall back to whatever holds focus.
 func windowID(s string) (int64, error) {
+	if t := strings.TrimSpace(s); strings.EqualFold(t, "focused") {
+		v, ok, err := readFocusedView()
+		if err != nil {
+			return 0, err
+		}
+		if !ok {
+			return 0, fmt.Errorf("act: no window is focused")
+		}
+		return v.ID, nil
+	}
 	n, err := strconv.ParseInt(strings.TrimSpace(s), 10, 64)
 	if err != nil || n < 0 {
-		return 0, fmt.Errorf("act: window id must be numeric, got %q", s)
+		return 0, fmt.Errorf("act: window id must be numeric or the word focused, got %q", s)
 	}
 	return n, nil
 }
@@ -430,6 +504,460 @@ func moveViewToCell(id int64, handle string, focus bool) error {
 	}
 	if focus {
 		return perform("window-rules/focus-view", map[string]any{"id": id})
+	}
+	return nil
+}
+
+// directionArg reads the argument every directional act takes. A keybind row
+// spells it, so a typo names itself instead of walking some other way.
+func directionArg(args []string, i int) (string, error) {
+	s, err := arg(args, i, "direction")
+	if err != nil {
+		return "", err
+	}
+	switch d := strings.ToLower(strings.TrimSpace(s)); d {
+	case "left", "right", "up", "down":
+		return d, nil
+	default:
+		return "", fmt.Errorf("act: direction must be left|right|up|down, got %q", s)
+	}
+}
+
+// directionDelta maps a direction onto its unit vector on the plane.
+func directionDelta(dir string) (float64, float64) {
+	switch dir {
+	case "left":
+		return -1, 0
+	case "right":
+		return 1, 0
+	case "up":
+		return 0, -1
+	case "down":
+		return 0, 1
+	}
+	return 0, 0
+}
+
+func centerOf(r wayfireGeometry) (float64, float64) {
+	return r.X + r.Width/2, r.Y + r.Height/2
+}
+
+// nearestInDirection picks the rect whose centre lies strictly in dir from
+// the origin's centre and is closest to it, euclidean on the plane. False
+// when nothing lies that way, and the caller names the absence rather than
+// moving nowhere.
+func nearestInDirection(rects []wayfireGeometry, origin wayfireGeometry, dir string) (int, bool) {
+	dx, dy := directionDelta(dir)
+	ox, oy := centerOf(origin)
+	best, bestD := -1, 0.0
+	for i, r := range rects {
+		cx, cy := centerOf(r)
+		sx, sy := cx-ox, cy-oy
+		if sx*dx+sy*dy <= 0 {
+			continue
+		}
+		d := sx*sx + sy*sy
+		if best < 0 || d < bestD {
+			best, bestD = i, d
+		}
+	}
+	return best, best >= 0
+}
+
+// outputInDirection picks the neighbouring screen: its centre strictly in
+// dir from the focused output's centre, nearest wins. A lone output can
+// never point at another, which is the error the caller names.
+func outputInDirection(outputs []wayfireOutput, from wayfireOutput, dir string) (wayfireOutput, bool) {
+	rects := make([]wayfireGeometry, len(outputs))
+	for i, o := range outputs {
+		rects[i] = o.Geometry
+	}
+	idx, ok := nearestInDirection(rects, from.Geometry, dir)
+	if !ok {
+		return wayfireOutput{}, false
+	}
+	return outputs[idx], true
+}
+
+// clampF keeps a nudge inside its bounds; an empty range, a window wider
+// than its cell, leaves it where it is rather than snapping it blind.
+func clampF(v, lo, hi float64) float64 {
+	if hi < lo {
+		return v
+	}
+	if v < lo {
+		return lo
+	}
+	if v > hi {
+		return hi
+	}
+	return v
+}
+
+// candidatesIn gathers the windows a direction act may pick: mapped, not
+// minimised, on the origin's own output and cell. A direction across the
+// grid border is workspace navigation, not focus. The deck's scatter lives
+// in rect(), so a card behind the front one still answers where the eye
+// sees it.
+func (s *stage) candidatesIn(origin wayfireView) []wayfireView {
+	cellX, cellY, _ := s.cellOfView(origin)
+	var out []wayfireView
+	for _, v := range s.views {
+		if !v.Mapped || v.Minimized || v.OutputName != origin.OutputName || v.WsetIndex != origin.WsetIndex {
+			continue
+		}
+		x, y, _ := s.cellOfView(v)
+		if x == cellX && y == cellY {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
+// windowPlane is what a window-level direction act measures against: the
+// view's own rectangle, the output it lies on and the cell rectangle it is
+// clamped inside.
+type windowPlane struct {
+	rect wayfireGeometry
+	out  wayfireOutput
+	cell wayfireGeometry
+}
+
+// planeOf resolves one view against the stage in the same shape cellOfView
+// derives a cell, so the clamp and the cell occupancy can never disagree.
+func (s *stage) planeOf(v wayfireView) (windowPlane, bool) {
+	out, ok := s.outputByName(v.OutputName)
+	if !ok {
+		return windowPlane{}, false
+	}
+	cellX, cellY, _ := s.cellOfView(v)
+	ws := out.Workspace
+	if w, ok := s.wsetByIndex(v.WsetIndex); ok {
+		ws = w.Workspace
+	}
+	cell := wayfireGeometry{
+		X:      out.Geometry.X + float64(cellX-ws.X)*out.Geometry.Width,
+		Y:      out.Geometry.Y + float64(cellY-ws.Y)*out.Geometry.Height,
+		Width:  out.Geometry.Width,
+		Height: out.Geometry.Height,
+	}
+	return windowPlane{rect: v.rect(), out: out, cell: cell}, true
+}
+
+// focusedWindow is the window the keybind acts direct at, read fresh: the
+// seat's own answer, so a command row means exactly the window the user is
+// typing into.
+func focusedWindow(act wm.Action) (wayfireView, error) {
+	v, ok, err := readFocusedView()
+	if err != nil {
+		return wayfireView{}, err
+	}
+	if !ok {
+		return wayfireView{}, fmt.Errorf("act %s: no window is focused", act)
+	}
+	return v, nil
+}
+
+// focusedOutput is the screen the seat is on, read fresh for the screen acts
+// that measure direction from it.
+func focusedOutput(act wm.Action) (wayfireOutput, error) {
+	name, err := readFocusedOutput()
+	if err != nil {
+		return wayfireOutput{}, err
+	}
+	if name == "" {
+		return wayfireOutput{}, fmt.Errorf("act %s: no focused screen", act)
+	}
+	return readOutput(name)
+}
+
+// focusByDirection focuses the window nearest in that direction from the
+// focused one, both measured on their rectangles.
+func focusByDirection(act wm.Action, dir string) error {
+	st, err := readStage()
+	if err != nil {
+		return err
+	}
+	origin, err := focusedWindow(act)
+	if err != nil {
+		return err
+	}
+	cands := st.candidatesIn(origin)
+	rects := make([]wayfireGeometry, len(cands))
+	for i, v := range cands {
+		rects[i] = v.rect()
+	}
+	idx, ok := nearestInDirection(rects, origin.rect(), dir)
+	if !ok {
+		return fmt.Errorf("act %s: no window to the %s", act, dir)
+	}
+	return perform("window-rules/focus-view", map[string]any{"id": cands[idx].ID})
+}
+
+// focusAtEdge focuses the window at the far side of the cell: the leftmost
+// centre for first, the rightmost for last. The window already there keeps
+// focus, which is the answer a jump key gives everywhere else.
+func focusAtEdge(act wm.Action, edge string) error {
+	st, err := readStage()
+	if err != nil {
+		return err
+	}
+	origin, err := focusedWindow(act)
+	if err != nil {
+		return err
+	}
+	cands := st.candidatesIn(origin)
+	if len(cands) == 0 {
+		return fmt.Errorf("act %s: no window at the %s edge", act, edge)
+	}
+	best := cands[0]
+	bestX, _ := centerOf(best.rect())
+	for _, v := range cands[1:] {
+		x, _ := centerOf(v.rect())
+		if (edge == "left" && x < bestX) || (edge == "right" && x > bestX) {
+			best, bestX = v, x
+		}
+	}
+	return perform("window-rules/focus-view", map[string]any{"id": best.ID})
+}
+
+// moveFocusedBy slides the window an eighth of the screen that way, clamped
+// inside its own cell: one press is one keyboard step, never a jump into the
+// neighbouring cell. The slide clears the snap, the way a drag does.
+func moveFocusedBy(act wm.Action, dir string) error {
+	st, err := readStage()
+	if err != nil {
+		return err
+	}
+	origin, err := focusedWindow(act)
+	if err != nil {
+		return err
+	}
+	pl, ok := st.planeOf(origin)
+	if !ok {
+		return fmt.Errorf("act %s: the window's screen is gone", act)
+	}
+	dx, dy := directionDelta(dir)
+	nr := pl.rect
+	if dx != 0 {
+		nr.X += dx * pl.out.Geometry.Width / 8
+	} else {
+		nr.Y += dy * pl.out.Geometry.Height / 8
+	}
+	nr.X = clampF(nr.X, pl.cell.X, pl.cell.X+pl.cell.Width-nr.Width)
+	nr.Y = clampF(nr.Y, pl.cell.Y, pl.cell.Y+pl.cell.Height-nr.Height)
+	return configurePlaced(origin.ID, nr)
+}
+
+// resizeFocusedBy steps the size an eighth of the screen from the top-left
+// corner, with a floor so a window can never be pressed out of existence. A
+// sized window leaves the snap too: wayfire's snap and the free rectangle
+// are two states of one window, and this act picks the second.
+func resizeFocusedBy(act wm.Action, step string) error {
+	st, err := readStage()
+	if err != nil {
+		return err
+	}
+	origin, err := focusedWindow(act)
+	if err != nil {
+		return err
+	}
+	pl, ok := st.planeOf(origin)
+	if !ok {
+		return fmt.Errorf("act %s: the window's screen is gone", act)
+	}
+	nr := pl.rect
+	switch step {
+	case "narrower":
+		nr.Width = math.Max(64, nr.Width-pl.out.Geometry.Width/8)
+	case "wider":
+		nr.Width += pl.out.Geometry.Width / 8
+	case "shorter":
+		nr.Height = math.Max(64, nr.Height-pl.out.Geometry.Height/8)
+	case "taller":
+		nr.Height += pl.out.Geometry.Height / 8
+	}
+	return configurePlaced(origin.ID, nr)
+}
+
+// presetFocusedHeight cycles the window through its preset heights as a
+// fraction of the cell it sits in; first lands on the full height the reset
+// key means. The width and the left edge stay put, and the window slides up
+// only as far as it must to stay inside its cell.
+func presetFocusedHeight(act wm.Action, first bool) error {
+	st, err := readStage()
+	if err != nil {
+		return err
+	}
+	origin, err := focusedWindow(act)
+	if err != nil {
+		return err
+	}
+	pl, ok := st.planeOf(origin)
+	if !ok {
+		return fmt.Errorf("act %s: the window's screen is gone", act)
+	}
+	if pl.cell.Height <= 0 {
+		return fmt.Errorf("act %s: screen %q reports no height", act, pl.out.Name)
+	}
+	height := pl.cell.Height
+	if !first {
+		presets := [3]float64{1, 0.75, 0.5}
+		fraction := pl.rect.Height / pl.cell.Height
+		nearest, bestD := 0, math.MaxFloat64
+		for i, p := range presets {
+			if d := math.Abs(fraction - p); d < bestD {
+				nearest, bestD = i, d
+			}
+		}
+		height = presets[(nearest+1)%len(presets)] * pl.cell.Height
+	}
+	nr := pl.rect
+	nr.Height = height
+	nr.Y = clampF(nr.Y, pl.cell.Y, pl.cell.Y+pl.cell.Height-height)
+	return configurePlaced(origin.ID, nr)
+}
+
+// centerFocused centres the window on the screen it is on and lets go of the
+// snap: the screen rather than the cell, because that is the surface the eye
+// reads a centred window against.
+func centerFocused(act wm.Action) error {
+	st, err := readStage()
+	if err != nil {
+		return err
+	}
+	origin, err := focusedWindow(act)
+	if err != nil {
+		return err
+	}
+	pl, ok := st.planeOf(origin)
+	if !ok {
+		return fmt.Errorf("act %s: the window's screen is gone", act)
+	}
+	nr := pl.rect
+	nr.X = pl.out.Geometry.X + (pl.out.Geometry.Width-nr.Width)/2
+	nr.Y = pl.out.Geometry.Y + (pl.out.Geometry.Height-nr.Height)/2
+	return configurePlaced(origin.ID, nr)
+}
+
+// configurePlaced is the one configure every geometry act sends: the new
+// rectangle and the cleared snap land in the same transaction, the way
+// placeWindow floats, moves and sizes in one.
+func configurePlaced(id int64, r wayfireGeometry) error {
+	return perform("window-rules/configure-view", map[string]any{
+		"id": id,
+		"geometry": map[string]any{
+			"x":      r.X,
+			"y":      r.Y,
+			"width":  r.Width,
+			"height": r.Height,
+		},
+		"tiled-edges": 0,
+	})
+}
+
+// focusScreenByDirection lands the seat on the neighbouring screen through
+// the window it last held there: focusing a view is what carries the seat
+// across, since wayfire focuses an output by focusing one of its windows. A
+// screen showing no window has nothing to hand the seat to.
+func focusScreenByDirection(act wm.Action, dir string) error {
+	outputs, err := readOutputs()
+	if err != nil {
+		return err
+	}
+	from, err := focusedOutput(act)
+	if err != nil {
+		return err
+	}
+	target, ok := outputInDirection(outputs, from, dir)
+	if !ok {
+		return fmt.Errorf("act %s: no screen to the %s", act, dir)
+	}
+	st, err := readStage()
+	if err != nil {
+		return err
+	}
+	found := false
+	var best wayfireView
+	for _, v := range st.views {
+		if !v.Mapped || v.Minimized || v.OutputName != target.Name || v.WsetIndex != target.WsetIndex {
+			continue
+		}
+		x, y, _ := st.cellOfView(v)
+		if x != target.Workspace.X || y != target.Workspace.Y {
+			continue
+		}
+		if !found || v.LastFocusTimestamp > best.LastFocusTimestamp {
+			best, found = v, true
+		}
+	}
+	if !found {
+		return fmt.Errorf("act %s: screen %q shows no window", act, target.Name)
+	}
+	return perform("window-rules/focus-view", map[string]any{"id": best.ID})
+}
+
+// moveFocusedToScreen hands the focused window to the neighbouring screen;
+// wayfire re-homes it there the way a cross-output workspace move does.
+func moveFocusedToScreen(act wm.Action, dir string) error {
+	origin, err := focusedWindow(act)
+	if err != nil {
+		return err
+	}
+	outputs, err := readOutputs()
+	if err != nil {
+		return err
+	}
+	from, err := focusedOutput(act)
+	if err != nil {
+		return err
+	}
+	target, ok := outputInDirection(outputs, from, dir)
+	if !ok {
+		return fmt.Errorf("act %s: no screen to the %s", act, dir)
+	}
+	return perform("window-rules/configure-view", map[string]any{
+		"id": origin.ID, "output_id": target.ID,
+	})
+}
+
+// moveCellToScreen sends the focused cell's whole contents to the
+// neighbouring screen: the explicit move's traversal with direction standing
+// in for the workspace handle.
+func moveCellToScreen(act wm.Action, dir string) error {
+	out, x, y, err := focusedCell()
+	if err != nil {
+		return err
+	}
+	outputs, err := readOutputs()
+	if err != nil {
+		return err
+	}
+	target, ok := outputInDirection(outputs, out, dir)
+	if !ok {
+		return fmt.Errorf("act %s: no screen to the %s", act, dir)
+	}
+	st, err := readStage()
+	if err != nil {
+		return err
+	}
+	return moveCellViewsToOutput(st, out.WsetIndex, x, y, target)
+}
+
+// moveCellViewsToOutput sends every view of one cell to the target output.
+// The compositor's own cross-output move re-homes the view on the target
+// output, which is as close as a per-output grid comes to a workspace
+// travelling: the windows go, the cell belongs to the grid they land in.
+func moveCellViewsToOutput(st *stage, wsetIdx int64, x, y int, target wayfireOutput) error {
+	for _, view := range st.views {
+		vx, vy, _ := st.cellOfView(view)
+		if view.WsetIndex == wsetIdx && vx == x && vy == y {
+			if err := perform("window-rules/configure-view", map[string]any{
+				"id": view.ID, "output_id": target.ID,
+			}); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
 }
