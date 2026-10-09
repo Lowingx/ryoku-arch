@@ -10,6 +10,7 @@ Rectangle {
     required property var bundle
     property bool busy: false
 
+    signal openRequested()
     signal repairRequested()
     signal removeRequested()
 
@@ -28,7 +29,16 @@ Rectangle {
 
     Behavior on color { ColorAnimation { duration: Tokens.snap } }
     Behavior on border.color { ColorAnimation { duration: Tokens.snap } }
-    HoverHandler { id: hover }
+    HoverHandler { id: hover; cursorShape: Qt.PointingHandCursor }
+
+    Item {
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.bottom: actionBar.top
+        z: 1
+        TapHandler { onTapped: card.openRequested() }
+    }
 
     Rectangle {
         id: iconPlate
@@ -138,6 +148,15 @@ Rectangle {
         anchors.bottom: parent.bottom
         height: 48
 
+        Item {
+            anchors.left: parent.left
+            anchors.right: actions.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            z: 1
+            TapHandler { onTapped: card.openRequested() }
+        }
+
         Rectangle {
             anchors.left: parent.left
             anchors.leftMargin: Tokens.s3
@@ -160,6 +179,7 @@ Rectangle {
         }
 
         Row {
+            id: actions
             anchors.right: parent.right
             anchors.rightMargin: Tokens.s3
             anchors.verticalCenter: parent.verticalCenter

@@ -19,7 +19,6 @@ Item {
 
     // ── installed-management state ──────────────────────────────────────────
     property var plugins: []
-    property int desktopWidgetCount: 0
     property var catalog: []
     property var bundleCatalog: []
     property string selId: ""
@@ -53,6 +52,11 @@ Item {
     property string statusTarget: ""
     property bool statusQueued: false
     property string queuedStatusTarget: ""
+    property var bundleStatusLoaded: ({})
+    property string bundleSheetId: ""
+    property var bundleSheetData: ({})
+    property bool bundleSheetOpen: false
+    property bool bundleSheetLoading: false
 
     readonly property string query: (pg.hub && pg.hub.query) ? ("" + pg.hub.query) : ""
 
@@ -101,7 +105,6 @@ Item {
     readonly property bool allSectionsEmpty: pg.plugins.length === 0
         && pg.bundles.length === 0
         && (pg.barStyle !== "nomarchy" || pg.omarchyPlugins.length === 0)
-        && pg.desktopWidgetCount === 0
 
     readonly property string shellDir: Quickshell.env("RYOKU_SHELL_DIR")
     readonly property string script: (pg.shellDir && pg.shellDir.length > 0)
@@ -132,6 +135,36 @@ Item {
     }
     function isDesktopWidget(plugin) {
         return pg.manifestHosts((plugin || {}).manifest || {}).indexOf("desktopWidget") !== -1;
+    }
+    function bundleStatusIsLoaded(id) {
+        return id && pg.bundleStatusLoaded[id] === true;
+    }
+    function setBundleStatusLoaded(id, loaded) {
+        if (!id)
+            return;
+        var next = {};
+        for (var key in pg.bundleStatusLoaded)
+            next[key] = pg.bundleStatusLoaded[key];
+        next[id] = loaded;
+        pg.bundleStatusLoaded = next;
+    }
+    function openBundle(bundle) {
+        if (!bundle || !bundle.id)
+            return;
+        pg.bundleSheetId = bundle.id;
+        pg.bundleSheetData = bundle;
+        pg.bundleSheetOpen = true;
+        pg.bundleSheetLoading = !pg.bundleStatusIsLoaded(bundle.id);
+        if (pg.bundleSheetLoading)
+            pg.loadBundleStatus(bundle.id);
+    }
+    function finishBundleStatus(target) {
+        if (!pg.bundleSheetOpen)
+            return;
+        if (pg.bundleStatusIsLoaded(pg.bundleSheetId)
+                || target === pg.bundleSheetId
+                || (target === "" && !pg.statusQueued))
+            pg.bundleSheetLoading = false;
     }
 
     function clearError(kind) {
@@ -208,10 +241,6 @@ Item {
     }
     function browseOmarchyMarket() {
         Spawn.run(["ryostore", "open", "omarchy-plugins"]);
-    }
-    function openDesktop() {
-        if (pg.hub && typeof pg.hub.navigate === "function")
-            pg.hub.navigate("desktop");
     }
     function requestPluginRemove(id, name) {
         pg.confirmKind = "plugin";
@@ -394,8 +423,13 @@ Item {
     }
     function applyBundleStatuses(rows) {
         var byId = {};
-        for (var i = 0; i < rows.length; ++i)
+        var loaded = {};
+        for (var key in pg.bundleStatusLoaded)
+            loaded[key] = pg.bundleStatusLoaded[key];
+        for (var i = 0; i < rows.length; ++i) {
             byId[rows[i].id] = rows[i];
+            loaded[rows[i].id] = true;
+        }
         var current = {};
         for (var j = 0; j < pg.bundles.length; ++j)
             current[pg.bundles[j].id] = pg.bundles[j];
@@ -405,13 +439,23 @@ Item {
             var item = byId[base.id] !== undefined
                 ? pg.bundleWithStatus(base, byId[base.id])
                 : (current[base.id] || base);
+            if (base.id === pg.bundleSheetId)
+                pg.bundleSheetData = item;
             if (Number(item.installedCount || 0) > 0)
                 next.push(item);
         }
+        pg.bundleStatusLoaded = loaded;
         pg.bundles = next;
+        if (pg.bundleStatusIsLoaded(pg.bundleSheetId))
+            pg.bundleSheetLoading = false;
     }
     function loadBundleStatus(id) {
         const target = id || "";
+        if (target.length > 0) {
+            pg.setBundleStatusLoaded(target, false);
+            if (target === pg.bundleSheetId)
+                pg.bundleSheetLoading = true;
+        }
         if (statusProc.running) {
             pg.statusQueued = true;
             pg.queuedStatusTarget = target;
@@ -479,7 +523,6 @@ Item {
                 const parsed = JSON.parse(listOut.text || "[]");
                 if (!Array.isArray(parsed))
                     throw new Error("not an array");
-                pg.desktopWidgetCount = parsed.filter(plugin => pg.isDesktopWidget(plugin)).length;
                 const addOns = parsed.filter(plugin => !pg.isDesktopWidget(plugin));
                 pg.plugins = addOns;
                 if (pg.selId !== "") {
@@ -650,6 +693,7 @@ Item {
         onExited: code => {
             const target = pg.statusTarget;
             if (code !== 0) {
+                pg.finishBundleStatus(target);
                 pg.showError("bundle-status",
                     pg.compactError(statusErr.text, I18n.tr("Couldn't check bundle state (exit %1)."), code),
                     statusProc.command, target);
@@ -667,9 +711,11 @@ Item {
                 pg.applyBundleStatuses(rows);
                 pg.clearError("bundle-status");
             } catch (error) {
+                pg.finishBundleStatus(target);
                 pg.showError("bundle-status", I18n.tr("Couldn't read bundle state."),
                     statusProc.command, target);
             }
+            pg.finishBundleStatus(target);
             pg.runQueuedStatus();
         }
     }
@@ -805,7 +851,7 @@ Item {
         }
         Text {
             width: Math.min(parent.width, 720)
-            text: I18n.tr("Shell add-ons and bundles you've installed. Desktop widgets live in Desktop.")
+            text: I18n.tr("Shell add-ons and bundles you've installed.")
             color: Tokens.inkMuted
             font.family: Tokens.ui
             font.pixelSize: Tokens.fBody
@@ -844,24 +890,6 @@ Item {
                     text: (pg.bundles.length === 1
                         ? I18n.tr("%1 bundle") : I18n.tr("%1 bundles"))
                         .arg(pg.bundles.length)
-                    color: Tokens.inkMuted
-                    font.family: Tokens.ui
-                    font.pixelSize: Tokens.fTiny
-                }
-            }
-            Rectangle {
-                width: widgetStat.implicitWidth + Tokens.s3 * 2
-                height: 22
-                radius: Tokens.radius
-                color: "transparent"
-                border.width: Tokens.border
-                border.color: Tokens.line
-                Text {
-                    id: widgetStat
-                    anchors.centerIn: parent
-                    text: (pg.desktopWidgetCount === 1
-                        ? I18n.tr("%1 widget") : I18n.tr("%1 widgets"))
-                        .arg(pg.desktopWidgetCount)
                     color: Tokens.inkMuted
                     font.family: Tokens.ui
                     font.pixelSize: Tokens.fTiny
@@ -1056,6 +1084,7 @@ Item {
                                 width: bundleGrid.cardWidth
                                 bundle: installedBundleCard.modelData
                                 busy: pg.bundleBusyId === installedBundleCard.modelData.id
+                                onOpenRequested: pg.openBundle(installedBundleCard.modelData)
                                 onRepairRequested: pg.repairBundle(installedBundleCard.modelData.id)
                                 onRemoveRequested: pg.removeBundle(installedBundleCard.modelData.id, "")
                             }
@@ -1198,41 +1227,6 @@ Item {
                     }
                 }
 
-                Rectangle {
-                    width: parent.width
-                    height: 52
-                    visible: pg.desktopWidgetCount > 0
-                    radius: Tokens.radius
-                    color: widgetHover.hovered ? Tokens.tint5 : "transparent"
-                    border.width: Tokens.border
-                    border.color: widgetHover.hovered ? Tokens.lineStrong : Tokens.line
-                    Behavior on color { ColorAnimation { duration: Tokens.snap } }
-                    Behavior on border.color { ColorAnimation { duration: Tokens.snap } }
-
-                    Text {
-                        anchors.left: parent.left
-                        anchors.leftMargin: Tokens.s4
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: (pg.desktopWidgetCount === 1
-                            ? I18n.tr("%1 desktop widget installed, managed in Desktop")
-                            : I18n.tr("%1 desktop widgets installed, managed in Desktop"))
-                            .arg(pg.desktopWidgetCount)
-                        color: Tokens.inkDim
-                        font.family: Tokens.ui
-                        font.pixelSize: Tokens.fSmall
-                    }
-                    Text {
-                        anchors.right: parent.right
-                        anchors.rightMargin: Tokens.s4
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "\u203a"
-                        color: Tokens.ink
-                        font.family: Tokens.ui
-                        font.pixelSize: Tokens.fValue
-                    }
-                    HoverHandler { id: widgetHover; cursorShape: Qt.PointingHandCursor }
-                    TapHandler { onTapped: pg.openDesktop() }
-                }
             }
         }
     }
@@ -2072,6 +2066,18 @@ Item {
                 onCanceled: ciDlg.active = false
             }
         }
+    }
+
+    AddonBundleSheet {
+        anchors.fill: parent
+        z: 90
+        open: pg.bundleSheetOpen
+        bundle: pg.bundleSheetData
+        loading: pg.bundleSheetLoading
+        busy: pg.bundleBusyId === pg.bundleSheetId
+        onDismissed: pg.bundleSheetOpen = false
+        onRepairRequested: pg.repairBundle(pg.bundleSheetId)
+        onRemoveRequested: pg.removeBundle(pg.bundleSheetId, "")
     }
 
     // ── destructive confirm: a bone plate, 2px border, an unambiguous verb ──
